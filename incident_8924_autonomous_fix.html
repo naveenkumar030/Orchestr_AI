@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "outline": "#88726c",
+          "on-tertiary-container": "#2c2a26",
+          "surface": "#fcf9f4",
+          "secondary-container": "#ede0d7",
+          "on-secondary-fixed-variant": "#4d453f",
+          "status-success": "#5B7C4B",
+          "primary": "#99462a",
+          "tertiary-fixed": "#e7e2db",
+          "primary-fixed": "#ffdbd0",
+          "status-warning": "#B87A36",
+          "on-primary-fixed": "#390b00",
+          "on-secondary": "#ffffff",
+          "inverse-surface": "#31302d",
+          "inverse-primary": "#ffb59e",
+          "accent-subtle": "#F9ECE7",
+          "error-container": "#ffdad6",
+          "on-tertiary-fixed": "#1d1b17",
+          "text-secondary": "#6B625B",
+          "surface-container": "#EFEAE3",
+          "surface-container-low": "#f6f3ee",
+          "surface-bright": "#fcf9f4",
+          "on-primary-fixed-variant": "#7a2f15",
+          "surface-card": "#FFFFFF",
+          "status-error": "#C34A4A",
+          "on-tertiary": "#ffffff",
+          "accent-terracotta": "#D97757",
+          "error": "#ba1a1a",
+          "surface-container-highest": "#e5e2dd",
+          "on-surface-variant": "#55433d",
+          "tertiary-container": "#95918b",
+          "on-secondary-fixed": "#211a15",
+          "border-subtle": "#EFEAE3",
+          "background": "#F7F4EF",
+          "surface-variant": "#e5e2dd",
+          "surface-base": "#F7F4EF",
+          "on-primary": "#ffffff",
+          "on-tertiary-fixed-variant": "#494742",
+          "accent-hover": "#C66849",
+          "surface-container-high": "#ebe8e3",
+          "on-background": "#2D2926",
+          "on-surface": "#2D2926",
+          "inverse-on-surface": "#f3f0eb",
+          "on-secondary-container": "#6c635c",
+          "secondary": "#665d56",
+          "tertiary-fixed-dim": "#cac6bf",
+          "text-primary": "#2D2926",
+          "secondary-fixed-dim": "#d0c4bc",
+          "outline-variant": "#E5DED6",
+          "border-warm": "#E5DED6",
+          "secondary-fixed": "#ede0d7",
+          "primary-container": "#d97757",
+          "tertiary": "#615e59",
+          "surface-tint": "#99462a",
+          "on-error-container": "#93000a",
+          "on-error": "#ffffff",
+          "surface-container-lowest": "#ffffff",
+          "surface-dim": "#dcdad5",
+          "primary-fixed-dim": "#ffb59e",
+          "on-primary-container": "#541400"
+        },
+        "borderRadius": {
+          "DEFAULT": "0.25rem",
+          "lg": "0.5rem",
+          "xl": "0.75rem",
+          "full": "9999px"
+        },
+        "spacing": {
+          "space-2xs": "0.25rem",
+          "space-3xl": "4rem",
+          "space-2xl": "3rem",
+          "gutter-desktop": "1.5rem",
+          "margin-tablet": "2rem",
+          "space-xl": "2rem",
+          "margin-mobile": "1rem",
+          "space-sm": "0.75rem",
+          "space-xs": "0.5rem",
+          "space-lg": "1.5rem",
+          "margin-desktop": "3rem",
+          "space-md": "1rem",
+          "gutter-mobile": "1rem"
+        },
+        "fontFamily": {
+          "headline-lg": [
+            "Space Grotesk"
+          ],
+          "label-md": [
+            "JetBrains Mono"
+          ],
+          "body-lg": [
+            "Inter"
+          ],
+          "headline-md": [
+            "Space Grotesk"
+          ],
+          "headline-lg-mobile": [
+            "Space Grotesk"
+          ],
+          "label-sm": [
+            "JetBrains Mono"
+          ],
+          "headline-sm": [
+            "Space Grotesk"
+          ],
+          "body-md": [
+            "Inter"
+          ],
+          "code-sm": [
+            "JetBrains Mono"
+          ],
+          "display-mobile": [
+            "Space Grotesk"
+          ],
+          "body-sm": [
+            "Inter"
+          ],
+          "code-lg": [
+            "JetBrains Mono"
+          ],
+          "display": [
+            "Space Grotesk"
+          ]
+        },
+        "fontSize": {
+          "headline-lg": [
+            "32px",
+            {
+              "lineHeight": "40px",
+              "letterSpacing": "-0.02em",
+              "fontWeight": "600"
+            }
+          ],
+          "label-md": [
+            "11px",
+            {
+              "lineHeight": "16px",
+              "letterSpacing": "0.05em",
+              "fontWeight": "500"
+            }
+          ],
+          "body-lg": [
+            "16px",
+            {
+              "lineHeight": "26px",
+              "letterSpacing": "-0.01em",
+              "fontWeight": "400"
+            }
+          ],
+          "headline-md": [
+            "24px",
+            {
+              "lineHeight": "32px",
+              "letterSpacing": "-0.01em",
+              "fontWeight": "500"
+            }
+          ],
+          "headline-lg-mobile": [
+            "24px",
+            {
+              "lineHeight": "32px",
+              "letterSpacing": "-0.01em",
+              "fontWeight": "600"
+            }
+          ],
+          "label-sm": [
+            "10px",
+            {
+              "lineHeight": "14px",
+              "letterSpacing": "0.07em",
+              "fontWeight": "600"
+            }
+          ],
+          "headline-sm": [
+            "18px",
+            {
+              "lineHeight": "26px",
+              "letterSpacing": "0em",
+              "fontWeight": "600"
+            }
+          ],
+          "body-md": [
+            "14px",
+            {
+              "lineHeight": "22px",
+              "letterSpacing": "0em",
+              "fontWeight": "400"
+            }
+          ],
+          "code-sm": [
+            "12px",
+            {
+              "lineHeight": "18px",
+              "letterSpacing": "0em",
+              "fontWeight": "400"
+            }
+          ],
+          "display-mobile": [
+            "32px",
+            {
+              "lineHeight": "40px",
+              "letterSpacing": "-0.02em",
+              "fontWeight": "600"
+            }
+          ],
+          "body-sm": [
+            "12px",
+            {
+              "lineHeight": "18px",
+              "letterSpacing": "0.01em",
+              "fontWeight": "400"
+            }
+          ],
+          "code-lg": [
+            "14px",
+            {
+              "lineHeight": "22px",
+              "letterSpacing": "-0.01em",
+              "fontWeight": "500"
+            }
+          ],
+          "display": [
+            "48px",
+            {
+              "lineHeight": "56px",
+              "letterSpacing": "-0.03em",
+              "fontWeight": "600"
+            }
+          ]
+        }
+      },
+    },
+  }</script></head><body class="bg-[#F7F4EF] text-[#2D2926] font-body-md text-body-md antialiased selection:bg-[#D97757]/25 selection:text-[#2D2926]"><div class="fixed inset-0 pointer-events-none z-0 overflow-hidden"><div class="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-[#D97757]/5 blur-3xl"></div><div class="absolute top-1/4 -right-40 w-96 h-96 rounded-full bg-[#D97757]/5 blur-3xl"></div><div class="absolute -bottom-40 left-1/3 w-96 h-96 rounded-full bg-[#E5DED6]/60 blur-3xl"></div></div><aside class="fixed left-0 top-0 h-full w-72 bg-[#FFFFFF]/95 backdrop-blur-2xl z-50 flex flex-col justify-between border-r border-[#E5DED6] shadow-[0_2px_12px_rgba(45,41,38,0.04)]"><div class="flex flex-col"><div class="px-space-md py-space-lg flex flex-col gap-space-xs"><a href="autonomous_devops_main_control_center.html" class="cursor-pointer hover:opacity-85 transition-opacity block">
+<div class="flex items-center gap-space-sm"><img alt="Autonomous DevOps Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1XZ5qckH8Ao1yzEj6md_JHQ3JryoYByYQn_TXaGnK-E2O8agcYYAhLHxzJv44L7fBjX7Z6kH5Dbq2pRmR3JcMe0mXDDcwPWgHqT601uvydfqxtLHoCUmud0rUYp2dTs4p63VQmODSEY6kIdEof5PXhv7-TkOGRiokAiZKJvVdszT47O9RP1OLRhhA0IbEWfXETYX5IdpgSJxPNYtXEko9YTvBvvOPkHFNtUbAQWohFdK786OT4EM9BIc8A"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm tracking-tight text-[#2D2926] leading-tight">Autonomous DevOps</span><span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Enterprise Platform</span></div></div>
+</a><div class="mt-space-xs inline-flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-[#F2EDE6] border border-[#E5DED6] w-fit"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D97757] opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-[#D97757]"></span></span><span class="font-label-sm text-label-sm text-[#D97757] font-semibold tracking-wider">AI KERNEL v2.4 ACTIVE</span></div></div><nav class="flex flex-col gap-space-2xs px-space-sm mt-space-sm">
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="overview" href="autonomous_devops_main_control_center.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">dashboard</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Overview</span>
+      </div>
+      
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="pipelines" href="pipelines_autonomous_dag_workflows.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">account_tree</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Pipelines</span>
+      </div>
+      <span class="font-label-code-sm text-label-code-sm px-space-xs py-space-2xs rounded-full bg-[#F2EDE6] text-[#6B625B] border-[#E5DED6] border text-[11px]">148 active</span>
+    </a>
+<a aria-current="page" class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all bg-[#D97757]/12 text-[#99462A] border-[#D97757]/25 shadow-sm font-semibold" data-path="incidents" href="incident_8924_autonomous_fix.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#D97757]">warning</span>
+        <span class="font-headline-sm text-headline-sm font-semibold">Incidents</span>
+      </div>
+      <span class="font-label-code-sm text-label-code-sm px-space-xs py-space-2xs rounded-full bg-[#FDF0F0] text-[#C34A4A] border-[#C34A4A]/30 border text-[11px]">2 live</span>
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="ai-agents" href="ai_agents_fleet_orchestration.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">smart_toy</span>
+        <span class="font-headline-sm text-headline-sm font-medium">AI Agents</span>
+      </div>
+      <span class="relative flex h-2 w-2 mr-1"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D97757] opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-[#D97757]"></span></span>
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="pull-requests" href="pull_requests_code_review.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">call_merge</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Pull Requests</span>
+      </div>
+      <span class="font-label-code-sm text-label-code-sm px-space-xs py-space-2xs rounded-full bg-[#F2EDE6] text-[#6B625B] border-[#E5DED6] border text-[11px]">5 pending</span>
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="logs" href="logs_realtime_observability.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">terminal</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Logs</span>
+      </div>
+      
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="analytics" href="analytics_autonomous_velocity_mttr.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">monitoring</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Analytics</span>
+      </div>
+      
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="settings" href="settings_ai_autopilot_policies.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">tune</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Settings</span>
+      </div>
+      
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="profile" href="profile.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">account_circle</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Profile</span>
+      </div>
+      
+    </a>
+</nav></div><div class="p-space-md m-space-sm rounded-xl bg-[#F2EDE6] border border-[#E5DED6] shadow-sm"><div class="flex items-center justify-between mb-space-xs"><span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">System Telemetry</span><div class="flex items-center gap-space-2xs"><span class="h-1.5 w-1.5 rounded-full bg-[#D97757] animate-pulse"></span><span class="font-code-sm text-code-sm text-[#D97757] font-semibold">12ms</span></div></div><p class="font-body-sm text-body-sm text-[#2D2926] leading-tight font-medium">All Autonomous Workers Nominal</p><div class="flex items-center justify-between mt-space-sm pt-space-xs text-[#6B625B] border-t border-[#E5DED6]"><span class="font-code-sm text-code-sm text-[#6B625B]">Cluster US-East-1</span><span class="material-symbols-outlined text-sm text-[#D97757]">speed</span></div></div></aside><div class="pl-72 flex flex-col min-h-screen relative z-10"><header class="fixed top-0 left-72 right-0 h-16 bg-[#FFFFFF]/90 backdrop-blur-2xl border-b border-[#E5DED6] shadow-[0_1px_4px_rgba(45,41,38,0.03)] z-40 flex items-center justify-between px-space-lg gap-space-md"><div class="flex items-center gap-space-md flex-1 max-w-xl"><div class="relative w-full flex items-center"><span class="material-symbols-outlined absolute left-space-md text-[#6B625B] text-lg pointer-events-none">search</span><input class="w-full h-10 pl-10 pr-12 rounded-lg bg-[#F7F4EF] border border-[#E5DED6] text-[#2D2926] placeholder:text-[#6B625B] font-body-sm text-body-sm focus:outline-none focus:border-[#D97757] focus:bg-[#FFFFFF] transition-all" placeholder="Search repositories, traces, PRs, or agent logs..." type="text"/><kbd class="absolute right-space-md px-space-xs py-space-2xs bg-[#FFFFFF] border border-[#E5DED6] rounded font-code-sm text-code-sm text-[#6B625B] pointer-events-none">⌘K</kbd></div></div><div class="flex items-center gap-space-md"><div class="hidden xl:flex items-center gap-space-2xs px-space-md py-space-xs rounded-lg bg-[#FFFFFF] border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] transition-colors cursor-pointer shadow-sm"><span class="material-symbols-outlined text-base text-[#D97757]">source</span><span class="font-code-sm text-code-sm text-[#2D2926] font-medium">github.com/enterprise-core</span><span class="font-code-sm text-code-sm text-[#6B625B]">(12 repos)</span><span class="material-symbols-outlined text-sm text-[#6B625B] ml-space-2xs">expand_more</span></div><div class="hidden md:flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-[#FFFFFF] border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] transition-colors cursor-pointer shadow-sm"><span class="h-2 w-2 rounded-full bg-[#D97757] shadow-[0_0_6px_rgba(217,119,87,0.4)]"></span><span class="font-code-sm text-code-sm text-[#2D2926] font-medium">Prod-Cluster-Alpha</span><span class="material-symbols-outlined text-sm text-[#6B625B]">expand_more</span></div><div class="flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-[#F9ECE7] border border-[#D97757]/30 shadow-sm"><span class="h-2 w-2 rounded-full bg-[#D97757] animate-ping"></span><span class="font-label-sm text-label-sm text-[#99462a] font-semibold whitespace-nowrap">Agent: Autonomous Mode</span></div><div class="relative flex items-center justify-center w-10 h-10 rounded-lg text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] transition-colors cursor-pointer border border-transparent hover:border-[#E5DED6]"><span class="material-symbols-outlined text-xl">notifications</span><span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#D97757]"></span></div>
+<a href="profile.html" class="flex items-center justify-center w-10 h-10 rounded-lg text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] transition-colors cursor-pointer border border-[#E5DED6] shadow-sm" title="Operator Profile"><span class="material-symbols-outlined text-xl">account_circle</span></a></div></header><main class="w-full pt-16 bg-transparent flex-1"><div class="flex flex-col w-full">
+<!-- Interactive Toast / Live Agent Status Banner -->
+<div class="w-full px-space-lg pt-space-md">
+<div class="relative overflow-hidden rounded-xl bg-[#FFFFFF] border border-[#E5DED6] shadow-sm p-space-md flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md">
+<div class="absolute -right-16 -top-16 w-56 h-56 bg-[#D97757]/10 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-center gap-space-md z-10">
+<div class="relative flex items-center justify-center w-10 h-10 rounded-lg bg-[#F9ECE7] border border-[#D97757]/30 shadow-inner">
+<span class="material-symbols-outlined text-[#D97757] text-2xl">auto_fix_high</span>
+<span class="absolute -top-1 -right-1 flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D97757] opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-[#D97757]"></span>
+</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-sm flex-wrap">
+<span class="font-label-sm text-label-sm text-[#99462a] uppercase tracking-wider font-semibold">Autonomous Remediation Active</span>
+<span class="inline-flex items-center px-space-xs py-space-2xs rounded-full bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-label-sm text-label-sm font-semibold">Patch Verified (100%)</span>
+</div>
+<p class="font-body-sm text-body-sm text-[#6B625B] mt-space-2xs">
+            Autonomous Agent synthesized and validated patch in <span class="font-code-sm text-[#2D2926] font-bold">2m 14s</span>. PR #184 is passing CI checks and staged for automated promotion.
+          </p>
+</div>
+</div>
+<div class="flex items-center gap-space-xs z-10 self-end md:self-auto">
+<a href="pull_requests_code_review.html" class="inline-block"><button class="px-space-md py-space-xs rounded-lg bg-[#FFFFFF] hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-body-sm text-body-sm transition-all shadow-sm flex items-center gap-space-xs cursor-pointer font-medium" onclick="document.getElementById('explainModal').classList.toggle('hidden')">
+<span class="material-symbols-outlined text-base text-[#D97757]">chat_bubble</span>
+<span>Agent Rationale</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Incident Breadcrumb & Header Zone -->
+<div class="w-full px-space-lg pt-space-lg pb-space-sm flex flex-col gap-space-sm">
+<!-- Breadcrumb trail -->
+<nav class="flex items-center gap-space-xs font-code-sm text-code-sm text-[#6B625B]">
+<a class="hover:text-[#2D2926] transition-colors flex items-center gap-1" href="#">
+<span class="material-symbols-outlined text-xs">warning</span>
+        Incidents
+      </a>
+<span class="text-[#E5DED6]">/</span>
+<span class="text-[#D97757] font-semibold">INC-8924</span>
+<span class="text-[#E5DED6]">/</span>
+<span class="text-[#2D2926] font-medium">payment-service</span>
+</nav>
+<!-- Header Meta & Action CTA Stack -->
+<div class="flex flex-col xl:flex-row xl:items-center justify-between gap-space-lg">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center gap-space-md flex-wrap">
+<h1 class="font-headline-lg text-headline-lg text-[#2D2926] font-semibold tracking-tight">
+            Incident #8924: CI Pipeline Failure in payment-service
+          </h1>
+<span class="px-space-sm py-space-2xs rounded-full bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462a] font-label-sm text-label-sm font-semibold flex items-center gap-space-2xs shadow-sm">
+<span class="h-1.5 w-1.5 rounded-full bg-[#D97757] animate-pulse"></span>
+            PR Created • CI Passing
+          </span>
+<span class="px-space-sm py-space-2xs rounded-full bg-[#ffdad6] border border-[#ba1a1a]/30 text-[#ba1a1a] font-label-sm text-label-sm font-semibold flex items-center gap-space-2xs">
+<span class="material-symbols-outlined text-xs">error</span>
+            P1 - High Priority
+          </span>
+</div>
+<p class="font-body-md text-body-md text-[#6B625B]">
+          Triggered by GitHub Actions workflow <span class="font-code-sm text-[#D97757] font-semibold">#14092</span> · Commit <code class="font-code-sm text-[#2D2926] bg-[#FFFFFF] border border-[#E5DED6] px-space-xs py-space-2xs rounded">9f8a42b</code> by <span class="text-[#2D2926] font-semibold">@dev-sarah</span> on <code class="font-code-sm text-[#6B625B]">main</code>
+</p>
+</div>
+<!-- Action Buttons -->
+<div class="flex items-center gap-space-sm flex-wrap">
+<button class="px-space-md py-space-xs rounded-lg bg-[#FFFFFF] hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] font-body-sm text-body-sm flex items-center gap-space-xs transition-all shadow-sm cursor-pointer font-medium" onclick="window.scrollTo({top: 900, behavior: 'smooth'})">
+<span class="material-symbols-outlined text-base">picture_as_pdf</span>
+          Export Post-Mortem
+        </button>
+<button class="px-space-md py-space-xs rounded-lg bg-[#FFFFFF] hover:bg-[#ffdad6]/40 border border-[#E5DED6] text-[#ba1a1a] font-body-sm text-body-sm flex items-center gap-space-xs transition-all shadow-sm cursor-pointer font-medium" onclick="alert('Rollback dry-run triggered for commit 9f8a42b. Snapshot intact.')">
+<span class="material-symbols-outlined text-base">history</span>
+          Manual Rollback
+        </button>
+<a class="px-space-base py-space-xs rounded-lg bg-[#D97757] hover:bg-[#C66849] text-white font-headline-sm text-headline-sm font-semibold flex items-center gap-space-xs transition-all shadow-md shadow-[#D97757]/20 cursor-pointer" href="pull_requests_code_review.html">
+<span>Open Pull Request #184</span>
+<span class="material-symbols-outlined text-base">open_in_new</span>
+</a>
+</div>
+</div>
+<!-- Frosted Metadata Ribbon -->
+<div class="mt-space-sm grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-space-md p-space-md rounded-xl bg-[#FFFFFF] border border-[#E5DED6] shadow-sm">
+<div class="flex flex-col gap-space-2xs">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Detection to Fix</span>
+<span class="font-code-sm text-code-sm text-[#D97757] font-semibold flex items-center gap-space-2xs">
+<span class="material-symbols-outlined text-sm">timer</span>
+          2m 14s (Autonomous)
+        </span>
+</div>
+<div class="flex flex-col gap-space-2xs">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Target Branch</span>
+<span class="font-code-sm text-code-sm text-[#2D2926] font-medium flex items-center gap-space-2xs">
+<span class="material-symbols-outlined text-sm text-[#D97757]">alt_route</span>
+          refs/heads/main
+        </span>
+</div>
+<div class="flex flex-col gap-space-2xs">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Agent Engine</span>
+<span class="font-code-sm text-code-sm text-[#D97757] font-semibold">DevOps-LLM v2.4</span>
+</div>
+<div class="flex flex-col gap-space-2xs">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Confidence Score</span>
+<span class="font-code-sm text-code-sm text-[#D97757] font-bold">94% Certainty</span>
+</div>
+<div class="flex flex-col gap-space-2xs">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Blast Radius</span>
+<span class="font-code-sm text-code-sm text-[#2D2926] font-medium">Isolated (Node Module)</span>
+</div>
+<div class="flex flex-col gap-space-2xs">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Service Health</span>
+<span class="font-code-sm text-code-sm text-[#5B7C4B] font-semibold flex items-center gap-space-2xs">
+<span class="h-1.5 w-1.5 rounded-full bg-[#5B7C4B] animate-pulse"></span>
+          100% Zero Downtime
+        </span>
+</div>
+</div>
+</div>
+<!-- Primary Dashboard Grid -->
+<div class="w-full px-space-lg py-space-lg grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+<!-- Left / Main Column (65% width) -->
+<div class="lg:col-span-8 flex flex-col gap-space-xl">
+<!-- 1. Root Cause Analysis Card -->
+<section class="rounded-xl bg-[#FFFFFF] border border-[#E5DED6] shadow-sm overflow-hidden relative">
+<div class="absolute top-0 right-0 w-80 h-80 bg-[#D97757]/5 rounded-full blur-3xl pointer-events-none"></div>
+<div class="p-space-md bg-[#F2EDE6]/80 border-b border-[#E5DED6] flex items-center justify-between flex-wrap gap-space-sm">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[#D97757] text-xl" style="font-variation-settings: 'FILL' 1;">arrow_back_ios_new</span>
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-semibold tracking-tight">AI Root Cause Identified</span>
+<span class="px-space-xs py-space-2xs rounded-full bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462a] font-label-sm text-label-sm font-semibold">Deep AST Analysis</span>
+</div>
+<div class="flex items-center gap-space-md">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Agent Confidence</span>
+<div class="flex items-center gap-space-xs">
+<div class="w-24 h-2 rounded-full bg-[#E5DED6] overflow-hidden">
+<div class="bg-[#D97757] h-full rounded-full w-[94%]"></div>
+</div>
+<span class="font-code-sm text-code-sm text-[#D97757] font-bold">94%</span>
+</div>
+</div>
+</div>
+<div class="p-space-lg flex flex-col gap-space-lg">
+<!-- Key Details Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<div class="p-space-md rounded-lg bg-[#F7F4EF] border border-[#E5DED6] flex flex-col gap-space-xs">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Identified Root Conflict</span>
+<p class="font-body-sm text-body-sm text-[#2D2926] font-medium leading-relaxed">
+                Node dependency version incompatibility: <code class="font-code-sm text-[#99462a] font-semibold">@stripe/stripe-node v12.1.0</code> requires <code class="font-code-sm text-[#6B625B]">@types/node@^18.0.0</code>, which violates workspace spec (<code class="font-code-sm text-[#D97757] font-semibold">v20.11.0</code>).
+              </p>
+</div>
+<div class="p-space-md rounded-lg bg-[#F7F4EF] border border-[#E5DED6] flex flex-col gap-space-xs">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Impacted Target Manifests</span>
+<div class="flex flex-wrap gap-space-xs mt-space-2xs">
+<span class="font-code-sm text-code-sm px-space-xs py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] text-[#2D2926] flex items-center gap-1 font-medium shadow-2xs">
+<span class="material-symbols-outlined text-xs text-[#D97757]">description</span>
+                  package.json
+                </span>
+<span class="font-code-sm text-code-sm px-space-xs py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] text-[#2D2926] flex items-center gap-1 font-medium shadow-2xs">
+<span class="material-symbols-outlined text-xs text-[#D97757]">lock</span>
+                  package-lock.json
+                </span>
+<span class="font-code-sm text-code-sm px-space-xs py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] text-[#6B625B]">
+                  services/payment-webhook/**
+                </span>
+</div>
+</div>
+</div>
+<!-- Recommended Action Banner -->
+<div class="p-space-md rounded-lg bg-[#F9ECE7] border border-[#D97757]/30 flex flex-col gap-space-2xs">
+<div class="flex items-center gap-space-xs text-[#99462a]">
+<span class="material-symbols-outlined text-sm text-[#D97757]">lightbulb</span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-[#99462a] font-semibold">Automated Solution Strategy</span>
+</div>
+<p class="font-body-md text-body-md text-[#2D2926] leading-relaxed">
+              Update <code class="font-code-sm text-[#99462a] font-semibold">@stripe/stripe-node</code> to version <code class="font-code-sm text-[#D97757] font-bold">14.1.2</code> and regenerate the deterministic lockfile with strict semantic versioning resolution flags to maintain node20 LTS parity.
+            </p>
+</div>
+<!-- Quick Action Bar -->
+<div class="flex items-center justify-between flex-wrap gap-space-sm pt-space-xs">
+<div class="flex items-center gap-space-xs flex-wrap">
+<button class="px-space-md py-space-xs rounded-lg bg-[#FFFFFF] hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-body-sm text-body-sm flex items-center gap-space-xs transition-all shadow-sm cursor-pointer font-medium" onclick="alert('Patch deployed to ephemeral staging namespace: staging-payment-pr184')">
+<span class="material-symbols-outlined text-sm text-[#D97757]">rocket_launch</span>
+<span>Apply Fix to Staging</span>
+</button>
+<a class="px-space-md py-space-xs rounded-lg bg-[#FFFFFF] hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-body-sm text-body-sm flex items-center gap-space-xs transition-all shadow-sm font-medium" href="#code-diff">
+<span class="material-symbols-outlined text-sm text-[#D97757]">difference</span>
+<span>Review Unified Diff</span>
+</a>
+<button class="px-space-md py-space-xs rounded-lg bg-[#FFFFFF] hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] font-body-sm text-body-sm flex items-center gap-space-xs transition-all shadow-sm cursor-pointer font-medium" onclick="document.getElementById('explainModal').classList.remove('hidden')">
+<span class="material-symbols-outlined text-sm text-[#D97757]">psychology</span>
+<span>Explain via AI Chat</span>
+</button>
+</div>
+<span class="font-code-sm text-code-sm text-[#6B625B]">Synthesized in 14.8s</span>
+</div>
+</div>
+</section>
+<!-- 2. Error Logs Monospace Glass Terminal -->
+<section class="rounded-xl bg-[#FFFFFF] border border-[#E5DED6] shadow-sm overflow-hidden flex flex-col">
+<!-- Terminal Header -->
+<div class="px-space-md py-space-xs bg-[#F2EDE6] border-b border-[#E5DED6] flex items-center justify-between gap-space-base">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-2xs">
+<div class="w-3 h-3 rounded-full bg-[#ba1a1a]/40 border border-[#ba1a1a]/50"></div>
+<div class="w-3 h-3 rounded-full bg-[#B87A36]/40 border border-[#B87A36]/50"></div>
+<div class="w-3 h-3 rounded-full bg-[#5B7C4B]/40 border border-[#5B7C4B]/50"></div>
+</div>
+<div class="flex items-center gap-space-xs text-[#6B625B] font-code-sm text-code-sm">
+<span class="material-symbols-outlined text-sm">terminal</span>
+<span>build-ci.us-east-1.internal // stdout</span>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<div class="relative flex items-center">
+<input class="h-7 px-space-sm pl-7 rounded bg-[#FFFFFF] border border-[#E5DED6] text-[#2D2926] font-code-sm text-code-sm placeholder:text-[#6B625B] focus:outline-none focus:border-[#D97757] transition-all" id="logFilter" onkeyup="filterLogs()" placeholder="Filter logs (e.g. ERESOLVE)..." type="text"/>
+<span class="material-symbols-outlined absolute left-1.5 text-xs text-[#6B625B] pointer-events-none">search</span>
+</div>
+<button class="p-1.5 rounded hover:bg-[#FFFFFF] text-[#6B625B] hover:text-[#2D2926] transition-colors cursor-pointer" onclick="navigator.clipboard.writeText('npm ERR! code ERESOLVE\nnpm ERR! ERESOLVE could not resolve\nConflicting peer dependency: @types/node@^18.0.0'); alert('Logs copied to clipboard!')" title="Copy Raw Logs">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Terminal Body -->
+<div class="p-space-md bg-[#FAF7F2] font-code-sm text-code-sm overflow-x-auto max-h-80 flex flex-col gap-1 leading-relaxed border-t border-[#E5DED6]/50" id="terminalLogs">
+<div class="log-line text-[#6B625B] flex items-start gap-space-sm hover:bg-[#F2EDE6]/60 px-space-xs py-space-2xs rounded">
+<span class="text-[#E5DED6] select-none font-semibold">01</span>
+<span class="text-[#D97757] font-medium">[14:22:01]</span>
+<span class="text-[#6B625B] font-semibold">info:</span>
+<span>Triggering pipeline step: <span class="text-[#2D2926] font-medium">npm test -- --bail</span> (NodeJS v20.11.0 runtime)</span>
+</div>
+<div class="log-line text-[#ba1a1a] bg-[#ffdad6]/60 border-l-2 border-[#ba1a1a] flex items-start gap-space-sm px-space-xs py-space-2xs rounded">
+<span class="text-[#ba1a1a]/60 select-none font-semibold">02</span>
+<span class="text-[#ba1a1a]/80 font-medium">[14:22:04]</span>
+<span class="font-bold">ERR!</span>
+<span>npm ERR! code ERESOLVE</span>
+</div>
+<div class="log-line text-[#ba1a1a] bg-[#ffdad6]/60 border-l-2 border-[#ba1a1a] flex items-start gap-space-sm px-space-xs py-space-2xs rounded">
+<span class="text-[#ba1a1a]/60 select-none font-semibold">03</span>
+<span class="text-[#ba1a1a]/80 font-medium">[14:22:04]</span>
+<span class="font-bold">ERR!</span>
+<span>npm ERR! ERESOLVE could not resolve peer dependency tree</span>
+</div>
+<div class="log-line text-[#99462a] flex items-start gap-space-sm px-space-xs py-space-2xs rounded">
+<span class="text-[#E5DED6] select-none font-semibold">04</span>
+<span class="text-[#D97757] font-medium">[14:22:04]</span>
+<span class="text-[#ba1a1a] font-semibold">ERR!</span>
+<span>While resolving: <code class="text-[#99462a] bg-[#F2EDE6] px-1 rounded">@stripe/stripe-node@12.1.0</code></span>
+</div>
+<div class="log-line text-[#6B625B] flex items-start gap-space-sm px-space-xs py-space-2xs rounded">
+<span class="text-[#E5DED6] select-none font-semibold">05</span>
+<span class="text-[#D97757] font-medium">[14:22:04]</span>
+<span class="text-[#ba1a1a] font-semibold">ERR!</span>
+<span>Found: <code class="text-[#D97757] font-medium">@types/node@20.11.0</code> (node_modules/@types/node)</span>
+</div>
+<div class="log-line text-[#6B625B] flex items-start gap-space-sm px-space-xs py-space-2xs rounded">
+<span class="text-[#E5DED6] select-none font-semibold">06</span>
+<span class="text-[#D97757] font-medium">[14:22:04]</span>
+<span class="text-[#ba1a1a] font-semibold">ERR!</span>
+<span>Conflicting peer dependency: <code class="text-[#99462a] bg-[#F2EDE6] px-1 rounded">@types/node@^18.0.0</code></span>
+</div>
+<div class="log-line text-[#2D2926] bg-[#F2EDE6]/80 flex items-start gap-space-sm px-space-xs py-space-2xs rounded border border-[#E5DED6]/70">
+<span class="text-[#E5DED6] select-none font-semibold">07</span>
+<span class="text-[#D97757] font-medium">[14:22:05]</span>
+<span class="text-[#D97757] font-bold">[AUTONOMOUS-AGENT]</span>
+<span>Detected exit code 1. Stack trace fingerprint: <span class="underline decoration-[#D97757] font-medium">HASH_9a7d32b4f</span></span>
+</div>
+<div class="log-line text-[#99462a] bg-[#F9ECE7] flex items-start gap-space-sm px-space-xs py-space-2xs rounded border border-[#D97757]/20">
+<span class="text-[#E5DED6] select-none font-semibold">08</span>
+<span class="text-[#D97757] font-medium">[14:22:06]</span>
+<span class="text-[#D97757] font-bold">[AUTONOMOUS-AGENT]</span>
+<span>Querying AST knowledge base for fix recipes... Match found (99% similarity to CVE-RECIPE-492)</span>
+</div>
+</div>
+</section>
+<!-- 3. Proposed Fix & Unified Code Diff -->
+<section class="rounded-xl bg-[#FFFFFF] border border-[#E5DED6] shadow-sm overflow-hidden" id="code-diff">
+<div class="p-space-md bg-[#F2EDE6]/80 border-b border-[#E5DED6] flex items-center justify-between flex-wrap gap-space-sm">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[#D97757] text-xl">code_blocks</span>
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-semibold">Autonomous Patch Diff</span>
+<code class="font-code-sm text-code-sm px-space-xs py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] text-[#D97757] font-semibold">package.json</code>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="px-space-xs py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] text-[#6B625B] font-code-sm text-code-sm flex items-center gap-1 font-medium">
+<span class="material-symbols-outlined text-xs text-[#5B7C4B]">verified</span>
+              Lockfile SHA-512 Validated
+            </span>
+</div>
+</div>
+<div class="p-space-md font-code-sm text-code-sm flex flex-col gap-1 bg-[#FAF7F2]">
+<div class="text-[#6B625B] px-space-xs py-1">@@ -24,8 +24,8 @@ "dependencies": {</div>
+<!-- Unchanged Context line -->
+<div class="flex items-center px-space-xs py-space-2xs text-[#6B625B]">
+<span class="w-8 text-[#E5DED6] select-none font-semibold">24</span>
+<span class="w-4 select-none"> </span>
+<span>  "express": "^4.19.2",</span>
+</div>
+<!-- Red Deleted Line -->
+<div class="flex items-center px-space-xs py-space-2xs bg-[#ffdad6]/70 text-[#ba1a1a] rounded font-medium border-l-2 border-[#ba1a1a]">
+<span class="w-8 text-[#ba1a1a]/60 select-none font-semibold">25</span>
+<span class="w-4 select-none text-[#ba1a1a] font-bold">-</span>
+<span>  "@stripe/stripe-node": "^12.1.0",</span>
+</div>
+<!-- Green/Warm Amber Added Line -->
+<div class="flex items-center px-space-xs py-space-2xs bg-[#EAF3E7] text-[#5B7C4B] rounded font-medium border-l-2 border-[#5B7C4B]">
+<span class="w-8 text-[#5B7C4B]/60 select-none font-semibold">25</span>
+<span class="w-4 select-none text-[#5B7C4B] font-bold">+</span>
+<span>  "@stripe/stripe-node": "^14.1.2",</span>
+</div>
+<!-- Unchanged Context line -->
+<div class="flex items-center px-space-xs py-space-2xs text-[#6B625B]">
+<span class="w-8 text-[#E5DED6] select-none font-semibold">26</span>
+<span class="w-4 select-none"> </span>
+<span>  "dotenv": "^16.4.5",</span>
+</div>
+<!-- Unchanged Context line -->
+<div class="flex items-center px-space-xs py-space-2xs text-[#6B625B]">
+<span class="w-8 text-[#E5DED6] select-none font-semibold">27</span>
+<span class="w-4 select-none"> </span>
+<span>  "@types/node": "^20.11.0"</span>
+</div>
+</div>
+<div class="p-space-md bg-[#F2EDE6] border-t border-[#E5DED6] flex items-center justify-between text-body-sm text-body-sm flex-wrap gap-space-sm">
+<div class="flex items-center gap-space-md text-[#6B625B]">
+<span class="flex items-center gap-1 text-[#5B7C4B] font-code-sm font-semibold">
+<span class="material-symbols-outlined text-sm">add_circle</span> +4 additions
+            </span>
+<span class="flex items-center gap-1 text-[#ba1a1a] font-code-sm font-semibold">
+<span class="material-symbols-outlined text-sm">remove_circle</span> -2 deletions
+            </span>
+<span class="font-code-sm text-[#6B625B]">package-lock.json (142 changes auto-resolved)</span>
+</div>
+<button class="px-space-sm py-space-2xs rounded bg-[#FFFFFF] hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-code-sm text-code-sm transition-colors cursor-pointer font-medium shadow-2xs" onclick="alert('Raw diff downloaded to local environment.')">
+            Export .patch file
+          </button>
+</div>
+</section>
+<!-- 4. Pull Request & CI Validation Card -->
+<section class="rounded-xl bg-[#FFFFFF] border border-[#E5DED6] shadow-sm overflow-hidden flex flex-col" id="pr-section">
+<div class="p-space-md bg-[#F2EDE6]/80 border-b border-[#E5DED6] flex items-center justify-between flex-wrap gap-space-sm">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[#D97757] text-2xl">call_merge</span>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-semibold">Pull Request #184</span>
+<span class="px-space-xs py-space-2xs rounded-full bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462a] font-label-sm text-label-sm font-semibold">Open</span>
+</div>
+<span class="font-body-sm text-body-sm text-[#6B625B]">fix(deps): resolve stripe-node peer dependency conflict in payment-service</span>
+</div>
+</div>
+<div class="flex items-center gap-space-xs">
+<a class="px-space-sm py-space-xs rounded-lg bg-[#FFFFFF] hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-body-sm text-body-sm flex items-center gap-space-xs transition-colors font-medium shadow-2xs" href="#">
+<span class="material-symbols-outlined text-sm text-[#D97757]">open_in_new</span>
+<span>Open in GitHub</span>
+</a>
+</div>
+</div>
+<div class="p-space-lg flex flex-col gap-space-lg">
+<!-- CI Validation Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md">
+<!-- Checks status -->
+<div class="p-space-md rounded-lg bg-[#F7F4EF] border border-[#E5DED6] flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Automated Checks</span>
+<span class="material-symbols-outlined text-[#5B7C4B] text-lg">check_circle</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-bold">14 / 14 Passed</span>
+<span class="font-code-sm text-code-sm text-[#5B7C4B] font-semibold">All workflows green (48s)</span>
+</div>
+<!-- Unit & Integration Tests -->
+<div class="p-space-md rounded-lg bg-[#F7F4EF] border border-[#E5DED6] flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Test Suite Coverage</span>
+<span class="material-symbols-outlined text-[#D97757] text-lg">fact_check</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-bold">440 Tests Run</span>
+<span class="font-code-sm text-code-sm text-[#6B625B]">412 unit · 28 integration</span>
+</div>
+<!-- Security & Quality Gates -->
+<div class="p-space-md rounded-lg bg-[#F7F4EF] border border-[#E5DED6] flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Security Gates</span>
+<span class="material-symbols-outlined text-[#6B625B] text-lg">shield</span>
+</div>
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-bold">0 Vulnerabilities</span>
+<span class="font-code-sm text-code-sm text-[#6B625B]">Trivy · Snyk · SonarQube [A]</span>
+</div>
+</div>
+<!-- Bottom Action Confirmation -->
+<div class="flex items-center justify-between flex-wrap gap-space-md pt-space-xs">
+<div class="flex items-center gap-space-sm text-[#6B625B] font-body-sm text-body-sm">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D97757] opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#D97757]"></span>
+</span>
+<span>Self-merge window unlocks in <strong class="text-[#2D2926] font-code-sm">12m 46s</strong> or approve now:</span>
+</div>
+<div class="flex items-center gap-space-sm">
+<button class="px-space-lg py-space-sm rounded-lg bg-[#D97757] text-white font-headline-sm text-headline-sm font-semibold hover:bg-[#C66849] transition-all shadow-md shadow-[#D97757]/25 flex items-center gap-space-xs cursor-pointer" onclick="alert('Pull Request #184 manually merged into main branch. Triggering zero-downtime canary deployment.')">
+<span class="material-symbols-outlined text-base">done_all</span>
+<span>Merge Pull Request #184</span>
+</button></a>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column (35% width) -->
+<div class="lg:col-span-4 flex flex-col gap-space-xl">
+<!-- 1. AI Agent Activity Timeline -->
+<section class="rounded-xl bg-[#FFFFFF] border border-[#E5DED6] shadow-sm overflow-hidden flex flex-col">
+<div class="p-space-md bg-[#F2EDE6]/80 border-b border-[#E5DED6] flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[#D97757] text-lg">timeline</span>
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-semibold">Autonomous Execution Trail</span>
+</div>
+<span class="font-label-sm text-label-sm text-[#99462a] bg-[#F9ECE7] border border-[#D97757]/30 px-space-xs py-space-2xs rounded font-semibold">Live Loop</span>
+</div>
+<div class="p-space-lg flex flex-col gap-space-md">
+<!-- Timeline steps -->
+<div class="relative pl-6 flex flex-col gap-space-lg">
+<div class="absolute left-2.5 top-2 bottom-2 w-0.5 bg-[#E5DED6]"></div>
+<!-- Step 1 -->
+<div class="relative flex items-start gap-space-sm">
+<div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#ffdad6] border border-[#ba1a1a]/40 text-[#ba1a1a] flex items-center justify-center">
+<span class="material-symbols-outlined text-xs">close</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-code-sm text-code-sm text-[#6B625B]">14:22:05</span>
+<span class="font-body-sm text-body-sm text-[#2D2926] font-semibold">Failure detected via webhook</span>
+</div>
+<span class="font-body-sm text-body-sm text-[#6B625B]">GitHub Actions CI pipeline failed in exit-code 1</span>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="relative flex items-start gap-space-sm">
+<div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-xs">check</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-code-sm text-code-sm text-[#6B625B]">14:22:08</span>
+<span class="font-body-sm text-body-sm text-[#2D2926] font-semibold">Artifact logs &amp; AST analysis</span>
+</div>
+<span class="font-body-sm text-body-sm text-[#6B625B]">Captured stdout / stack trace fingerprint HASH_9a7d</span>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="relative flex items-start gap-space-sm">
+<div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-xs">check</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-code-sm text-code-sm text-[#6B625B]">14:22:15</span>
+<span class="font-body-sm text-body-sm text-[#2D2926] font-semibold">Conflict isolated</span>
+</div>
+<span class="font-body-sm text-body-sm text-[#6B625B]">Identified @stripe/stripe-node peer dependency constraint</span>
+</div>
+</div>
+<!-- Step 4 -->
+<div class="relative flex items-start gap-space-sm">
+<div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-xs">check</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-code-sm text-code-sm text-[#6B625B]">14:22:28</span>
+<span class="font-body-sm text-body-sm text-[#2D2926] font-semibold">Synthesized patch</span>
+</div>
+<span class="font-body-sm text-body-sm text-[#6B625B]">Updated package.json &amp; resolved clean lockfile</span>
+</div>
+</div>
+<!-- Step 5 -->
+<div class="relative flex items-start gap-space-sm">
+<div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-xs">check</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-code-sm text-code-sm text-[#6B625B]">14:22:45</span>
+<span class="font-body-sm text-body-sm text-[#2D2926] font-semibold">Ephemeral sandbox validation</span>
+</div>
+<span class="font-body-sm text-body-sm text-[#6B625B]">Spun runner pod in k8s-sandbox-cluster</span>
+</div>
+</div>
+<!-- Step 6 -->
+<div class="relative flex items-start gap-space-sm">
+<div class="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#5B7C4B] text-white flex items-center justify-center shadow-xs">
+<span class="material-symbols-outlined text-xs">done_all</span>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="font-code-sm text-code-sm text-[#6B625B]">14:23:45</span>
+<span class="font-body-sm text-body-sm text-[#99462a] font-bold">Generated PR #184</span>
+</div>
+<span class="font-body-sm text-body-sm text-[#6B625B]">Tagged @sre-oncall &amp; awaiting review</span>
+</div>
+</div>
+</div>
+<!-- Status badge at bottom of trail -->
+<div class="p-space-sm rounded-lg bg-[#F7F4EF] border border-[#E5DED6] flex items-center gap-space-xs text-[#6B625B] font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[#D97757] text-base">hourglass_top</span>
+<span>Awaiting human review or auto-merge in <strong class="text-[#2D2926]">15m</strong></span>
+</div>
+</div>
+</section>
+<!-- 2. Impact & Telemetry Glass Card -->
+<section class="rounded-xl bg-[#FFFFFF] border border-[#E5DED6] shadow-sm overflow-hidden flex flex-col">
+<div class="p-space-md bg-[#F2EDE6]/80 border-b border-[#E5DED6] flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[#D97757] text-lg">insights</span>
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-semibold">Operational Telemetry</span>
+</div>
+<span class="font-code-sm text-code-sm text-[#5B7C4B] font-semibold">SLO: 99.99%</span>
+</div>
+<div class="p-space-md flex flex-col gap-space-md">
+<!-- MTTR metric -->
+<div class="p-space-md rounded-lg bg-[#F7F4EF] border border-[#E5DED6] flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Autonomous MTTR</span>
+<span class="font-headline-lg text-headline-lg text-[#D97757] font-bold">1m 40s</span>
+</div>
+<div class="text-right">
+<span class="font-code-sm text-code-sm text-[#6B625B]">Target: &lt; 5m</span>
+<div class="font-code-sm text-code-sm text-[#5B7C4B] font-semibold">66% faster than SLA</div>
+</div>
+</div>
+<!-- Human effort counter -->
+<div class="p-space-md rounded-lg bg-[#F7F4EF] border border-[#E5DED6] flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">SRE Manual Touch</span>
+<span class="font-headline-lg text-headline-lg text-[#2D2926] font-bold">0 Clicks</span>
+</div>
+<span class="px-space-xs py-space-2xs rounded bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462a] font-label-sm text-label-sm font-semibold">Zero-touch</span>
+</div>
+<!-- Affected Services list -->
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Affected Downstream Services</span>
+<div class="flex flex-col gap-space-2xs">
+<div class="p-space-xs rounded bg-[#F7F4EF] border border-[#E5DED6] flex items-center justify-between font-code-sm text-code-sm">
+<span class="text-[#2D2926] font-medium">payment-gateway</span>
+<span class="text-[#5B7C4B] font-semibold flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-[#5B7C4B]"></span> 0% Drop</span>
+</div>
+<div class="p-space-xs rounded bg-[#F7F4EF] border border-[#E5DED6] flex items-center justify-between font-code-sm text-code-sm">
+<span class="text-[#2D2926] font-medium">checkout-frontend</span>
+<span class="text-[#5B7C4B] font-semibold flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-[#5B7C4B]"></span> Nominal</span>
+</div>
+</div>
+</div>
+<!-- Rollback Snapshot Card -->
+<div class="p-space-md rounded-lg bg-[#FAF7F2] border border-[#E5DED6] flex flex-col gap-space-2xs">
+<span class="font-label-sm text-label-sm text-[#6B625B] uppercase tracking-wider font-semibold">Automated Rollback Guard</span>
+<p class="font-body-sm text-body-sm text-[#6B625B]">
+              Pre-failure image snapshot <code class="font-code-sm text-[#2D2926] bg-[#FFFFFF] border border-[#E5DED6] px-1 rounded font-medium">sha-9f8a42b</code> cached in registry. Rollback ready with instant traffic shifting in &lt;100ms.
+            </p>
+</div>
+</div>
+</section>
+<!-- Related Active Incidents / On-Call SRE Badge -->
+<div class="p-space-md rounded-xl bg-[#FFFFFF] border border-[#E5DED6] shadow-sm flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-full bg-[#F9ECE7] border border-[#D97757]/30 flex items-center justify-center text-[#D97757]">
+<span class="material-symbols-outlined">support_agent</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-semibold">Alex Vance (SRE)</span>
+<span class="font-label-sm text-label-sm text-[#6B625B]">Primary On-Call Responder</span>
+</div>
+</div>
+<button class="px-space-sm py-space-xs rounded bg-[#FFFFFF] hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-code-sm text-code-sm transition-colors cursor-pointer font-medium shadow-2xs" onclick="alert('Incident escalation broadcast sent to Slack channel #devops-war-room')">
+          Page Team
+        </button>
+</div>
+</div>
+</div>
+<!-- AI Chat Rationale Flyout Modal (Toggleable) -->
+<div class="hidden fixed inset-0 z-50 bg-[#2D2926]/40 backdrop-blur-sm flex items-center justify-center p-space-base" id="explainModal">
+<div class="w-full max-w-2xl rounded-2xl bg-[#FFFFFF] border border-[#E5DED6] shadow-2xl p-space-lg flex flex-col gap-space-md">
+<div class="flex items-center justify-between pb-space-sm border-b border-[#E5DED6]">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-[#D97757] text-2xl">smart_toy</span>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-semibold">Autonomous Agent Rationale</span>
+<span class="font-code-sm text-code-sm text-[#6B625B]">Kernel v2.4 · Multi-turn inference log</span>
+</div>
+</div>
+<button class="p-1 rounded-lg text-[#6B625B] hover:text-[#2D2926] hover:bg-[#F2EDE6] cursor-pointer" onclick="document.getElementById('explainModal').classList.add('hidden')">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex flex-col gap-space-md max-h-96 overflow-y-auto pr-space-xs">
+<div class="p-space-base rounded-xl bg-[#F7F4EF] border border-[#E5DED6] flex flex-col gap-space-xs">
+<span class="font-label-sm text-label-sm text-[#99462a] uppercase tracking-wider font-semibold">Diagnostic Step 1: Parse AST</span>
+<p class="font-body-md text-body-md text-[#2D2926]">
+            "I parsed the NPM resolver tree and identified an incompatibility between node types 20.11.0 installed in root and stripe-node 12.1.0 which had a strict peer constraint of &lt;= 18.x.x."
+          </p>
+</div>
+<div class="p-space-base rounded-xl bg-[#F7F4EF] border border-[#E5DED6] flex flex-col gap-space-xs">
+<span class="font-label-sm text-label-sm text-[#D97757] uppercase tracking-wider font-semibold">Diagnostic Step 2: Compatibility Search</span>
+<p class="font-body-md text-body-md text-[#2D2926]">
+            "Stripe SDK release 14.1.2 officially introduced Node 20 LTS typings without breaking changes to webhook HMAC verification APIs used in this codebase."
+          </p>
+</div>
+<div class="p-space-base rounded-xl bg-[#F7F4EF] border border-[#E5DED6] flex flex-col gap-space-xs">
+<span class="font-label-sm text-label-sm text-[#5B7C4B] uppercase tracking-wider font-semibold">Diagnostic Step 3: Verification Sandbox</span>
+<p class="font-body-md text-body-md text-[#2D2926]">
+            "The ephemeral runner executed 412 unit tests and 28 integration tests in a clean pod container. Zero assertion failures observed. Code coverage maintained at 91.4%."
+          </p>
+</div>
+</div>
+<div class="flex items-center justify-end gap-space-sm pt-space-xs border-t border-[#E5DED6]">
+<button class="px-space-md py-space-xs rounded-lg bg-[#FFFFFF] hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-body-sm text-body-sm transition-all cursor-pointer font-medium" onclick="document.getElementById('explainModal').classList.add('hidden')">
+          Dismiss Rationale
+        </button>
+</div>
+</div>
+</div>
+<script>
+    function filterLogs() {
+      const input = document.getElementById('logFilter').value.toLowerCase();
+      const rows = document.querySelectorAll('#terminalLogs .log-line');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(input) ? 'flex' : 'none';
+      });
+    }
+  </script>
+</div></main></div></body></html>

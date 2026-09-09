@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@500;600;700&amp;family=Manrope:wght@400;500;600&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "background": "#F7F4EF",
+          "surface": "#FFFFFF",
+          "surface-container-lowest": "#FFFFFF",
+          "surface-container-low": "#FBF9F5",
+          "surface-container": "#F2EDE6",
+          "surface-container-high": "#EBE4DA",
+          "surface-container-highest": "#E5DED6",
+          "surface-bright": "#FFFFFF",
+          "primary": "#D97757",
+          "primary-container": "#F9ECE7",
+          "on-primary": "#FFFFFF",
+          "on-primary-container": "#7A2F15",
+          "primary-fixed": "#FFDBD0",
+          "primary-fixed-dim": "#FFB59E",
+          "secondary": "#6B625B",
+          "secondary-container": "#EDE0D7",
+          "on-secondary-container": "#4D453F",
+          "tertiary": "#B87A36",
+          "tertiary-container": "#F6EFE6",
+          "tertiary-fixed-dim": "#D0C4BC",
+          "on-surface": "#2D2926",
+          "on-surface-variant": "#6B625B",
+          "outline": "#88726C",
+          "outline-variant": "#E5DED6",
+          "error": "#C34A4A",
+          "error-container": "#FDF0F0",
+          "on-error-container": "#851D1D"
+        },
+        "borderRadius": {
+          "DEFAULT": "0.25rem",
+          "lg": "0.5rem",
+          "xl": "0.75rem",
+          "full": "9999px"
+        },
+        "spacing": {
+          "space-2xs": "0.125rem",
+          "space-xs": "0.25rem",
+          "space-sm": "0.5rem",
+          "space-md": "0.75rem",
+          "space-base": "1rem",
+          "space-lg": "1.5rem",
+          "space-xl": "2rem",
+          "space-2xl": "3rem"
+        },
+        "fontFamily": {
+          "headline-xl": ["Space Grotesk", "Inter", "sans-serif"],
+          "headline-lg": ["Space Grotesk", "Inter", "sans-serif"],
+          "headline-md": ["Space Grotesk", "Inter", "sans-serif"],
+          "headline-sm": ["Space Grotesk", "Inter", "sans-serif"],
+          "body-lg": ["Manrope", "Inter", "sans-serif"],
+          "body-md": ["Manrope", "Inter", "sans-serif"],
+          "body-sm": ["Manrope", "Inter", "sans-serif"],
+          "label-caps": ["JetBrains Mono", "monospace"],
+          "label-code-md": ["JetBrains Mono", "monospace"],
+          "label-code-sm": ["JetBrains Mono", "monospace"]
+        },
+        "fontSize": {
+          "headline-xl": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.03em", "fontWeight": "700" }],
+          "headline-lg": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+          "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+          "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+          "body-lg": ["16px", { "lineHeight": "26px", "letterSpacing": "0em", "fontWeight": "400" }],
+          "body-md": ["14px", { "lineHeight": "22px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+          "body-sm": ["12px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "400" }],
+          "label-caps": ["10px", { "lineHeight": "14px", "letterSpacing": "0.08em", "fontWeight": "600" }],
+          "label-code-md": ["12px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+          "label-code-sm": ["11px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }]
+        }
+      }
+    }
+  }</script></head><body class="bg-[#F7F4EF] text-[#2D2926] font-body-md text-body-md antialiased selection:bg-[#D97757]/20"><div class="fixed inset-0 pointer-events-none z-0 overflow-hidden"><div class="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-[#D97757]/6 blur-3xl"></div><div class="absolute top-1/4 -right-40 w-96 h-96 rounded-full bg-[#B87A36]/6 blur-3xl"></div><div class="absolute -bottom-40 left-1/3 w-96 h-96 rounded-full bg-[#D97757]/5 blur-3xl"></div></div><aside class="fixed left-0 top-0 h-full w-72 bg-[#FFFFFF] backdrop-blur-2xl z-50 flex flex-col justify-between border-r border-[#E5DED6] shadow-[0_1px_16px_rgba(45,41,38,0.04)]"><div class="flex flex-col"><div class="px-space-base py-space-lg flex flex-col gap-space-xs"><a href="autonomous_devops_main_control_center.html" class="cursor-pointer hover:opacity-85 transition-opacity block">
+<div class="flex items-center gap-space-sm"><div class="w-8 h-8 rounded-lg bg-[#D97757]/10 border border-[#D97757]/25 flex items-center justify-center text-[#D97757] shadow-sm"><span class="material-symbols-outlined text-xl">auto_mode</span></div><div class="flex flex-col"><span class="font-headline-sm text-headline-sm tracking-tight text-[#2D2926] leading-tight font-semibold">Autonomous DevOps</span><span class="font-label-caps text-label-caps text-[#6B625B] uppercase tracking-wider">Enterprise Platform</span></div></div>
+</a><div class="mt-space-xs inline-flex items-center gap-space-xs px-space-sm py-space-2xs rounded-full bg-[#F9ECE7] border border-[#D97757]/30 w-fit"><span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D97757] opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-[#D97757]"></span></span><span class="font-label-code-sm text-label-code-sm text-[#99462A] font-semibold">AI KERNEL v2.4 ACTIVE</span></div></div><nav class="flex flex-col gap-space-2xs px-space-sm mt-space-sm">
+<a aria-current="page" class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all bg-[#D97757]/12 text-[#99462A] border-[#D97757]/25 shadow-sm font-semibold" data-path="overview" href="autonomous_devops_main_control_center.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#D97757]">dashboard</span>
+        <span class="font-headline-sm text-headline-sm font-semibold">Overview</span>
+      </div>
+      
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="pipelines" href="pipelines_autonomous_dag_workflows.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">account_tree</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Pipelines</span>
+      </div>
+      <span class="font-label-code-sm text-label-code-sm px-space-xs py-space-2xs rounded-full bg-[#F2EDE6] text-[#6B625B] border-[#E5DED6] border text-[11px]">148 active</span>
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="incidents" href="incident_8924_autonomous_fix.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">warning</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Incidents</span>
+      </div>
+      <span class="font-label-code-sm text-label-code-sm px-space-xs py-space-2xs rounded-full bg-[#FDF0F0] text-[#C34A4A] border-[#C34A4A]/30 border text-[11px]">2 live</span>
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="ai-agents" href="ai_agents_fleet_orchestration.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">smart_toy</span>
+        <span class="font-headline-sm text-headline-sm font-medium">AI Agents</span>
+      </div>
+      <span class="relative flex h-2 w-2 mr-1"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D97757] opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-[#D97757]"></span></span>
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="pull-requests" href="pull_requests_code_review.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">call_merge</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Pull Requests</span>
+      </div>
+      <span class="font-label-code-sm text-label-code-sm px-space-xs py-space-2xs rounded-full bg-[#F2EDE6] text-[#6B625B] border-[#E5DED6] border text-[11px]">5 pending</span>
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="logs" href="logs_realtime_observability.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">terminal</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Logs</span>
+      </div>
+      
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="analytics" href="analytics_autonomous_velocity_mttr.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">monitoring</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Analytics</span>
+      </div>
+      
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="settings" href="settings_ai_autopilot_policies.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">tune</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Settings</span>
+      </div>
+      
+    </a>
+<a  class="group flex items-center justify-between px-space-base py-space-sm rounded-lg border transition-all text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] border-transparent hover:border-[#E5DED6]" data-path="profile" href="profile.html">
+      <div class="flex items-center gap-space-md">
+        <span class="material-symbols-outlined text-xl text-[#6B625B] group-hover:text-[#2D2926]">account_circle</span>
+        <span class="font-headline-sm text-headline-sm font-medium">Profile</span>
+      </div>
+      
+    </a>
+</nav></div><div class="p-space-base m-space-base rounded-xl bg-[#FBF9F5] border border-[#E5DED6] shadow-sm"><div class="flex items-center justify-between mb-space-xs"><span class="font-label-caps text-label-caps text-[#6B625B] uppercase">System Telemetry</span><div class="flex items-center gap-space-2xs"><span class="h-1.5 w-1.5 rounded-full bg-[#D97757] animate-pulse"></span><span class="font-label-code-sm text-label-code-sm text-[#99462A] font-medium">12ms</span></div></div><p class="font-body-sm text-body-sm text-[#2D2926] leading-tight font-medium">All Autonomous Workers Nominal</p><div class="flex items-center justify-between mt-space-sm pt-space-xs text-[#6B625B] border-t border-[#E5DED6]"><span class="font-label-code-sm text-label-code-sm text-[#6B625B]">Cluster US-East-1</span><span class="material-symbols-outlined text-sm text-[#D97757]">speed</span></div></div></aside><div class="pl-72 flex flex-col min-h-screen relative z-10"><header class="fixed top-0 left-72 right-0 h-16 bg-[#FFFFFF]/95 backdrop-blur-2xl border-b border-[#E5DED6] shadow-[0_1px_10px_rgba(45,41,38,0.03)] z-40 flex items-center justify-between px-space-lg gap-space-base"><div class="flex items-center gap-space-base flex-1 max-w-xl"><div class="relative w-full flex items-center"><span class="material-symbols-outlined absolute left-space-md text-[#6B625B] text-lg pointer-events-none">search</span><input class="w-full h-10 pl-10 pr-12 rounded-lg bg-[#F7F4EF] border border-[#E5DED6] text-[#2D2926] placeholder:text-[#6B625B] font-body-sm text-body-sm focus:outline-none focus:border-[#D97757] focus:bg-[#FFFFFF] transition-all shadow-inner" placeholder="Search repositories, traces, PRs, or agent logs..." type="text"/><kbd class="absolute right-space-md px-space-xs py-space-2xs bg-[#FFFFFF] border border-[#E5DED6] rounded font-label-code-sm text-label-code-sm text-[#6B625B] pointer-events-none shadow-sm">⌘K</kbd></div></div><div class="flex items-center gap-space-md"><div class="hidden xl:flex items-center gap-space-2xs px-space-md py-space-xs rounded-lg bg-[#FFFFFF] border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] hover:bg-[#F2EDE6] transition-colors cursor-pointer shadow-sm"><span class="material-symbols-outlined text-base text-[#D97757]">source</span><span class="font-label-code-md text-label-code-md text-[#2D2926] font-medium">github.com/enterprise-core</span><span class="font-label-code-sm text-label-code-sm text-[#6B625B]">(12 repos)</span><span class="material-symbols-outlined text-sm text-[#6B625B] ml-space-2xs">expand_more</span></div><div class="hidden md:flex items-center gap-space-xs px-space-md py-space-xs rounded-lg bg-[#FFFFFF] border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] hover:bg-[#F2EDE6] transition-colors cursor-pointer shadow-sm"><span class="h-2 w-2 rounded-full bg-[#D97757] shadow-[0_0_6px_rgba(217,119,87,0.4)]"></span><span class="font-label-code-md text-label-code-md text-[#2D2926] font-medium">Prod-Cluster-Alpha</span><span class="material-symbols-outlined text-sm text-[#6B625B]">expand_more</span></div><div class="flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-[#F9ECE7] border border-[#D97757]/30 shadow-sm"><span class="h-2 w-2 rounded-full bg-[#D97757] animate-ping"></span><span class="font-label-code-sm text-label-code-sm text-[#99462A] font-semibold whitespace-nowrap">Agent: Autonomous Mode</span></div><div class="relative flex items-center justify-center w-10 h-10 rounded-lg text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] transition-colors cursor-pointer border border-[#E5DED6] shadow-sm"><span class="material-symbols-outlined text-xl">notifications</span><span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#C34A4A]"></span></div>
+<a href="profile.html" class="flex items-center justify-center w-10 h-10 rounded-lg text-[#6B625B] hover:bg-[#F2EDE6] hover:text-[#2D2926] transition-colors cursor-pointer border border-[#E5DED6] shadow-sm" title="Operator Profile"><span class="material-symbols-outlined text-xl">account_circle</span></a></div></header><main class="w-full pt-16 bg-transparent flex-1"><div class="flex flex-col w-full px-space-lg py-space-lg gap-space-xl">
+<!-- Hero Section (Atmospheric Header) -->
+<section class="relative overflow-hidden rounded-xl bg-[#FFFFFF] border border-[#E5DED6] p-space-xl shadow-[0_4px_24px_rgba(45,41,38,0.05)]">
+<div class="absolute -right-24 -top-24 w-96 h-96 bg-[#D97757]/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="absolute right-1/3 -bottom-24 w-72 h-72 bg-[#B87A36]/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-space-lg">
+<div class="flex flex-col max-w-3xl">
+<!-- Live Telemetry Pill -->
+<div class="inline-flex items-center gap-space-xs px-space-md py-space-2xs rounded-full bg-[#F9ECE7] border border-[#D97757]/30 shadow-sm w-fit mb-space-md">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D97757] opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-[#D97757]"></span>
+</span>
+<span class="font-label-code-sm text-label-code-sm text-[#99462A] tracking-wide uppercase font-semibold">Live Agent Orchestration: 99.4% autonomous resolution rate (24h)</span>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-[#2D2926] tracking-tight">
+          Autonomous DevOps Control Center
+        </h1>
+<p class="font-body-lg text-body-lg text-[#6B625B] mt-space-xs max-w-2xl">
+          AI-powered real-time detection, self-healing diagnostics, and deterministic remediation across distributed CI/CD workflows.
+        </p>
+</div>
+<!-- Action Cluster -->
+<div class="flex flex-wrap items-center gap-space-md shrink-0">
+<a href="incident_8924_autonomous_fix.html" class="inline-block"><a href="incident_8924_autonomous_fix.html" class="inline-block"><button class="relative group overflow-hidden px-space-lg py-space-sm rounded-lg bg-[#D97757] hover:bg-[#C66849] text-[#FFFFFF] font-headline-sm text-headline-sm font-bold shadow-[0_4px_16px_rgba(217,119,87,0.35)] hover:shadow-[0_6px_22px_rgba(217,119,87,0.45)] transition-all flex items-center gap-space-sm active:scale-95">
+<span class="material-symbols-outlined text-xl text-[#FFFFFF]">fork_right</span>
+<span>Connect Repository</span>
+<div class="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+</button>
+<button class="px-space-lg py-space-sm rounded-lg bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] hover:bg-[#EBE4DA] transition-all font-headline-sm text-headline-sm font-medium flex items-center gap-space-sm shadow-sm active:scale-95">
+<span class="relative flex items-center justify-center">
+<span class="material-symbols-outlined text-xl text-[#C34A4A]">notification_important</span>
+<span class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#C34A4A] animate-ping"></span>
+</span>
+<span>View Incidents</span>
+<span class="font-label-code-sm text-label-code-sm px-space-xs rounded bg-[#FDF0F0] text-[#C34A4A] border border-[#C34A4A]/30 font-semibold">2 live</span>
+</button></a>
+</div>
+</div>
+</section>
+<!-- KPI Grid (4 Cards) -->
+<section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-base">
+<!-- Card 1: Total Pipelines -->
+<div class="relative overflow-hidden rounded-xl bg-[#FFFFFF] border border-[#E5DED6] p-space-base shadow-[0_2px_12px_rgba(45,41,38,0.04)] transition-transform hover:-translate-y-1 hover:border-[#D97757]/40 hover:shadow-md">
+<div class="absolute top-0 right-0 w-32 h-32 bg-[#D97757]/5 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-start justify-between">
+<span class="font-label-caps text-label-caps uppercase text-[#6B625B] tracking-wider font-semibold">Total Pipelines</span>
+<div class="p-space-xs rounded-lg bg-[#F9ECE7] text-[#D97757] border border-[#D97757]/30 shadow-sm">
+<span class="material-symbols-outlined text-xl">account_tree</span>
+</div>
+</div>
+<div class="mt-space-md flex items-baseline gap-space-sm">
+<span class="font-headline-xl text-headline-xl text-[#2D2926] font-bold tracking-tight">1,428</span>
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-space-2xs rounded-full bg-[#F9ECE7] text-[#99462A] border border-[#D97757]/30 font-label-code-sm text-label-code-sm font-semibold">
+<span class="material-symbols-outlined text-xs">trending_up</span>+12.4%
+        </span>
+</div>
+<div class="mt-space-sm pt-space-xs flex items-center justify-between text-[#6B625B] border-t border-[#E5DED6]">
+<span class="font-body-sm text-body-sm">Across 38 microservice repos</span>
+<span class="font-label-code-sm text-label-code-sm text-[#99462A] font-medium">All clusters</span>
+</div>
+<div class="mt-space-xs w-full bg-[#F2EDE6] rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#D97757] h-1.5 rounded-full w-[84%]"></div>
+</div>
+</div>
+<!-- Card 2: Failed Pipelines -->
+<div class="relative overflow-hidden rounded-xl bg-[#FFFFFF] border border-[#E5DED6] p-space-base shadow-[0_2px_12px_rgba(45,41,38,0.04)] transition-transform hover:-translate-y-1 hover:border-[#C34A4A]/40 hover:shadow-md">
+<div class="absolute top-0 right-0 w-32 h-32 bg-[#C34A4A]/5 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-start justify-between">
+<span class="font-label-caps text-label-caps uppercase text-[#6B625B] tracking-wider font-semibold">Failed Pipelines</span>
+<div class="p-space-xs rounded-lg bg-[#FDF0F0] text-[#C34A4A] border border-[#C34A4A]/30 shadow-sm">
+<span class="material-symbols-outlined text-xl">warning</span>
+</div>
+</div>
+<div class="mt-space-md flex items-baseline gap-space-sm">
+<span class="font-headline-xl text-headline-xl text-[#2D2926] font-bold tracking-tight">14</span>
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-space-2xs rounded-full bg-[#F9ECE7] text-[#99462A] border border-[#D97757]/30 font-label-code-sm text-label-code-sm font-semibold">
+<span class="material-symbols-outlined text-xs">trending_down</span>-42% reduction
+        </span>
+</div>
+<div class="mt-space-sm pt-space-xs flex items-center justify-between text-[#6B625B] border-t border-[#E5DED6]">
+<span class="font-body-sm text-body-sm text-[#C34A4A] font-medium">2 actively being diagnosed</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B]">12 resolved</span>
+</div>
+<div class="mt-space-xs w-full bg-[#F2EDE6] rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#C34A4A] h-1.5 rounded-full w-[18%]"></div>
+</div>
+</div>
+<!-- Card 3: Automatically Repaired -->
+<div class="relative overflow-hidden rounded-xl bg-[#FFFFFF] border border-[#E5DED6] p-space-base shadow-[0_2px_12px_rgba(45,41,38,0.04)] transition-transform hover:-translate-y-1 hover:border-[#B87A36]/40 hover:shadow-md">
+<div class="absolute top-0 right-0 w-32 h-32 bg-[#B87A36]/5 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-start justify-between">
+<span class="font-label-caps text-label-caps uppercase text-[#6B625B] tracking-wider font-semibold">Auto Repaired</span>
+<div class="p-space-xs rounded-lg bg-[#F6EFE6] text-[#B87A36] border border-[#B87A36]/30 shadow-sm">
+<span class="material-symbols-outlined text-xl">auto_fix_high</span>
+</div>
+</div>
+<div class="mt-space-md flex items-baseline gap-space-sm">
+<span class="font-headline-xl text-headline-xl text-[#2D2926] font-bold tracking-tight">132</span>
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-space-2xs rounded-full bg-[#F6EFE6] text-[#B87A36] border border-[#B87A36]/30 font-label-code-sm text-label-code-sm font-semibold">
+<span class="material-symbols-outlined text-xs">auto_awesome</span>+18.2% auto
+        </span>
+</div>
+<div class="mt-space-sm pt-space-xs flex items-center justify-between text-[#6B625B] border-t border-[#E5DED6]">
+<span class="font-body-sm text-body-sm text-[#B87A36] font-medium">Zero human intervention</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B]">v2.4 Kernel</span>
+</div>
+<div class="mt-space-xs w-full bg-[#F2EDE6] rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#B87A36] h-1.5 rounded-full w-[91%]"></div>
+</div>
+</div>
+<!-- Card 4: Recovery Rate -->
+<div class="relative overflow-hidden rounded-xl bg-[#FFFFFF] border border-[#E5DED6] p-space-base shadow-[0_2px_12px_rgba(45,41,38,0.04)] transition-transform hover:-translate-y-1 hover:border-[#D97757]/40 hover:shadow-md">
+<div class="absolute top-0 right-0 w-32 h-32 bg-[#D97757]/5 rounded-full blur-2xl pointer-events-none"></div>
+<div class="flex items-start justify-between">
+<span class="font-label-caps text-label-caps uppercase text-[#6B625B] tracking-wider font-semibold">Recovery Rate</span>
+<div class="p-space-xs rounded-lg bg-[#F9ECE7] text-[#D97757] border border-[#D97757]/30 shadow-sm">
+<span class="material-symbols-outlined text-xl">bolt</span>
+</div>
+</div>
+<div class="mt-space-md flex items-baseline gap-space-sm">
+<span class="font-headline-xl text-headline-xl text-[#2D2926] font-bold tracking-tight">94.8%</span>
+<span class="inline-flex items-center gap-space-2xs px-space-xs py-space-2xs rounded-full bg-[#F9ECE7] text-[#99462A] border border-[#D97757]/30 font-label-code-sm text-label-code-sm font-semibold">
+<span class="material-symbols-outlined text-xs">timer</span>avg MTTR: 1.8m
+        </span>
+</div>
+<div class="mt-space-sm pt-space-xs flex items-center justify-between text-[#6B625B] border-t border-[#E5DED6]">
+<span class="font-body-sm text-body-sm">Down from 34m manual</span>
+<span class="font-label-code-sm text-label-code-sm text-[#99462A] font-medium">-94.7% MTTR</span>
+</div>
+<div class="mt-space-xs w-full bg-[#F2EDE6] rounded-full h-1.5 overflow-hidden">
+<div class="bg-[#D97757] h-1.5 rounded-full w-[95%]"></div>
+</div>
+</div>
+</section>
+<!-- Split Panel: Pipeline Health & Live AI Agent Stream -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-base">
+<!-- Left 7 cols: Pipeline Health & Autonomous Velocity Chart -->
+<section class="lg:col-span-7 flex flex-col rounded-xl bg-[#FFFFFF] border border-[#E5DED6] p-space-lg shadow-[0_2px_16px_rgba(45,41,38,0.04)] relative overflow-hidden">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm mb-space-base">
+<div>
+<h2 class="font-headline-md text-headline-md text-[#2D2926] font-semibold tracking-tight">Pipeline Health &amp; Autonomous Velocity</h2>
+<p class="font-body-sm text-body-sm text-[#6B625B]">Continuous integration build volume vs. autonomous agent mitigation curve</p>
+</div>
+<div class="flex items-center gap-space-xs bg-[#F2EDE6] border border-[#E5DED6] p-space-2xs rounded-lg">
+<button class="px-space-sm py-space-2xs rounded font-label-code-sm text-label-code-sm bg-[#D97757] text-[#FFFFFF] font-bold shadow-sm">24H</button>
+<button class="px-space-sm py-space-2xs rounded font-label-code-sm text-label-code-sm text-[#6B625B] hover:text-[#2D2926]">7D</button>
+<button class="px-space-sm py-space-2xs rounded font-label-code-sm text-label-code-sm text-[#6B625B] hover:text-[#2D2926]">30D</button>
+</div>
+</div>
+<!-- 4 Key Summary Metrics Strip -->
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-space-sm p-space-md rounded-lg bg-[#FBF9F5] border border-[#E5DED6] mb-space-md shadow-sm">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps uppercase text-[#6B625B] font-semibold">Success Rate</span>
+<span class="font-headline-sm text-headline-sm text-[#D97757] font-bold">98.6%</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B] mt-space-2xs">Target: &gt;98%</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps uppercase text-[#6B625B] font-semibold">Failure Rate</span>
+<span class="font-headline-sm text-headline-sm text-[#C34A4A] font-bold">1.4%</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B] mt-space-2xs">-0.8% today</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps uppercase text-[#6B625B] font-semibold">Avg Recovery</span>
+<span class="font-headline-sm text-headline-sm text-[#2D2926] font-bold">1m 48s</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B] mt-space-2xs">Autonomous</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps uppercase text-[#6B625B] font-semibold">Auto Resolution</span>
+<span class="font-headline-sm text-headline-sm text-[#B87A36] font-bold">92.4%</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B] mt-space-2xs">132 / 146 runs</span>
+</div>
+</div>
+<!-- Line & Area Telemetry SVG Chart -->
+<div class="relative w-full h-64 mt-space-xs flex flex-col justify-end">
+<svg class="w-full h-full overflow-visible" preserveaspectratio="none" viewbox="0 0 700 220">
+<defs>
+<lineargradient id="terracottaArea" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#D97757" stop-opacity="0.22"></stop>
+<stop offset="100%" stop-color="#D97757" stop-opacity="0.0"></stop>
+</lineargradient>
+<lineargradient id="amberArea" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#6B625B" stop-opacity="0.14"></stop>
+<stop offset="100%" stop-color="#6B625B" stop-opacity="0.0"></stop>
+</lineargradient>
+</defs>
+<!-- Subtle horizontal grid lines -->
+<line class="text-[#E5DED6]" stroke="currentColor" stroke-dasharray="3,3" x1="0" x2="700" y1="20" y2="20"></line>
+<line class="text-[#E5DED6]" stroke="currentColor" stroke-dasharray="3,3" x1="0" x2="700" y1="75" y2="75"></line>
+<line class="text-[#E5DED6]" stroke="currentColor" stroke-dasharray="3,3" x1="0" x2="700" y1="130" y2="130"></line>
+<line class="text-[#E5DED6]" stroke="currentColor" x1="0" x2="700" y1="185" y2="185"></line>
+<!-- Secondary Muted Area (AI Autonomous Fixes) -->
+<polygon fill="url(#amberArea)" points="0,195 0,160 70,150 140,140 210,148 280,120 350,110 420,95 490,90 560,70 630,65 700,50 700,195"></polygon>
+<!-- Terracotta Area (Successful Builds) -->
+<polygon fill="url(#terracottaArea)" points="0,195 0,110 70,95 140,85 210,92 280,60 350,55 420,40 490,45 560,30 630,25 700,20 700,195"></polygon>
+<!-- Secondary Wave Line (AI Autonomous Fixes) -->
+<path d="M 0,160 Q 35,155 70,150 T 140,140 T 210,148 T 280,120 T 350,110 T 420,95 T 490,90 T 560,70 T 630,65 T 700,50" fill="none" stroke="#6B625B" stroke-width="2.5"></path>
+<!-- Terracotta Primary Line (Successful Builds) -->
+<path d="M 0,110 Q 35,102 70,95 T 140,85 T 210,92 T 280,60 T 350,55 T 420,40 T 490,45 T 560,30 T 630,25 T 700,20" fill="none" stroke="#D97757" stroke-width="2.5"></path>
+<!-- Interactive Points on Terracotta -->
+<circle class="animate-pulse" cx="280" cy="60" fill="#D97757" r="4.5"></circle>
+<circle cx="560" cy="30" fill="#D97757" r="4.5"></circle>
+<circle cx="700" cy="20" fill="#D97757" r="4.5"></circle>
+<!-- Interactive Points on Secondary -->
+<circle cx="280" cy="120" fill="#6B625B" r="4"></circle>
+<circle class="animate-pulse" cx="560" cy="70" fill="#6B625B" r="4"></circle>
+<circle cx="700" cy="50" fill="#6B625B" r="4"></circle>
+</svg>
+<!-- Time Axis Labels -->
+<div class="flex justify-between items-center text-[#6B625B] font-label-code-sm text-label-code-sm pt-space-xs mt-space-2xs">
+<span>00:00</span>
+<span>04:00</span>
+<span>08:00</span>
+<span>12:00</span>
+<span>16:00</span>
+<span>20:00</span>
+<span>Now (Live)</span>
+</div>
+</div>
+<!-- Chart Legend & SRE Context -->
+<div class="flex flex-wrap items-center justify-between pt-space-sm mt-space-sm gap-space-sm border-t border-[#E5DED6]">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="w-3 h-1.5 rounded-full bg-[#D97757]"></span>
+<span class="font-label-code-sm text-label-code-sm text-[#2D2926] font-medium">Successful Builds (1,414)</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="w-3 h-1.5 rounded-full bg-[#6B625B]"></span>
+<span class="font-label-code-sm text-label-code-sm text-[#2D2926] font-medium">AI Autonomous Fixes (132)</span>
+</div>
+</div>
+<div class="flex items-center gap-space-xs text-[#6B625B] font-label-code-sm text-label-code-sm">
+<span class="material-symbols-outlined text-sm text-[#D97757]">cloud_done</span>
+<span>Cluster-Alpha Telemetry Ingestion Active</span>
+</div>
+</div>
+</section>
+<!-- Right 5 cols: Live AI Agent Activity Stream -->
+<section class="lg:col-span-5 flex flex-col rounded-xl bg-[#FFFFFF] border border-[#E5DED6] p-space-lg shadow-[0_2px_16px_rgba(45,41,38,0.04)] relative overflow-hidden">
+<!-- Header with Pulsating Radar Dot -->
+<div class="flex items-center justify-between pb-space-sm mb-space-sm border-b border-[#E5DED6]">
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs">
+<span class="relative flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D97757] opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-[#D97757]"></span>
+</span>
+<h2 class="font-headline-sm text-headline-sm text-[#2D2926] font-semibold tracking-tight">AI Remediation Agent</h2>
+</div>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B] pl-space-md">Live Task Orchestration Stream</span>
+</div>
+<div class="px-space-sm py-space-2xs rounded-full bg-[#F9ECE7] text-[#99462A] border border-[#D97757]/30 font-label-code-sm text-label-code-sm font-semibold tracking-wide">
+          PROCESSING #INC-8924
+        </div>
+</div>
+<!-- Stepper / Timeline Container -->
+<div class="flex-1 overflow-y-auto pr-space-xs space-y-space-sm max-h-[310px]">
+<!-- Step 1: Failure detected -->
+<div class="flex items-start gap-space-sm group">
+<div class="flex flex-col items-center mt-1">
+<span class="w-5 h-5 rounded-full bg-[#F9ECE7] text-[#D97757] border border-[#D97757]/40 flex items-center justify-center font-label-code-sm text-[10px] font-bold">✓</span>
+<span class="w-0.5 h-6 bg-[#D97757]/30 mt-1"></span>
+</div>
+<div class="flex-1 pb-space-2xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-md text-[#2D2926] font-medium">Failure detected in payment-service</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B]">02:14:10</span>
+</div>
+<p class="font-body-sm text-body-sm text-[#6B625B]">Process exited with non-zero exit code 1 in test runner.</p>
+</div>
+</div>
+<!-- Step 2: Retrieved Logs -->
+<div class="flex items-start gap-space-sm group">
+<div class="flex flex-col items-center mt-1">
+<span class="w-5 h-5 rounded-full bg-[#F9ECE7] text-[#D97757] border border-[#D97757]/40 flex items-center justify-center font-label-code-sm text-[10px] font-bold">✓</span>
+<span class="w-0.5 h-6 bg-[#D97757]/30 mt-1"></span>
+</div>
+<div class="flex-1 pb-space-2xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-md text-[#2D2926] font-medium">Retrieved GitHub Actions logs</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B]">02:14:12</span>
+</div>
+<p class="font-body-sm text-body-sm text-[#6B625B]">Streamed 4,812 raw console output lines into parser.</p>
+</div>
+</div>
+<!-- Step 3: Analyzed recent commit -->
+<div class="flex items-start gap-space-sm group">
+<div class="flex flex-col items-center mt-1">
+<span class="w-5 h-5 rounded-full bg-[#F9ECE7] text-[#D97757] border border-[#D97757]/40 flex items-center justify-center font-label-code-sm text-[10px] font-bold">✓</span>
+<span class="w-0.5 h-6 bg-[#D97757]/30 mt-1"></span>
+</div>
+<div class="flex-1 pb-space-2xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-md text-[#2D2926] font-medium">Analyzed commit <span class="font-label-code-sm text-[#D97757]">9f8a42b</span></span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B]">02:14:18</span>
+</div>
+<p class="font-body-sm text-body-sm text-[#6B625B]">Semantic AST diff identified package.json bump anomaly.</p>
+</div>
+</div>
+<!-- Step 4: Identified root cause -->
+<div class="flex items-start gap-space-sm group">
+<div class="flex flex-col items-center mt-1">
+<span class="w-5 h-5 rounded-full bg-[#F9ECE7] text-[#D97757] border border-[#D97757]/40 flex items-center justify-center font-label-code-sm text-[10px] font-bold">✓</span>
+<span class="w-0.5 h-6 bg-[#D97757]/30 mt-1"></span>
+</div>
+<div class="flex-1 pb-space-2xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-md text-[#2D2926] font-medium">Identified root cause (96% conf)</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B]">02:14:24</span>
+</div>
+<p class="font-body-sm text-body-sm text-[#6B625B]">Peer dependency mismatch in @stripe/stripe-node v14.2.</p>
+</div>
+</div>
+<!-- Step 5: Generated patch -->
+<div class="flex items-start gap-space-sm group">
+<div class="flex flex-col items-center mt-1">
+<span class="w-5 h-5 rounded-full bg-[#F9ECE7] text-[#D97757] border border-[#D97757]/40 flex items-center justify-center font-label-code-sm text-[10px] font-bold">✓</span>
+<span class="w-0.5 h-6 bg-[#D97757]/30 mt-1"></span>
+</div>
+<div class="flex-1 pb-space-2xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-md text-[#2D2926] font-medium">Generated deterministic patch</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B]">02:14:35</span>
+</div>
+<p class="font-body-sm text-body-sm text-[#6B625B]">Replaced lockfile pins, reconciled sub-dependencies.</p>
+</div>
+</div>
+<!-- Step 6: Created branch -->
+<div class="flex items-start gap-space-sm group">
+<div class="flex flex-col items-center mt-1">
+<span class="w-5 h-5 rounded-full bg-[#F9ECE7] text-[#D97757] border border-[#D97757]/40 flex items-center justify-center font-label-code-sm text-[10px] font-bold">✓</span>
+<span class="w-0.5 h-6 bg-[#B87A36]/40 mt-1"></span>
+</div>
+<div class="flex-1 pb-space-2xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-md text-[#2D2926] font-medium">Created branch <span class="font-label-code-sm text-[#99462A] font-semibold">fix/pkg-mismatch</span></span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B]">02:14:41</span>
+</div>
+</div>
+</div>
+<!-- Step 7: In Progress validation -->
+<div class="flex items-start gap-space-sm group">
+<div class="flex flex-col items-center mt-1">
+<div class="w-5 h-5 rounded-full bg-[#F6EFE6] border border-[#B87A36]/40 text-[#B87A36] flex items-center justify-center animate-spin">
+<span class="material-symbols-outlined text-sm">sync</span>
+</div>
+<span class="w-0.5 h-6 bg-[#E5DED6] mt-1"></span>
+</div>
+<div class="flex-1 pb-space-2xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-md text-[#B87A36] font-semibold">Running CI validation test suite</span>
+<span class="font-label-code-sm text-label-code-sm text-[#B87A36] animate-pulse font-medium">Running (18s)</span>
+</div>
+<p class="font-body-sm text-body-sm text-[#6B625B]">Ephemeral micro-sandbox node initialized. 48/52 tests passing.</p>
+</div>
+</div>
+<!-- Step 8: Pending PR -->
+<div class="flex items-start gap-space-sm opacity-60">
+<div class="flex flex-col items-center mt-1">
+<span class="w-5 h-5 rounded-full bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] flex items-center justify-center font-label-code-sm text-xs">○</span>
+</div>
+<div class="flex-1 pb-space-2xs">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-body-md text-[#6B625B] font-medium">Auto-create PR #185 &amp; request SRE signoff</span>
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B]">Pending</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Live Terminal Preview Drawer -->
+<div class="mt-space-md p-space-sm rounded-lg bg-[#FBF9F5] border border-[#E5DED6] font-label-code-sm text-label-code-sm text-[#6B625B] shadow-inner">
+<div class="flex items-center justify-between pb-space-2xs text-[#6B625B] border-b border-[#E5DED6] mb-space-2xs">
+<div class="flex items-center gap-space-xs">
+<span class="w-2.5 h-2.5 rounded-full bg-[#C34A4A]"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-[#B87A36]"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-[#5B7C4B]"></span>
+<span class="font-label-caps text-label-caps uppercase ml-space-xs text-[#6B625B] font-semibold">Agent Thought Trace</span>
+</div>
+<span class="text-[#99462A] font-mono font-medium">PID: 90242</span>
+</div>
+<div class="text-[#2D2926] font-mono leading-relaxed">
+<span class="text-[#D97757] font-semibold">[AGENT-CORE]</span> Executing npm audit fix --dry-run... AST diff verified. 0 syntax regressions.
+        </div>
+<div class="text-[#6B625B] font-mono text-[10px] truncate mt-0.5">
+          ➜ Sandbox container 'ephem-val-8924' health: OK (memory: 382MB, cpu: 14%)
+        </div>
+</div>
+</section>
+</div>
+<!-- Recent Incidents Section (High-Density Glass Data Table) -->
+<section class="rounded-xl bg-[#FFFFFF] border border-[#E5DED6] p-space-lg shadow-[0_2px_16px_rgba(45,41,38,0.04)] flex flex-col">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm mb-space-base">
+<div class="flex items-center gap-space-sm">
+<div class="p-space-xs rounded-lg bg-[#F9ECE7] border border-[#D97757]/30 text-[#D97757]">
+<span class="material-symbols-outlined text-xl">security</span>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-[#2D2926] font-semibold tracking-tight">Recent Incidents &amp; Automated Interventions</h2>
+<p class="font-body-sm text-body-sm text-[#6B625B]">Real-time incident log with AI diagnostic confidence, remediation states, and manual override channels</p>
+</div>
+</div>
+<div class="flex items-center gap-space-sm">
+<div class="flex items-center gap-space-2xs px-space-sm py-space-xs rounded-lg bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] text-body-sm cursor-pointer hover:text-[#2D2926]">
+<span class="material-symbols-outlined text-base">filter_list</span>
+<span class="font-medium">Filter: All Repos</span>
+<span class="material-symbols-outlined text-sm">expand_more</span>
+</div>
+<button class="px-space-md py-space-xs rounded-lg bg-[#D97757] hover:bg-[#C66849] text-[#FFFFFF] font-headline-sm text-body-sm font-bold shadow-sm transition-all">
+          Export Audit Trail
+        </button>
+</div>
+</div>
+<!-- Full-Width Responsive Table -->
+<div class="overflow-x-auto w-full">
+<table class="w-full text-left font-body-sm text-body-sm">
+<thead>
+<tr class="bg-[#FBF9F5] text-[#6B625B] border-y border-[#E5DED6] uppercase font-label-caps text-label-caps">
+<th class="py-space-sm px-space-base">Repository</th>
+<th class="py-space-sm px-space-base">Pipeline</th>
+<th class="py-space-sm px-space-base">Failure</th>
+<th class="py-space-sm px-space-base">Root Cause</th>
+<th class="py-space-sm px-space-base">AI Confidence</th>
+<th class="py-space-sm px-space-base">Status</th>
+<th class="py-space-sm px-space-base">Time</th>
+<th class="py-space-sm px-space-base text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#E5DED6] text-[#2D2926]">
+<!-- Row 1: payment-service -->
+<tr class="hover:bg-[#FBF9F5] transition-colors group">
+<td class="py-space-base px-space-base">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-base text-[#6B625B] group-hover:text-[#D97757] transition-colors">folder</span>
+<span class="font-label-code-md text-label-code-md font-semibold text-[#2D2926]">payment-service</span>
+</div>
+</td>
+<td class="py-space-base px-space-base">
+<span class="px-space-xs py-space-2xs rounded bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] font-label-code-sm text-label-code-sm">CI Pipeline</span>
+</td>
+<td class="py-space-base px-space-base">
+<span class="text-[#C34A4A] font-medium">Dependency Error</span>
+</td>
+<td class="py-space-base px-space-base">
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B] max-w-xs block truncate" title="package mismatch in @stripe/stripe-node">
+                package mismatch in @stripe/stripe-node
+              </span>
+</td>
+<td class="py-space-base px-space-base">
+<div class="flex items-center gap-space-xs">
+<div class="w-16 bg-[#F2EDE6] rounded-full h-1.5 overflow-hidden border border-[#E5DED6]">
+<div class="bg-[#D97757] h-1.5 rounded-full w-[96%]"></div>
+</div>
+<span class="font-label-code-sm text-label-code-sm text-[#D97757] font-semibold">96%</span>
+</div>
+</td>
+<td class="py-space-base px-space-base">
+<span class="inline-flex items-center gap-space-2xs px-space-sm py-0.5 rounded-full bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462A] font-label-code-sm text-label-code-sm font-semibold shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-[#D97757]"></span>
+                Fixed
+              </span>
+</td>
+<td class="py-space-base px-space-base font-label-code-sm text-label-code-sm text-[#6B625B]">4m ago</td>
+<td class="py-space-base px-space-base text-right">
+<button class="px-space-sm py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-label-code-sm text-label-code-sm font-medium transition-colors shadow-sm">
+                View Details
+              </button>
+</td>
+</tr>
+<!-- Row 2: auth-service -->
+<tr class="hover:bg-[#FBF9F5] transition-colors group bg-[#FAF7F2]/60">
+<td class="py-space-base px-space-base">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-base text-[#6B625B] group-hover:text-[#D97757] transition-colors">folder</span>
+<span class="font-label-code-md text-label-code-md font-semibold text-[#2D2926]">auth-service</span>
+</div>
+</td>
+<td class="py-space-base px-space-base">
+<span class="px-space-xs py-space-2xs rounded bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] font-label-code-sm text-label-code-sm">Docker Build</span>
+</td>
+<td class="py-space-base px-space-base">
+<span class="text-[#C34A4A] font-medium">Missing ENV</span>
+</td>
+<td class="py-space-base px-space-base">
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B] max-w-xs block truncate" title="JWT_SECRET not injected in staging">
+                JWT_SECRET not injected in staging
+              </span>
+</td>
+<td class="py-space-base px-space-base">
+<div class="flex items-center gap-space-xs">
+<div class="w-16 bg-[#F2EDE6] rounded-full h-1.5 overflow-hidden border border-[#E5DED6]">
+<div class="bg-[#D97757] h-1.5 rounded-full w-[91%]"></div>
+</div>
+<span class="font-label-code-sm text-label-code-sm text-[#D97757] font-semibold">91%</span>
+</div>
+</td>
+<td class="py-space-base px-space-base">
+<span class="inline-flex items-center gap-space-2xs px-space-sm py-0.5 rounded-full bg-[#EDE0D7] border border-[#D97757]/30 text-[#4D453F] font-label-code-sm text-label-code-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#D97757]"></span>
+                PR Created
+              </span>
+</td>
+<td class="py-space-base px-space-base font-label-code-sm text-label-code-sm text-[#6B625B]">12m ago</td>
+<td class="py-space-base px-space-base text-right">
+<button class="px-space-sm py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-label-code-sm text-label-code-sm font-medium transition-colors shadow-sm">
+                View Details
+              </button>
+</td>
+</tr>
+<!-- Row 3: order-orchestrator -->
+<tr class="hover:bg-[#FBF9F5] transition-colors group">
+<td class="py-space-base px-space-base">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-base text-[#6B625B] group-hover:text-[#D97757] transition-colors">folder</span>
+<span class="font-label-code-md text-label-code-md font-semibold text-[#2D2926]">order-orchestrator</span>
+</div>
+</td>
+<td class="py-space-base px-space-base">
+<span class="px-space-xs py-space-2xs rounded bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] font-label-code-sm text-label-code-sm">Integration Test</span>
+</td>
+<td class="py-space-base px-space-base">
+<span class="text-[#C34A4A] font-medium">Timeout Exception</span>
+</td>
+<td class="py-space-base px-space-base">
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B] max-w-xs block truncate" title="Redis lock lease expiration in gRPC">
+                Redis lock lease expiration in gRPC
+              </span>
+</td>
+<td class="py-space-base px-space-base">
+<div class="flex items-center gap-space-xs">
+<div class="w-16 bg-[#F2EDE6] rounded-full h-1.5 overflow-hidden border border-[#E5DED6]">
+<div class="bg-[#B87A36] h-1.5 rounded-full w-[88%]"></div>
+</div>
+<span class="font-label-code-sm text-label-code-sm text-[#B87A36] font-semibold">88%</span>
+</div>
+</td>
+<td class="py-space-base px-space-base">
+<span class="inline-flex items-center gap-space-2xs px-space-sm py-0.5 rounded-full bg-[#F6EFE6] border border-[#B87A36]/40 text-[#B87A36] font-label-code-sm text-label-code-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#B87A36] animate-ping"></span>
+                Investigating
+              </span>
+</td>
+<td class="py-space-base px-space-base font-label-code-sm text-label-code-sm text-[#6B625B]">18m ago</td>
+<td class="py-space-base px-space-base text-right">
+<button class="px-space-sm py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-label-code-sm text-label-code-sm font-medium transition-colors shadow-sm">
+                View Details
+              </button>
+</td>
+</tr>
+<!-- Row 4: notification-worker -->
+<tr class="hover:bg-[#FBF9F5] transition-colors group bg-[#FAF7F2]/60">
+<td class="py-space-base px-space-base">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-base text-[#6B625B] group-hover:text-[#D97757] transition-colors">folder</span>
+<span class="font-label-code-md text-label-code-md font-semibold text-[#2D2926]">notification-worker</span>
+</div>
+</td>
+<td class="py-space-base px-space-base">
+<span class="px-space-xs py-space-2xs rounded bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] font-label-code-sm text-label-code-sm">Deploy Staging</span>
+</td>
+<td class="py-space-base px-space-base">
+<span class="text-[#C34A4A] font-medium">Helm Template Error</span>
+</td>
+<td class="py-space-base px-space-base">
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B] max-w-xs block truncate" title="Invalid YAML indentation in values.yaml">
+                Invalid YAML indentation in values.yaml
+              </span>
+</td>
+<td class="py-space-base px-space-base">
+<div class="flex items-center gap-space-xs">
+<div class="w-16 bg-[#F2EDE6] rounded-full h-1.5 overflow-hidden border border-[#E5DED6]">
+<div class="bg-[#D97757] h-1.5 rounded-full w-[99%]"></div>
+</div>
+<span class="font-label-code-sm text-label-code-sm text-[#D97757] font-semibold">99%</span>
+</div>
+</td>
+<td class="py-space-base px-space-base">
+<span class="inline-flex items-center gap-space-2xs px-space-sm py-0.5 rounded-full bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462A] font-label-code-sm text-label-code-sm font-semibold shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-[#D97757]"></span>
+                Needs Approval
+              </span>
+</td>
+<td class="py-space-base px-space-base font-label-code-sm text-label-code-sm text-[#6B625B]">32m ago</td>
+<td class="py-space-base px-space-base text-right">
+<button class="px-space-sm py-space-2xs rounded bg-[#D97757] text-[#FFFFFF] hover:bg-[#C66849] font-label-code-sm text-label-code-sm font-bold transition-all shadow-sm">
+                Review Fix
+              </button></a>
+</td>
+</tr>
+<!-- Row 5: inventory-api -->
+<tr class="hover:bg-[#FBF9F5] transition-colors group">
+<td class="py-space-base px-space-base">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-base text-[#6B625B] group-hover:text-[#D97757] transition-colors">folder</span>
+<span class="font-label-code-md text-label-code-md font-semibold text-[#2D2926]">inventory-api</span>
+</div>
+</td>
+<td class="py-space-base px-space-base">
+<span class="px-space-xs py-space-2xs rounded bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] font-label-code-sm text-label-code-sm">Lint &amp; Security</span>
+</td>
+<td class="py-space-base px-space-base">
+<span class="text-[#C34A4A] font-medium">Trivy CVE Alert</span>
+</td>
+<td class="py-space-base px-space-base">
+<span class="font-label-code-sm text-label-code-sm text-[#6B625B] max-w-xs block truncate" title="Critical vulnerability in base alpine:3.18">
+                Critical vulnerability in base alpine:3.18
+              </span>
+</td>
+<td class="py-space-base px-space-base">
+<div class="flex items-center gap-space-xs">
+<div class="w-16 bg-[#F2EDE6] rounded-full h-1.5 overflow-hidden border border-[#E5DED6]">
+<div class="bg-[#C34A4A] h-1.5 rounded-full w-[84%]"></div>
+</div>
+<span class="font-label-code-sm text-label-code-sm text-[#C34A4A] font-semibold">84%</span>
+</div>
+</td>
+<td class="py-space-base px-space-base">
+<span class="inline-flex items-center gap-space-2xs px-space-sm py-0.5 rounded-full bg-[#FDF0F0] border border-[#C34A4A]/40 text-[#C34A4A] font-label-code-sm text-label-code-sm font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#C34A4A]"></span>
+                Failed
+              </span>
+</td>
+<td class="py-space-base px-space-base font-label-code-sm text-label-code-sm text-[#6B625B]">1h ago</td>
+<td class="py-space-base px-space-base text-right">
+<button class="px-space-sm py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-label-code-sm text-label-code-sm font-medium transition-colors shadow-sm">
+                View Details
+              </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer with Pagination & Status Info -->
+<div class="flex flex-col sm:flex-row items-center justify-between pt-space-md mt-space-sm gap-space-sm text-[#6B625B] font-label-code-sm text-label-code-sm border-t border-[#E5DED6]">
+<div class="flex items-center gap-space-xs">
+<span>Showing 5 of 14 active and resolved incidents</span>
+<span class="w-1 h-1 rounded-full bg-[#6B625B]"></span>
+<span class="text-[#D97757] font-semibold">Autopilot Mode Enabled</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="px-space-sm py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] transition-colors shadow-sm" disabled="">Previous</button>
+<span class="px-space-sm py-space-2xs rounded bg-[#D97757] text-[#FFFFFF] font-bold shadow-sm">1</span>
+<button class="px-space-sm py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] transition-colors shadow-sm">2</button>
+<button class="px-space-sm py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] transition-colors shadow-sm">3</button>
+<button class="px-space-sm py-space-2xs rounded bg-[#FFFFFF] border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] transition-colors shadow-sm">Next</button>
+</div>
+</div>
+</section>
+</div></main></div></body></html>
