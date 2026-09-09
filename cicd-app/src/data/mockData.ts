@@ -2,15 +2,15 @@ import type { Incident, Pipeline, AIAgent, PullRequest, LogEntry, KpiMetric, Rem
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
 export const navItems: NavItem[] = [
-  { path: '/',             label: 'Overview',      icon: 'dashboard' },
-  { path: '/pipelines',   label: 'Pipelines',     icon: 'account_tree', badge: { text: '148 active', variant: 'neutral' } },
-  { path: '/incidents',   label: 'Incidents',     icon: 'warning',      badge: { text: '2 live', variant: 'error' } },
-  { path: '/ai-agents',   label: 'AI Agents',     icon: 'smart_toy',    badge: { text: '', variant: 'pulse' } },
+  { path: '/dashboard',     label: 'Overview',      icon: 'dashboard' },
+  { path: '/pipelines',     label: 'Pipelines',     icon: 'account_tree', badge: { text: '148 active', variant: 'neutral' } },
+  { path: '/incidents',     label: 'Incidents',     icon: 'warning',      badge: { text: '2 live', variant: 'error' } },
+  { path: '/ai-agents',     label: 'AI Agents',     icon: 'smart_toy',    badge: { text: '', variant: 'pulse' } },
   { path: '/pull-requests', label: 'Pull Requests', icon: 'call_merge', badge: { text: '5 pending', variant: 'neutral' } },
-  { path: '/logs',        label: 'Logs',          icon: 'terminal' },
-  { path: '/analytics',   label: 'Analytics',     icon: 'monitoring' },
-  { path: '/settings',    label: 'Settings',      icon: 'tune' },
-  { path: '/profile',     label: 'Profile',       icon: 'account_circle' },
+  { path: '/logs',          label: 'Logs',          icon: 'terminal' },
+  { path: '/analytics',     label: 'Analytics',     icon: 'monitoring' },
+  { path: '/settings',      label: 'Settings',      icon: 'tune' },
+  { path: '/profile',       label: 'Profile',       icon: 'account_circle' },
 ];
 
 // ─── KPI Cards (Overview) ─────────────────────────────────────────────────────

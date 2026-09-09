@@ -92,6 +92,22 @@ export default function Sidebar() {
               </NavLink>
             );
           })}
+
+          {/* Link to Product Landing Page */}
+          <NavLink
+            to="/"
+            className="mt-2 group flex items-center justify-between px-space-base py-space-sm rounded-lg border border-dashed border-[#E5DED6] hover:border-[#D97757]/40 text-[#6B625B] hover:text-[#D97757] hover:bg-[#F9ECE7]/50 transition-all text-xs font-semibold"
+          >
+            <div className="flex items-center gap-space-md">
+              <span className="material-symbols-outlined text-lg text-[#D97757]">
+                home
+              </span>
+              <span>Product Landing</span>
+            </div>
+            <span className="material-symbols-outlined text-sm opacity-60 group-hover:translate-x-0.5 transition-transform">
+              arrow_outward
+            </span>
+          </NavLink>
         </nav>
       </div>
 

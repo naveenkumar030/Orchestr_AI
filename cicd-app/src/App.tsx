@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
+import LandingPage from './pages/LandingPage';
 import OverviewPage from './pages/OverviewPage';
 import PipelinesPage from './pages/PipelinesPage';
 import IncidentsPage from './pages/IncidentsPage';
@@ -13,20 +14,87 @@ import ProfilePage from './pages/ProfilePage';
 export default function App() {
   return (
     <HashRouter>
-      <AppLayout>
-        <Routes>
-          <Route path="/" element={<OverviewPage />} />
-          <Route path="/pipelines" element={<PipelinesPage />} />
-          <Route path="/incidents" element={<IncidentsPage />} />
-          <Route path="/ai-agents" element={<AIAgentsPage />} />
-          <Route path="/pull-requests" element={<PullRequestsPage />} />
-          <Route path="/logs" element={<LogsPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AppLayout>
+      <Routes>
+        {/* Public Product Landing Page */}
+        <Route path="/" element={<LandingPage />} />
+
+        {/* Operations Console & Internal App Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <AppLayout>
+              <OverviewPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/pipelines"
+          element={
+            <AppLayout>
+              <PipelinesPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/incidents"
+          element={
+            <AppLayout>
+              <IncidentsPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/ai-agents"
+          element={
+            <AppLayout>
+              <AIAgentsPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/pull-requests"
+          element={
+            <AppLayout>
+              <PullRequestsPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/logs"
+          element={
+            <AppLayout>
+              <LogsPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <AppLayout>
+              <AnalyticsPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <AppLayout>
+              <SettingsPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <AppLayout>
+              <ProfilePage />
+            </AppLayout>
+          }
+        />
+
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </HashRouter>
   );
 }
