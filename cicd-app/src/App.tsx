@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import OverviewPage from './pages/OverviewPage';
 import PipelinesPage from './pages/PipelinesPage';
@@ -12,7 +12,7 @@ import ProfilePage from './pages/ProfilePage';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AppLayout>
         <Routes>
           <Route path="/" element={<OverviewPage />} />
@@ -27,6 +27,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppLayout>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
+
