@@ -50,46 +50,46 @@ export default function OverviewPage() {
     <div className="flex flex-col w-full gap-space-xl">
 
       {/* ── Hero Section ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden rounded-xl bg-white border border-[#E5DED6] p-space-xl shadow-panel">
+      <section className="relative overflow-hidden rounded-xl bg-white border border-[#E5DED6] p-4 sm:p-6 lg:p-space-xl shadow-panel">
         <div className="absolute -right-24 -top-24 w-96 h-96 bg-[#D97757]/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute right-1/3 -bottom-24 w-72 h-72 bg-[#B87A36]/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-space-lg">
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-space-lg">
           <div className="flex flex-col max-w-3xl">
             {/* Live pill */}
-            <div className="inline-flex items-center gap-space-xs px-space-md py-space-2xs rounded-full bg-[#F9ECE7] border border-[#D97757]/30 shadow-sm w-fit mb-space-md">
+            <div className="inline-flex items-center gap-space-xs px-3 sm:px-space-md py-1 sm:py-space-2xs rounded-full bg-[#F9ECE7] border border-[#D97757]/30 shadow-sm w-fit mb-3 sm:mb-space-md">
               <LivePulse />
-              <span className="font-label-code-sm text-label-code-sm text-[#99462A] tracking-wide uppercase font-semibold">
-                Live Agent Orchestration: 99.4% autonomous resolution rate (24h)
+              <span className="font-label-code-sm text-[11px] sm:text-label-code-sm text-[#99462A] tracking-wide uppercase font-semibold">
+                Live Agent Orchestration: 99.4% resolution (24h)
               </span>
             </div>
 
-            <h1 className="font-headline-xl text-headline-xl text-[#2D2926] tracking-tight">
+            <h1 className="font-headline-xl text-2xl sm:text-3xl lg:text-headline-xl text-[#2D2926] tracking-tight">
               Autonomous DevOps Control Center
             </h1>
-            <p className="font-body-lg text-body-lg text-[#6B625B] mt-space-xs max-w-2xl">
+            <p className="font-body-lg text-sm sm:text-base text-[#6B625B] mt-1 sm:mt-space-xs max-w-2xl">
               AI-powered real-time detection, self-healing diagnostics, and deterministic remediation
               across distributed CI/CD workflows.
             </p>
           </div>
 
           {/* Action cluster */}
-          <div className="flex flex-wrap items-center gap-space-md shrink-0">
-            <Link to="/incidents">
-              <button className="relative group overflow-hidden px-space-lg py-space-sm rounded-lg bg-[#D97757] hover:bg-[#C66849] text-white font-headline-sm text-headline-sm font-bold shadow-[0_4px_16px_rgba(217,119,87,0.35)] hover:shadow-[0_6px_22px_rgba(217,119,87,0.45)] transition-all flex items-center gap-space-sm active:scale-95">
-                <span className="material-symbols-outlined text-xl text-white">fork_right</span>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-space-md shrink-0 w-full sm:w-auto">
+            <Link to="/incidents" className="w-full sm:w-auto">
+              <button className="w-full relative group overflow-hidden px-4 sm:px-space-lg py-2.5 sm:py-space-sm rounded-lg bg-[#D97757] hover:bg-[#C66849] text-white font-headline-sm text-xs sm:text-headline-sm font-bold shadow-[0_4px_16px_rgba(217,119,87,0.35)] hover:shadow-[0_6px_22px_rgba(217,119,87,0.45)] transition-all flex items-center justify-center gap-space-sm active:scale-95">
+                <span className="material-symbols-outlined text-lg sm:text-xl text-white">fork_right</span>
                 <span>Connect Repository</span>
                 <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               </button>
             </Link>
-            <Link to="/incidents">
-              <button className="px-space-lg py-space-sm rounded-lg bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] hover:bg-[#EBE4DA] transition-all font-headline-sm text-headline-sm font-medium flex items-center gap-space-sm shadow-sm active:scale-95">
+            <Link to="/incidents" className="w-full sm:w-auto">
+              <button className="w-full px-4 sm:px-space-lg py-2.5 sm:py-space-sm rounded-lg bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] hover:bg-[#EBE4DA] transition-all font-headline-sm text-xs sm:text-headline-sm font-medium flex items-center justify-center gap-space-sm shadow-sm active:scale-95">
                 <span className="relative flex items-center justify-center">
-                  <span className="material-symbols-outlined text-xl text-[#C34A4A]">notification_important</span>
+                  <span className="material-symbols-outlined text-lg sm:text-xl text-[#C34A4A]">notification_important</span>
                   <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#C34A4A] animate-ping" />
                 </span>
                 <span>View Incidents</span>
-                <span className="font-label-code-sm text-label-code-sm px-space-xs rounded bg-[#FDF0F0] text-[#C34A4A] border border-[#C34A4A]/30 font-semibold">2 live</span>
+                <span className="font-label-code-sm text-[10px] sm:text-label-code-sm px-1.5 py-0.5 rounded bg-[#FDF0F0] text-[#C34A4A] border border-[#C34A4A]/30 font-semibold">2 live</span>
               </button>
             </Link>
           </div>
@@ -97,7 +97,7 @@ export default function OverviewPage() {
       </section>
 
       {/* ── KPI Grid ─────────────────────────────────────────────────────── */}
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-base">
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-space-base">
         {kpiMetricsList.map((m) => <KpiCard key={m.label} metric={m} />)}
       </section>
 
@@ -248,28 +248,28 @@ export default function OverviewPage() {
       </div>
 
       {/* ── Recent Incidents Table ────────────────────────────────────────── */}
-      <section className="rounded-xl bg-white border border-[#E5DED6] p-space-lg shadow-panel flex flex-col">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm mb-space-base">
+      <section className="rounded-xl bg-white border border-[#E5DED6] p-4 sm:p-6 lg:p-space-lg shadow-panel flex flex-col">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-space-sm mb-space-base">
           <div className="flex items-center gap-space-sm">
             <div className="p-space-xs rounded-lg bg-[#F9ECE7] border border-[#D97757]/30 text-[#D97757]">
               <span className="material-symbols-outlined text-xl">security</span>
             </div>
             <div>
-              <h2 className="font-headline-md text-headline-md text-[#2D2926] font-semibold tracking-tight">
+              <h2 className="font-headline-md text-base sm:text-headline-md text-[#2D2926] font-semibold tracking-tight">
                 Recent Incidents &amp; Automated Interventions
               </h2>
-              <p className="font-body-sm text-body-sm text-[#6B625B]">
+              <p className="font-body-sm text-xs sm:text-body-sm text-[#6B625B]">
                 Real-time incident log with AI diagnostic confidence, remediation states, and manual override channels
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-space-sm">
-            <div className="flex items-center gap-space-2xs px-space-sm py-space-xs rounded-lg bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] text-body-sm cursor-pointer hover:text-[#2D2926]">
-              <span className="material-symbols-outlined text-base">filter_list</span>
+          <div className="flex items-center gap-2 sm:gap-space-sm flex-wrap">
+            <div className="flex items-center gap-space-2xs px-2.5 sm:px-space-sm py-1.5 sm:py-space-xs rounded-lg bg-[#F2EDE6] border border-[#E5DED6] text-[#6B625B] text-xs sm:text-body-sm cursor-pointer hover:text-[#2D2926]">
+              <span className="material-symbols-outlined text-sm sm:text-base">filter_list</span>
               <span className="font-medium">Filter: All Repos</span>
-              <span className="material-symbols-outlined text-sm">expand_more</span>
+              <span className="material-symbols-outlined text-xs sm:text-sm">expand_more</span>
             </div>
-            <button className="px-space-md py-space-xs rounded-lg bg-[#D97757] hover:bg-[#C66849] text-white font-headline-sm text-body-sm font-bold shadow-sm transition-all">
+            <button className="px-3 sm:px-space-md py-1.5 sm:py-space-xs rounded-lg bg-[#D97757] hover:bg-[#C66849] text-white font-headline-sm text-xs sm:text-body-sm font-bold shadow-sm transition-all">
               Export Audit Trail
             </button>
           </div>
@@ -277,7 +277,7 @@ export default function OverviewPage() {
 
         {/* Table */}
         <div className="overflow-x-auto w-full">
-          <table className="w-full text-left font-body-sm text-body-sm">
+          <table className="w-full text-left font-body-sm text-body-sm min-w-[760px]">
             <thead>
               <tr className="bg-[#FBF9F5] text-[#6B625B] border-y border-[#E5DED6] uppercase font-label-caps text-label-caps">
                 {['Repository','Pipeline','Failure','Root Cause','AI Confidence','Status','Time','Actions'].map((h, i) => (

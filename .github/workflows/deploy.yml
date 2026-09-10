@@ -31,7 +31,7 @@ jobs:
         run: pip install -r backend/requirements.txt
 
       - name: Run Python API integration tests
-        run: python backend/test_api.py
+        run: pytest backend/test_api.py
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

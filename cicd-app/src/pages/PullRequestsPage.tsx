@@ -80,26 +80,26 @@ export default function PullRequestsPage() {
       )}
 
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-space-sm">
         <div>
           <div className="flex items-center gap-space-xs text-[#6B625B] font-label-code-sm text-xs">
             <span>Control Center</span>
             <span>/</span>
             <span className="text-[#99462A] font-semibold">Autonomous Code Review</span>
           </div>
-          <h1 className="font-headline-lg text-2xl font-bold text-[#2D2926] tracking-tight mt-1">
+          <h1 className="font-headline-lg text-xl sm:text-2xl font-bold text-[#2D2926] tracking-tight mt-1">
             Pull Requests &amp; Semantic Code Review
           </h1>
         </div>
 
-        <div className="flex items-center gap-space-sm">
-          <button className="px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all text-xs">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-space-sm">
+          <button className="px-3.5 sm:px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-1.5 sm:gap-2 shadow-sm transition-all text-xs">
             <span className="material-symbols-outlined text-base text-[#D97757]">settings</span>
             <span>Review Policies</span>
           </button>
-          <button className="px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all text-xs">
+          <button className="px-3.5 sm:px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-1.5 sm:gap-2 shadow-sm transition-all text-xs">
             <span className="material-symbols-outlined text-base">add</span>
-            <span>Synthesize New PR</span>
+            <span>New PR</span>
           </button>
         </div>
       </div>

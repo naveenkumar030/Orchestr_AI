@@ -23,7 +23,7 @@ NAV_ITEMS = [
     {"path": "/profile", "label": "Profile", "icon": "account_circle"},
 ]
 
-# ─── KPI Metrics ─────────────────────────────────────────────────────────────
+
 KPI_METRICS = [
     {
         "label": "Total Pipelines",

@@ -22,9 +22,33 @@
   ::selection { background-color: rgba(217, 119, 87, 0.2); }
 }
 
-/* Hide scrollbars globally */
-* { scrollbar-width: none; -ms-overflow-style: none; }
-*::-webkit-scrollbar { display: none; }
+/* Elegant responsive scrollbars for horizontal tables and terminal views */
+.overflow-x-auto, .overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+.overflow-x-auto::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: rgba(229, 222, 214, 0.3);
+  border-radius: 9999px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: rgba(217, 119, 87, 0.3);
+  border-radius: 9999px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 119, 87, 0.6);
+}
 
 /* Material Symbols icon font */
 .material-symbols-outlined {

@@ -262,10 +262,12 @@ def serve_frontend(path):
 
 
 if __name__ == "__main__":
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", 5000))
     print("=" * 68)
     print("  SentinelOps Autonomous DevOps -- Unified Server (API + Frontend)")
-    print("  Web UI: http://127.0.0.1:5000")
-    print("  API:    http://127.0.0.1:5000/api/health")
+    print(f"  Web UI: http://127.0.0.1:{port}")
+    print(f"  API:    http://127.0.0.1:{port}/api/health")
     print("=" * 68)
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(host=host, port=port, debug=True)
 

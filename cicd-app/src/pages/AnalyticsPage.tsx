@@ -55,19 +55,19 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-space-lg">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-space-sm">
         <div>
           <div className="flex items-center gap-space-xs text-[#6B625B] font-label-code-sm text-xs">
             <span>Control Center</span>
             <span>/</span>
             <span className="text-[#99462A] font-semibold">Autonomous Velocity</span>
           </div>
-          <h1 className="font-headline-lg text-2xl font-bold text-[#2D2926] tracking-tight mt-1">
+          <h1 className="font-headline-lg text-xl sm:text-2xl font-bold text-[#2D2926] tracking-tight mt-1">
             MTTR &amp; Autonomous Velocity Analytics
           </h1>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-1 bg-[#F2EDE6] p-1 rounded-lg border border-[#E5DED6]">
             {(['7d', '30d', '90d'] as const).map((r) => (
               <button
@@ -261,8 +261,8 @@ export default function AnalyticsPage() {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-body-sm">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left text-xs font-body-sm min-w-[650px]">
             <thead>
               <tr className="border-b border-[#E5DED6] text-[#6B625B] font-label-caps uppercase tracking-wider">
                 <th className="pb-3 font-semibold">Service Identifier</th>

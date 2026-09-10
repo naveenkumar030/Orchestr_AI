@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<'control' | 'dag' | 'incident' | 'fleet'>('control');
   const [activeStep, setActiveStep] = useState<number>(1);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#F7F4EF] text-[#2D2926] selection:bg-[#D97757]/20 font-body-lg antialiased overflow-x-hidden">
@@ -15,25 +16,25 @@ export default function LandingPage() {
       </div>
 
       {/* ─── Sticky Glassmorphism Header ─── */}
-      <header className="sticky top-0 z-50 bg-[#F7F4EF]/85 backdrop-blur-xl border-b border-[#E5DED6] transition-all">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-[#F7F4EF]/90 backdrop-blur-xl border-b border-[#E5DED6] transition-all">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
           {/* Logo & Status */}
-          <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-[#D97757] text-white flex items-center justify-center shadow-[0_4px_16px_rgba(217,119,87,0.35)] group-hover:scale-105 transition-transform">
-                <span className="material-symbols-outlined text-2xl">security</span>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-[#D97757] text-white flex items-center justify-center shadow-[0_4px_16px_rgba(217,119,87,0.35)] group-hover:scale-105 transition-transform">
+                <span className="material-symbols-outlined text-xl sm:text-2xl">security</span>
               </div>
               <div className="flex flex-col">
-                <span className="font-headline-md text-xl tracking-tight text-[#2D2926] font-bold">
+                <span className="font-headline-md text-lg sm:text-xl tracking-tight text-[#2D2926] font-bold">
                   SentinelOps
                 </span>
-                <span className="font-label-caps text-[10px] text-[#6B625B] uppercase tracking-widest -mt-1">
+                <span className="font-label-caps text-[9px] sm:text-[10px] text-[#6B625B] uppercase tracking-widest -mt-1">
                   Autonomous DevOps Platform
                 </span>
               </div>
             </Link>
 
-            <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F9ECE7] border border-[#D97757]/30">
+            <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F9ECE7] border border-[#D97757]/30">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#D97757] opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#D97757]" />
@@ -54,12 +55,12 @@ export default function LandingPage() {
           </nav>
 
           {/* Action CTAs */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <a
               href="https://github.com/naveenkumar030/SentinelOps"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#E5DED6] text-xs font-semibold text-[#2D2926] hover:bg-[#F2EDE6] hover:border-[#D97757]/40 transition-all shadow-sm"
+              className="hidden sm:inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl bg-white border border-[#E5DED6] text-xs font-semibold text-[#2D2926] hover:bg-[#F2EDE6] hover:border-[#D97757]/40 transition-all shadow-sm"
             >
               <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
@@ -69,13 +70,82 @@ export default function LandingPage() {
 
             <Link
               to="/dashboard"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#D97757] hover:bg-[#C66849] text-white text-xs font-bold uppercase tracking-wider shadow-[0_4px_16px_rgba(217,119,87,0.35)] hover:shadow-[0_6px_20px_rgba(217,119,87,0.45)] transition-all transform hover:-translate-y-0.5"
+              className="inline-flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-[#D97757] hover:bg-[#C66849] text-white text-[11px] sm:text-xs font-bold uppercase tracking-wider shadow-[0_4px_16px_rgba(217,119,87,0.35)] hover:shadow-[0_6px_20px_rgba(217,119,87,0.45)] transition-all transform hover:-translate-y-0.5"
             >
-              <span>Launch Console</span>
-              <span className="material-symbols-outlined text-base">arrow_forward</span>
+              <span>Launch</span>
+              <span className="material-symbols-outlined text-sm sm:text-base">arrow_forward</span>
             </Link>
+
+            {/* Mobile Hamburger Toggle Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-2 rounded-xl text-[#6B625B] hover:text-[#2D2926] hover:bg-[#F2EDE6] transition-colors"
+              aria-label="Toggle Navigation Menu"
+            >
+              <span className="material-symbols-outlined text-2xl">
+                {isMobileMenuOpen ? 'close' : 'menu'}
+              </span>
+            </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Drawer */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden px-6 py-4 bg-[#F7F4EF] border-b border-[#E5DED6] flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 shadow-lg">
+            <a
+              href="#features"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-medium text-[#2D2926] hover:text-[#D97757] py-1.5 transition-colors"
+            >
+              Features &amp; Previews
+            </a>
+            <a
+              href="#fleet"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-medium text-[#2D2926] hover:text-[#D97757] py-1.5 transition-colors"
+            >
+              AI Fleet Nodes
+            </a>
+            <a
+              href="#workflow"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-medium text-[#2D2926] hover:text-[#D97757] py-1.5 transition-colors"
+            >
+              Self-Healing Loop
+            </a>
+            <a
+              href="#metrics"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-medium text-[#2D2926] hover:text-[#D97757] py-1.5 transition-colors"
+            >
+              DORA Impact
+            </a>
+            <a
+              href="#security"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-sm font-medium text-[#2D2926] hover:text-[#D97757] py-1.5 transition-colors"
+            >
+              Enterprise Security
+            </a>
+            <div className="pt-3 border-t border-[#E5DED6] flex items-center gap-3">
+              <a
+                href="https://github.com/naveenkumar030/SentinelOps"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 text-center py-2 rounded-lg bg-white border border-[#E5DED6] text-xs font-semibold text-[#2D2926]"
+              >
+                GitHub Repo
+              </a>
+              <Link
+                to="/dashboard"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex-1 text-center py-2 rounded-lg bg-[#D97757] text-white text-xs font-bold uppercase tracking-wider shadow-sm"
+              >
+                Launch Console
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ─── Hero Section ─── */}
@@ -162,10 +232,10 @@ export default function LandingPage() {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
+        <div className="flex overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap items-center justify-start sm:justify-center gap-2 mb-6 scrollbar-none">
           <button
             onClick={() => setActiveTab('control')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
               activeTab === 'control'
                 ? 'bg-[#D97757] text-white shadow-md'
                 : 'bg-white text-[#6B625B] hover:bg-[#F2EDE6] border border-[#E5DED6]'
@@ -176,7 +246,7 @@ export default function LandingPage() {
           </button>
           <button
             onClick={() => setActiveTab('dag')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
               activeTab === 'dag'
                 ? 'bg-[#D97757] text-white shadow-md'
                 : 'bg-white text-[#6B625B] hover:bg-[#F2EDE6] border border-[#E5DED6]'
@@ -187,7 +257,7 @@ export default function LandingPage() {
           </button>
           <button
             onClick={() => setActiveTab('incident')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
               activeTab === 'incident'
                 ? 'bg-[#D97757] text-white shadow-md'
                 : 'bg-white text-[#6B625B] hover:bg-[#F2EDE6] border border-[#E5DED6]'
@@ -198,7 +268,7 @@ export default function LandingPage() {
           </button>
           <button
             onClick={() => setActiveTab('fleet')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all ${
               activeTab === 'fleet'
                 ? 'bg-[#D97757] text-white shadow-md'
                 : 'bg-white text-[#6B625B] hover:bg-[#F2EDE6] border border-[#E5DED6]'
@@ -212,7 +282,7 @@ export default function LandingPage() {
         {/* Browser Mock Frame */}
         <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-[0_20px_50px_rgba(45,41,38,0.08)] overflow-hidden">
           {/* Mock Window Top Bar */}
-          <div className="px-6 py-4 bg-[#FBF9F5] border-b border-[#E5DED6] flex items-center justify-between">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 bg-[#FBF9F5] border-b border-[#E5DED6] flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-[#C34A4A]/70" />
               <div className="w-3 h-3 rounded-full bg-[#B87A36]/70" />

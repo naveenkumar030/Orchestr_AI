@@ -401,8 +401,8 @@ export default function PipelinesPage() {
         </div>
 
         {/* Table of Pipelines */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left font-body-sm">
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left font-body-sm min-w-[760px]">
             <thead>
               <tr className="border-b border-[#E5DED6] text-[#6B625B] font-label-caps text-xs uppercase tracking-wider">
                 <th className="pb-3 font-semibold">Pipeline &amp; Service</th>
@@ -515,8 +515,8 @@ export default function PipelinesPage() {
 
       {/* Trigger Pipeline Modal */}
       {showTriggerModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-md w-full p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-md w-full p-4 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#E5DED6] pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#D97757] text-2xl">account_tree</span>

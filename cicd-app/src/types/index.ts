@@ -1,4 +1,4 @@
-// ─── Navigation ───────────────────────────────────────────────────────────────
+
 export interface NavItem {
   path: string;
   label: string;
@@ -7,7 +7,7 @@ export interface NavItem {
   active?: boolean;
 }
 
-// ─── Incidents ────────────────────────────────────────────────────────────────
+
 export type IncidentStatus =
   | 'Fixed'
   | 'Failed'

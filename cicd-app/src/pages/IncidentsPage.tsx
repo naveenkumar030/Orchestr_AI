@@ -93,7 +93,7 @@ export default function IncidentsPage() {
       )}
 
       {/* Top Breadcrumb & Incident Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-space-sm">
         <div>
           <div className="flex items-center gap-space-xs text-[#6B625B] font-label-code-sm text-xs">
             <span>Control Center</span>
@@ -102,8 +102,8 @@ export default function IncidentsPage() {
             <span>/</span>
             <span className="text-[#99462A] font-semibold">{selectedIncident.id}</span>
           </div>
-          <div className="flex items-center gap-space-sm mt-1">
-            <h1 className="font-headline-lg text-2xl font-bold text-[#2D2926] tracking-tight">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <h1 className="font-headline-lg text-xl sm:text-2xl font-bold text-[#2D2926] tracking-tight">
               {selectedIncident.id}: Autonomous Remediation
             </h1>
             <span className="px-2.5 py-0.5 rounded-full bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462A] font-label-code-sm text-xs font-semibold flex items-center gap-1.5">
@@ -113,7 +113,7 @@ export default function IncidentsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-space-sm">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-space-sm">
           <select
             value={selectedIncident.id}
             onChange={(e) => {
@@ -121,7 +121,7 @@ export default function IncidentsPage() {
               if (inc) setSelectedIncident(inc);
             }}
             aria-label="Select incident"
-            className="px-3 py-2 rounded-lg bg-white border border-[#E5DED6] text-xs font-medium text-[#2D2926] focus:outline-none focus:border-[#D97757]"
+            className="w-full sm:w-auto px-3 py-2 rounded-lg bg-white border border-[#E5DED6] text-xs font-medium text-[#2D2926] focus:outline-none focus:border-[#D97757]"
           >
             {incidentList.map(inc => (
               <option key={inc.id} value={inc.id}>
@@ -572,8 +572,8 @@ export default function IncidentsPage() {
 
       {/* AI Explanation Modal */}
       {showExplainModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-lg w-full p-6 space-y-4 animate-fade-in">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-lg w-full p-4 sm:p-6 space-y-4 animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#E5DED6] pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#D97757] text-2xl">psychology</span>

@@ -93,19 +93,19 @@ export default function LogsPage() {
   return (
     <div className="space-y-space-lg">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-space-sm">
         <div>
           <div className="flex items-center gap-space-xs text-[#6B625B] font-label-code-sm text-xs">
             <span>Control Center</span>
             <span>/</span>
             <span className="text-[#99462A] font-semibold">Observability</span>
           </div>
-          <h1 className="font-headline-lg text-2xl font-bold text-[#2D2926] tracking-tight mt-1">
+          <h1 className="font-headline-lg text-xl sm:text-2xl font-bold text-[#2D2926] tracking-tight mt-1">
             Real-Time Logs &amp; Trace Observability
           </h1>
         </div>
 
-        <div className="flex items-center gap-space-sm">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-space-sm">
           <button
             onClick={() => setIsLive(!isLive)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 border transition-all cursor-pointer ${
@@ -141,7 +141,7 @@ export default function LogsPage() {
       <div className="p-3 rounded-xl bg-[#F2EDE6] border border-[#E5DED6] flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {/* Level Filter Tabs */}
-          <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-[#E5DED6]">
+          <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-[#E5DED6] overflow-x-auto max-w-full">
             {(['ALL', 'ERROR', 'WARN', 'INFO', 'DEBUG'] as const).map((lvl) => (
               <button
                 key={lvl}

@@ -95,29 +95,29 @@ export default function AIAgentsPage() {
       )}
 
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-space-sm">
         <div>
           <div className="flex items-center gap-space-xs text-[#6B625B] font-label-code-sm text-xs">
             <span>Control Center</span>
             <span>/</span>
             <span className="text-[#99462A] font-semibold">Fleet Orchestration</span>
           </div>
-          <h1 className="font-headline-lg text-2xl font-bold text-[#2D2926] tracking-tight mt-1">
+          <h1 className="font-headline-lg text-xl sm:text-2xl font-bold text-[#2D2926] tracking-tight mt-1">
             AI Agents Fleet &amp; Orchestration
           </h1>
         </div>
 
-        <div className="flex items-center gap-space-sm">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-space-sm">
           <button
             onClick={() => setShowDeployModal(true)}
-            className="px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all text-xs cursor-pointer"
+            className="px-3.5 sm:px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-1.5 sm:gap-2 shadow-sm transition-all text-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-base text-[#D97757]">smart_toy</span>
-            <span>Deploy Agent Pod</span>
+            <span>Deploy Pod</span>
           </button>
           <button
             onClick={() => fetchAgents()}
-            className="px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all text-xs cursor-pointer"
+            className="px-3.5 sm:px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-1.5 sm:gap-2 shadow-sm transition-all text-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-base">refresh</span>
             <span>Sync Fleet</span>
@@ -500,8 +500,8 @@ export default function AIAgentsPage() {
 
       {/* Deploy Agent Pod Modal */}
       {showDeployModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-lg w-full p-space-lg space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-lg w-full p-4 sm:p-space-lg space-y-4 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between border-b border-[#E5DED6] pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#D97757]">smart_toy</span>

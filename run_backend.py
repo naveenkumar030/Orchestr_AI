@@ -46,8 +46,11 @@ if __name__ == "__main__":
     print("  * API Root:    http://127.0.0.1:5000/api/overview")
     print("=" * 68)
 
-    if open_browser:
-        webbrowser.open("http://127.0.0.1:5000")
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", 5000))
 
-    app.run(host="127.0.0.1", port=5000, debug=False)
+    if open_browser:
+        webbrowser.open(f"http://127.0.0.1:{port}")
+
+    app.run(host=host, port=port, debug=False)
 

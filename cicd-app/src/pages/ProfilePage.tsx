@@ -12,14 +12,14 @@ export default function ProfilePage() {
   return (
     <div className="space-y-space-lg">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-space-sm">
         <div>
           <div className="flex items-center gap-space-xs text-[#6B625B] font-label-code-sm text-xs">
             <span>Control Center</span>
             <span>/</span>
             <span className="text-[#99462A] font-semibold">Operator Profile</span>
           </div>
-          <h1 className="font-headline-lg text-2xl font-bold text-[#2D2926] tracking-tight mt-1">
+          <h1 className="font-headline-lg text-xl sm:text-2xl font-bold text-[#2D2926] tracking-tight mt-1">
             Operator Profile &amp; Security Clearance
           </h1>
         </div>
@@ -36,7 +36,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Operator Identity Banner */}
-      <div className="p-space-lg rounded-2xl bg-white border border-[#E5DED6] shadow-card flex flex-col md:flex-row items-start md:items-center justify-between gap-space-md">
+      <div className="p-4 sm:p-6 lg:p-space-lg rounded-2xl bg-white border border-[#E5DED6] shadow-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-[#D97757] text-white flex items-center justify-center font-bold text-2xl shadow-md shadow-[#D97757]/30">
             NK

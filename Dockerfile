@@ -1,7 +1,4 @@
-# ========================================================
-# SentinelOps Autonomous DevOps CI/CD Control Center
-# Multi-Stage Production Dockerfile
-# ========================================================
+
 
 # Stage 1: Build React 19 Frontend Bundle
 FROM node:20-alpine AS frontend-builder
