@@ -1,19 +1,94 @@
-import { useState } from 'react';
-import { logEntries } from '../data/mockData';
-import type { LogLevel } from '../types';
+import { useState, useEffect, useCallback } from 'react';
+import { logEntries as initialLogs } from '../data/mockData';
+import { api } from '../services/api';
+import type { LogEntry, LogLevel } from '../types';
 
 export default function LogsPage() {
+  const [logsList, setLogsList] = useState<LogEntry[]>(initialLogs);
   const [selectedService, setSelectedService] = useState<string>('all');
   const [selectedLevel, setSelectedLevel] = useState<LogLevel | 'ALL'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLive, setIsLive] = useState(true);
+  const [sseActive, setSseActive] = useState(false);
 
-  const filteredLogs = logEntries.filter((log) => {
+  const fetchLogs = useCallback(async () => {
+    try {
+      const data = await api.getLogs({
+        service: selectedService,
+        level: selectedLevel,
+        query: searchQuery,
+      });
+      if (data && data.length > 0) {
+        setLogsList(data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch logs:', err);
+    }
+  }, [selectedService, selectedLevel, searchQuery]);
+
+  // Initial load
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  // Server-Sent Events (SSE) stream for sub-second log delivery
+  useEffect(() => {
+    if (!isLive) {
+      setSseActive(false);
+      return;
+    }
+
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource('/api/logs/stream');
+
+      es.addEventListener('log', (e: MessageEvent) => {
+        try {
+          const newEntry = JSON.parse(e.data) as LogEntry;
+          setLogsList((prev) => {
+            if (prev.some((l) => l.id === newEntry.id)) return prev;
+            return [newEntry, ...prev];
+          });
+        } catch (err) {
+          console.error('Failed to parse incoming log stream event:', err);
+        }
+      });
+
+      es.onopen = () => setSseActive(true);
+      es.onerror = () => {
+        setSseActive(false);
+        es?.close();
+      };
+    } catch {
+      setSseActive(false);
+    }
+
+    // Fallback polling if SSE is disconnected
+    const interval = setInterval(() => {
+      if (!sseActive) {
+        fetchLogs();
+      }
+    }, 3000);
+
+    return () => {
+      es?.close();
+      clearInterval(interval);
+      setSseActive(false);
+    };
+  }, [isLive, sseActive, fetchLogs]);
+
+  const filteredLogs = logsList.filter((log) => {
     if (selectedService !== 'all' && log.service !== selectedService) return false;
     if (selectedLevel !== 'ALL' && log.level !== selectedLevel) return false;
-    if (searchQuery && !log.message.toLowerCase().includes(searchQuery.toLowerCase()) && !log.service.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (
+      searchQuery &&
+      !log.message.toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !log.service.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+      return false;
     return true;
   });
+
 
   return (
     <div className="space-y-space-lg">
@@ -33,14 +108,20 @@ export default function LogsPage() {
         <div className="flex items-center gap-space-sm">
           <button
             onClick={() => setIsLive(!isLive)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 border transition-all ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 border transition-all cursor-pointer ${
               isLive
                 ? 'bg-[#F9ECE7] border-[#D97757]/30 text-[#99462A]'
                 : 'bg-white border-[#E5DED6] text-[#6B625B]'
             }`}
           >
-            <span className={`h-2 w-2 rounded-full ${isLive ? 'bg-[#D97757] animate-pulse' : 'bg-gray-400'}`}></span>
-            <span>{isLive ? 'Live Streaming' : 'Paused'}</span>
+            <span
+              className={`h-2 w-2 rounded-full ${
+                isLive ? (sseActive ? 'bg-[#5B7C4B] animate-pulse' : 'bg-[#D97757] animate-pulse') : 'bg-gray-400'
+              }`}
+            ></span>
+            <span>
+              {isLive ? (sseActive ? '⚡ SSE Stream Active' : 'Live Polling') : 'Paused'}
+            </span>
           </button>
 
           <button

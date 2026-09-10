@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import KpiCard from '../components/ui/KpiCard';
 import StatusBadge from '../components/ui/StatusBadge';
 import LivePulse from '../components/ui/LivePulse';
 import RemediationTimeline from '../components/ui/RemediationTimeline';
-import { kpiMetrics, incidents, remediationSteps } from '../data/mockData';
+import { kpiMetrics as defaultKpis, incidents as defaultIncidents, remediationSteps as defaultSteps } from '../data/mockData';
+import { api } from '../services/api';
+import type { Incident, KpiMetric, RemediationStep } from '../types';
 
-const summaryMetrics = [
+const defaultSummaryMetrics = [
   { label: 'Success Rate',    value: '98.6%',    sub: 'Target: >98%',    color: 'text-[#D97757]' },
   { label: 'Failure Rate',    value: '1.4%',     sub: '-0.8% today',     color: 'text-[#C34A4A]' },
   { label: 'Avg Recovery',    value: '1m 48s',   sub: 'Autonomous',      color: 'text-[#2D2926]' },
@@ -18,6 +20,31 @@ type TimeFilter = typeof timeFilters[number];
 
 export default function OverviewPage() {
   const [activeFilter, setActiveFilter] = useState<TimeFilter>('24H');
+  const [kpiMetricsList, setKpiMetricsList] = useState<KpiMetric[]>(defaultKpis);
+  const [incidentList, setIncidentList] = useState<Incident[]>(defaultIncidents);
+  const [timelineSteps, setTimelineSteps] = useState<RemediationStep[]>(defaultSteps);
+  const [summaryMetrics, setSummaryMetrics] = useState(defaultSummaryMetrics);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getOverview().then((overview) => {
+      if (!mounted) return;
+      if (overview.kpiMetrics?.length) setKpiMetricsList(overview.kpiMetrics);
+      if (overview.incidents?.length) setIncidentList(overview.incidents);
+      if (overview.remediationSteps?.length) setTimelineSteps(overview.remediationSteps);
+      if (overview.stats) {
+        setSummaryMetrics([
+          { label: 'Success Rate',    value: overview.stats.successRate,    sub: 'Target: >98%',    color: 'text-[#D97757]' },
+          { label: 'Failure Rate',    value: overview.stats.failureRate,     sub: '-0.8% today',     color: 'text-[#C34A4A]' },
+          { label: 'Avg Recovery',    value: overview.stats.avgRecovery,   sub: 'Autonomous',      color: 'text-[#2D2926]' },
+          { label: 'Auto Resolution', value: overview.stats.autoResolution,    sub: '132 / 146 runs',  color: 'text-[#B87A36]' },
+        ]);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <div className="flex flex-col w-full gap-space-xl">
@@ -71,7 +98,7 @@ export default function OverviewPage() {
 
       {/* ── KPI Grid ─────────────────────────────────────────────────────── */}
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-space-base">
-        {kpiMetrics.map((m) => <KpiCard key={m.label} metric={m} />)}
+        {kpiMetricsList.map((m) => <KpiCard key={m.label} metric={m} />)}
       </section>
 
       {/* ── Split Panel ──────────────────────────────────────────────────── */}
@@ -197,7 +224,7 @@ export default function OverviewPage() {
             </div>
           </div>
 
-          <RemediationTimeline steps={remediationSteps} />
+          <RemediationTimeline steps={timelineSteps} />
 
           {/* Terminal preview */}
           <div className="mt-space-md p-space-sm rounded-lg bg-[#FBF9F5] border border-[#E5DED6] font-label-code-sm text-label-code-sm text-[#6B625B] shadow-inner">
@@ -259,7 +286,7 @@ export default function OverviewPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E5DED6] text-[#2D2926]">
-              {incidents.map((inc, idx) => (
+              {incidentList.map((inc, idx) => (
                 <tr key={inc.id} className={`hover:bg-[#FBF9F5] transition-colors group ${idx % 2 === 1 ? 'bg-[#FAF7F2]/60' : ''}`}>
                   <td className="py-space-base px-space-base">
                     <div className="flex items-center gap-space-xs">

@@ -48,43 +48,63 @@ SentinelOps is an AI-native DevOps orchestration platform designed to automate p
 
 ## 🛠️ Architecture & Tech Stack
 
-- **Framework**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **Frontend**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **Backend API**: [Python 3.13+](https://www.python.org/) + [Flask 3.1](https://flask.palletsprojects.com/) + [flask-cors](https://flask-cors.readthedocs.io/)
 - **Bundler & Dev Server**: [Vite](https://vitejs.dev/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Design System**: Tailored Warm Cream & Dark Modern Enterprise Glassmorphism UI
+- **Design System**: Tailored Warm Cream & Dark Modern Enterprise UI
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Running Options
 
 ### Prerequisites
-- Node.js (v18 or higher recommended)
-- npm or pnpm or yarn
+- Python 3.10+ (Python 3.13 recommended)
+- Node.js (v18+) & npm
 
-### Installation & Run
+---
 
-1. **Clone the repository**:
+### Option A: Unified Server (Recommended)
+Single command starts Python Flask hosting both the REST API and the compiled React UI:
+
+```bash
+# Windows One-Click:
+start_backend.bat
+
+# Or via Python CLI:
+python run_backend.py --open
+```
+- **Web UI & App**: [http://127.0.0.1:5000](http://127.0.0.1:5000)
+- **API Health Check**: [http://127.0.0.1:5000/api/health](http://127.0.0.1:5000/api/health)
+- **API Overview**: [http://127.0.0.1:5000/api/overview](http://127.0.0.1:5000/api/overview)
+
+---
+
+### Option B: Full-Stack Dev Server (Hot-Reload)
+Run Flask backend and Vite dev server simultaneously with automatic proxy:
+
+1. **Start Python Flask Backend**:
    ```bash
-   git clone https://github.com/naveenkumar030/SentinelOps.git
-   cd SentinelOps/cicd-app
+   python backend/app.py
    ```
+   Backend listens on `http://127.0.0.1:5000`.
 
-2. **Install dependencies**:
+2. **Start Vite Dev Server**:
    ```bash
+   cd cicd-app
    npm install
-   ```
-
-3. **Start the development server**:
-   ```bash
    npm run dev
    ```
-   Open [http://localhost:5173](http://localhost:5173) in your browser.
+   Open [http://localhost:5173](http://localhost:5173). Vite automatically proxies all `/api/*` requests to the Flask backend.
 
-4. **Build for production**:
-   ```bash
-   npm run build
-   ```
+---
+
+### 🧪 Automated Backend Test Suite
+Run the comprehensive test suite verifying all 8 REST endpoints, data mutations, and schemas:
+
+```bash
+python backend/test_api.py
+```
 
 ---
 
@@ -92,18 +112,25 @@ SentinelOps is an AI-native DevOps orchestration platform designed to automate p
 
 ```
 SentinelOps/
+├── backend/                # Python Flask REST API & Data Store
+│   ├── app.py              # Flask server, routes, CORS & SPA fallback
+│   ├── data_store.py       # Enterprise in-memory state store with mutations
+│   ├── test_api.py         # Automated integration test runner (36 assertions)
+│   └── requirements.txt    # Python dependencies (Flask, flask-cors)
 ├── cicd-app/               # React 19 + TypeScript + Vite application
 │   ├── src/
-│   │   ├── components/     # UI components & layouts (Header, Sidebar, Modals, Cards)
+│   │   ├── components/     # UI components & layouts (Header, Sidebar, Modals)
+│   │   ├── context/        # BackendContext (Health & latency polling)
 │   │   ├── pages/          # Complete dashboard pages (Overview, Pipelines, Agents, etc.)
-│   │   ├── data/           # Mock telemetry, mock incidents, DAG models, agents data
+│   │   ├── services/       # api.ts (REST API client with fallback)
 │   │   ├── types/          # TypeScript interface definitions
-│   │   └── index.css       # Custom design system tokens & Tailwind utilities
+│   │   └── index.css       # Custom design system tokens
 │   ├── package.json
-│   ├── vite.config.ts
+│   ├── vite.config.ts      # Dev server with /api proxy to :5000
 │   └── tailwind.config.js
-├── README.md               # SentinelOps project documentation
-└── .gitignore              # Git ignore rules
+├── run_backend.py          # Unified Python launcher (builds UI & starts Flask)
+├── start_backend.bat       # Windows one-click desktop launcher
+└── README.md
 ```
 
 ---

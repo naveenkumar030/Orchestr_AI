@@ -22,6 +22,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run Python API integration tests
+        run: python backend/test_api.py
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:

@@ -1,13 +1,60 @@
-import { useState } from 'react';
-import { incidents } from '../data/mockData';
-import type { Incident } from '../types';
+import { useState, useEffect } from 'react';
+import { incidents as initialIncidents } from '../data/mockData';
+import { api, type IncidentExplanation } from '../services/api';
+import type { Incident, IncidentStatus } from '../types';
 
 export default function IncidentsPage() {
-  const [selectedIncident, setSelectedIncident] = useState<Incident>(incidents[0]);
+  const [incidentList, setIncidentList] = useState<Incident[]>(initialIncidents);
+  const [selectedIncident, setSelectedIncident] = useState<Incident>(initialIncidents[0]);
   const [logFilter, setLogFilter] = useState('');
   const [copied, setCopied] = useState(false);
   const [merged, setMerged] = useState(false);
   const [showExplainModal, setShowExplainModal] = useState(false);
+  const [explanationData, setExplanationData] = useState<IncidentExplanation | null>(null);
+  const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getIncidents().then((data) => {
+      if (!mounted) return;
+      if (data && data.length > 0) {
+        setIncidentList(data);
+        setSelectedIncident((prev) => data.find((i) => i.id === prev.id) || data[0]);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleStatusChange = async (newStatus: IncidentStatus) => {
+    try {
+      const updated = await api.updateIncidentStatus(selectedIncident.id, newStatus);
+      setIncidentList((prev) =>
+        prev.map((i) => (i.id === updated.id ? updated : i))
+      );
+      setSelectedIncident(updated);
+      if (newStatus === 'Resolved') setMerged(true);
+      setNotification(`Incident ${updated.id} status updated to '${newStatus}' in Flask backend!`);
+      setTimeout(() => setNotification(null), 4000);
+    } catch (err) {
+      console.error('Failed to update status:', err);
+    }
+  };
+
+  const handleExplain = async () => {
+    setShowExplainModal(true);
+    setIsLoadingExplanation(true);
+    try {
+      const exp = await api.explainIncident(selectedIncident.id);
+      setExplanationData(exp);
+    } catch (err) {
+      console.error('Failed to fetch AI explanation:', err);
+    } finally {
+      setIsLoadingExplanation(false);
+    }
+  };
 
   const rawLogs = [
     { line: '01', time: '[14:22:01]', type: 'info', text: 'Triggering pipeline step: npm test -- --bail (NodeJS v20.11.0 runtime)' },
@@ -32,6 +79,19 @@ export default function IncidentsPage() {
 
   return (
     <div className="space-y-space-lg">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="p-3 rounded-lg bg-[#EAF3E7] border border-[#5B7C4B]/40 text-[#5B7C4B] text-xs font-semibold flex items-center justify-between shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">task_alt</span>
+            <span>{notification}</span>
+          </div>
+          <button onClick={() => setNotification(null)} className="text-[#5B7C4B] hover:text-[#2D2926]">
+            <span className="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Breadcrumb & Incident Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
         <div>
@@ -57,13 +117,13 @@ export default function IncidentsPage() {
           <select
             value={selectedIncident.id}
             onChange={(e) => {
-              const inc = incidents.find(i => i.id === e.target.value);
+              const inc = incidentList.find(i => i.id === e.target.value);
               if (inc) setSelectedIncident(inc);
             }}
             aria-label="Select incident"
             className="px-3 py-2 rounded-lg bg-white border border-[#E5DED6] text-xs font-medium text-[#2D2926] focus:outline-none focus:border-[#D97757]"
           >
-            {incidents.map(inc => (
+            {incidentList.map(inc => (
               <option key={inc.id} value={inc.id}>
                 {inc.id} ({inc.repo} - {inc.status})
               </option>
@@ -71,14 +131,15 @@ export default function IncidentsPage() {
           </select>
 
           <button
-            onClick={() => setShowExplainModal(true)}
-            className="px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all"
+            onClick={handleExplain}
+            className="px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-lg text-[#D97757]">psychology</span>
             <span>Explain via AI</span>
           </button>
         </div>
       </div>
+
 
       {/* Metadata Ribbon */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-space-md p-space-md rounded-xl bg-white border border-[#E5DED6] shadow-card">
@@ -373,21 +434,18 @@ export default function IncidentsPage() {
                   <span>Self-merge window unlocks in <strong className="text-[#2D2926]">12m 46s</strong> or approve now:</span>
                 </div>
                 <button
-                  disabled={merged}
-                  onClick={() => {
-                    setMerged(true);
-                    alert('Pull Request #184 merged autonomously. Triggering zero-downtime canary deployment.');
-                  }}
-                  className={`px-5 py-2 rounded-lg font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-all ${
-                    merged
+                  disabled={merged || selectedIncident.status === 'Resolved'}
+                  onClick={() => handleStatusChange('Resolved')}
+                  className={`px-5 py-2 rounded-lg font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer ${
+                    merged || selectedIncident.status === 'Resolved'
                       ? 'bg-[#5B7C4B] text-white cursor-default'
                       : 'bg-[#D97757] hover:bg-[#B85D3E] text-white shadow-[#D97757]/20'
                   }`}
                 >
                   <span className="material-symbols-outlined text-base">
-                    {merged ? 'task_alt' : 'done_all'}
+                    {merged || selectedIncident.status === 'Resolved' ? 'task_alt' : 'done_all'}
                   </span>
-                  <span>{merged ? 'Merged into main' : 'Merge Pull Request #184'}</span>
+                  <span>{merged || selectedIncident.status === 'Resolved' ? 'Resolved in Flask API' : 'Approve Fix & Merge PR'}</span>
                 </button>
               </div>
             </div>
@@ -515,34 +573,65 @@ export default function IncidentsPage() {
       {/* AI Explanation Modal */}
       {showExplainModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-lg w-full p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-lg w-full p-6 space-y-4 animate-fade-in">
             <div className="flex items-center justify-between border-b border-[#E5DED6] pb-3">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#D97757] text-2xl">psychology</span>
-                <h3 className="font-headline-sm font-bold text-lg text-[#2D2926]">AI Explanation: INC-8924</h3>
+                <h3 className="font-headline-sm font-bold text-lg text-[#2D2926]">
+                  AI Diagnostics: {selectedIncident.id}
+                </h3>
               </div>
               <button
                 onClick={() => setShowExplainModal(false)}
-                className="text-[#6B625B] hover:text-[#2D2926] p-1 rounded"
+                className="text-[#6B625B] hover:text-[#2D2926] p-1 rounded cursor-pointer"
               >
                 <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
 
-            <p className="text-sm text-[#2D2926] leading-relaxed">
-              When <code className="font-mono text-xs bg-[#F2EDE6] px-1 py-0.5 rounded">npm test</code> ran on the payment-service repository, npm resolved the dependency graph and discovered that <code className="font-mono text-xs bg-[#F2EDE6] px-1 py-0.5 rounded">@stripe/stripe-node@12.1.0</code> pinned an outdated TypeScript types peer (<code className="font-mono text-xs bg-[#F2EDE6] px-1 py-0.5 rounded">@types/node@^18.0.0</code>).
-            </p>
+            {isLoadingExplanation ? (
+              <div className="py-8 flex flex-col items-center justify-center gap-3 text-[#6B625B]">
+                <span className="material-symbols-outlined text-3xl text-[#D97757] animate-spin">sync</span>
+                <span className="font-label-code-sm text-xs">Querying SentinelOps AI Diagnostics API...</span>
+              </div>
+            ) : (
+              <div className="space-y-3 text-xs text-[#2D2926] leading-relaxed">
+                <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] space-y-1">
+                  <div className="font-bold text-[#99462A] uppercase tracking-wider text-[11px]">
+                    Algorithmic Root Cause ({explanationData?.confidence ?? selectedIncident.confidence}% confidence)
+                  </div>
+                  <div className="font-medium text-[#2D2926]">{explanationData?.rootCause || selectedIncident.rootCause}</div>
+                </div>
 
-            <p className="text-sm text-[#2D2926] leading-relaxed">
-              Our autonomous kernel parsed the AST, validated that Stripe Node 14.1.2 is 100% backward-compatible with all invocations in <code className="font-mono text-xs bg-[#F2EDE6] px-1 py-0.5 rounded">payment-service/src/stripe.ts</code>, generated a deterministic patch, and verified it in an ephemeral sandbox.
-            </p>
+                <p className="text-sm text-[#6B625B] leading-relaxed">
+                  {explanationData?.explanation || (
+                    <>
+                      When <code className="font-mono text-xs bg-[#F2EDE6] px-1 py-0.5 rounded">npm test</code> ran on the {selectedIncident.repo} repository, npm resolved the dependency graph and discovered conflicting peer constraints.
+                    </>
+                  )}
+                </p>
+
+                {explanationData?.suggestedAction && (
+                  <div className="p-2.5 rounded-lg bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462A] font-medium">
+                    <strong>Suggested Action:</strong> {explanationData.suggestedAction}
+                  </div>
+                )}
+
+                {explanationData?.policyCheck && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-[#5B7C4B] font-semibold">
+                    <span className="material-symbols-outlined text-sm">verified_user</span>
+                    <span>{explanationData.policyCheck}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setShowExplainModal(false)}
-                className="px-4 py-2 rounded-lg bg-[#D97757] text-white text-xs font-semibold hover:bg-[#B85D3E] transition-all"
+                className="px-4 py-2 rounded-lg bg-[#D97757] text-white text-xs font-semibold hover:bg-[#B85D3E] transition-all cursor-pointer shadow-sm"
               >
-                Got it, close
+                Close Diagnostics
               </button>
             </div>
           </div>

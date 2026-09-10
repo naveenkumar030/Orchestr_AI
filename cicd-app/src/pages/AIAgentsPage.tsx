@@ -1,14 +1,99 @@
-import { useState } from 'react';
-import { aiAgents } from '../data/mockData';
+import { useState, useEffect } from 'react';
+import { aiAgents as initialMockAgents } from '../data/mockData';
+import { api } from '../services/api';
+import type { AIAgent, AgentStatus } from '../types';
 
 export default function AIAgentsPage() {
+  const [agentList, setAgentList] = useState<AIAgent[]>(initialMockAgents);
+  const [selectedAgentName, setSelectedAgentName] = useState<string>(initialMockAgents[0]?.name || 'Sentinel-α');
   const [temperature, setTemperature] = useState(0.10);
   const [reasoningBudget, setReasoningBudget] = useState(4096);
   const [astCaching, setAstCaching] = useState(true);
-  const [selectedAgent, setSelectedAgent] = useState(aiAgents[0].name);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  // Deploy Pod Modal
+  const [showDeployModal, setShowDeployModal] = useState(false);
+  const [newPodName, setNewPodName] = useState('');
+  const [newPodRole, setNewPodRole] = useState('Autonomous RCA & Healing');
+  const [newPodCapability, setNewPodCapability] = useState('eBPF trace correlation, semantic diff synthesis, lockfile pin fixing');
+  const [newPodModel, setNewPodModel] = useState('Claude 3.7 Sonnet (Hybrid CoT)');
+  const [isDeploying, setIsDeploying] = useState(false);
+
+  // Fetch agents from Python Flask Backend
+  const fetchAgents = async () => {
+    try {
+      const data = await api.getAiAgents();
+      if (data && data.length > 0) {
+        setAgentList(data);
+      }
+    } catch (err) {
+      console.warn('Failed to load AI agents from Flask backend:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAgents();
+  }, []);
+
+  const handleStatusChange = async (agentId: string, newStatus: AgentStatus) => {
+    try {
+      const updated = await api.updateAgentStatus(agentId, newStatus);
+      setAgentList((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+      setNotification(`Agent '${updated.name}' status changed to '${newStatus}' in Flask backend!`);
+      setTimeout(() => setNotification(null), 3500);
+    } catch (err) {
+      console.error('Failed to update agent status:', err);
+    }
+  };
+
+  const handleDeployPod = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPodName.trim()) return;
+    setIsDeploying(true);
+
+    try {
+      const created = await api.deployAgentPod({
+        name: newPodName.trim(),
+        role: newPodRole,
+        capability: newPodCapability,
+        status: 'active',
+        modelBackend: newPodModel,
+        tags: ['autonomous', 'k8s', 'dynamic-pod'],
+      });
+
+      setAgentList((prev) => [...prev, created]);
+      setSelectedAgentName(created.name);
+      setShowDeployModal(false);
+      setNewPodName('');
+      setNotification(`New Agent Pod '${created.name}' (${created.id}) successfully deployed to Python backend!`);
+      setTimeout(() => setNotification(null), 4500);
+    } catch (err) {
+      console.error('Failed to deploy agent pod:', err);
+      setNotification('Failed to deploy agent pod via Flask API.');
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
+  const activeCount = agentList.filter((a) => a.status === 'active' || a.status === 'processing').length;
+  const standbyCount = agentList.filter((a) => a.status === 'standby' || a.status === 'idle').length;
+  const avgSuccessRate =
+    agentList.length > 0
+      ? (agentList.reduce((acc, a) => acc + (a.successRate || 98), 0) / agentList.length).toFixed(1)
+      : '98.6';
+
+  const selectedAgent = agentList.find((a) => a.name === selectedAgentName) || agentList[0];
 
   return (
     <div className="space-y-space-lg">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-[#2D2926] text-white text-xs shadow-lg border border-[#D97757]/40 animate-bounce">
+          <span className="material-symbols-outlined text-[#D97757] text-base">check_circle</span>
+          <span>{notification}</span>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
         <div>
@@ -23,13 +108,19 @@ export default function AIAgentsPage() {
         </div>
 
         <div className="flex items-center gap-space-sm">
-          <button className="px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all text-xs">
+          <button
+            onClick={() => setShowDeployModal(true)}
+            className="px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all text-xs cursor-pointer"
+          >
             <span className="material-symbols-outlined text-base text-[#D97757]">smart_toy</span>
             <span>Deploy Agent Pod</span>
           </button>
-          <button className="px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all text-xs">
-            <span className="material-symbols-outlined text-base">tune</span>
-            <span>Global Policies</span>
+          <button
+            onClick={() => fetchAgents()}
+            className="px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all text-xs cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-base">refresh</span>
+            <span>Sync Fleet</span>
           </button>
         </div>
       </div>
@@ -43,14 +134,16 @@ export default function AIAgentsPage() {
             <span className="material-symbols-outlined text-[#D97757] text-xl">smart_toy</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">12 <span className="text-[#6B625B] text-lg font-normal">/ 16</span></span>
-            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">4 Standby</span>
+            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">
+              {activeCount} <span className="text-[#6B625B] text-lg font-normal">/ {agentList.length}</span>
+            </span>
+            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">{standbyCount} Standby</span>
           </div>
           <div className="mt-3 pt-2 flex items-center justify-between text-[#6B625B] border-t border-[#E5DED6] text-xs">
-            <span>k8s cluster: prod-east-agent</span>
+            <span>Flask API: /api/ai-agents</span>
             <span className="text-[#5B7C4B] font-semibold flex items-center gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-[#5B7C4B] animate-pulse"></span>
-              Healthy
+              Live Sync
             </span>
           </div>
         </div>
@@ -74,12 +167,12 @@ export default function AIAgentsPage() {
         {/* Metric 3 */}
         <div className="relative overflow-hidden p-space-base rounded-xl bg-white border border-[#E5DED6] shadow-card flex flex-col justify-between hover:shadow-md transition-all">
           <div className="flex items-center justify-between text-[#6B625B] mb-2">
-            <span className="font-label-caps text-xs uppercase tracking-wider font-semibold">Zero-Shot Patch Accuracy</span>
+            <span className="font-label-caps text-xs uppercase tracking-wider font-semibold">Fleet Pass Accuracy</span>
             <span className="material-symbols-outlined text-[#D97757] text-xl">auto_fix_high</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">98.6%</span>
-            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">99.1% Verified</span>
+            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">{avgSuccessRate}%</span>
+            <span className="font-label-code-sm text-xs text-[#5B7C4B] font-semibold">Backend Synced</span>
           </div>
           <div className="mt-3 pt-2 flex items-center justify-between text-[#6B625B] border-t border-[#E5DED6] text-xs">
             <span>AST compile &amp; test pass rate</span>
@@ -115,187 +208,107 @@ export default function AIAgentsPage() {
                 <span className="material-symbols-outlined text-[#D97757] text-xl">psychology</span>
                 <h2 className="font-headline-md text-lg font-bold text-[#2D2926]">Autonomous Agent Fleet</h2>
                 <span className="font-label-code-sm text-xs px-2 py-0.5 rounded-full bg-[#FAF7F3] border border-[#E5DED6] text-[#6B625B]">
-                  5 active · 1 standby
+                  {activeCount} active · {standbyCount} standby
                 </span>
               </div>
-              <span className="font-label-code-sm text-xs text-[#6B625B]">Orchestrator: K8s-CRD-v2</span>
+              <span className="font-label-code-sm text-xs text-[#6B625B]">Connected to Flask REST API</span>
             </div>
 
-            {/* Agent 1 */}
-            <div
-              onClick={() => setSelectedAgent('AST-Patch-Architect-v4')}
-              className={`p-space-base rounded-xl border transition-all cursor-pointer ${
-                selectedAgent === 'AST-Patch-Architect-v4'
-                  ? 'bg-[#F9ECE7]/40 border-[#D97757] shadow-sm'
-                  : 'bg-white border-[#E5DED6] hover:shadow-md'
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-center text-[#D97757]">
-                    <span className="material-symbols-outlined text-2xl">account_tree</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-headline-sm text-sm font-bold text-[#2D2926]">AST-Patch-Architect-v4</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462A] text-xs font-semibold">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#D97757] animate-pulse"></span>
-                        Active (4 in flight)
-                      </span>
+            {/* Dynamic Agent List */}
+            <div className="space-y-3">
+              {agentList.map((agent) => {
+                const isSelected = selectedAgent?.id === agent.id;
+                const isOnline = agent.status === 'active' || agent.status === 'processing';
+
+                return (
+                  <div
+                    key={agent.id}
+                    onClick={() => setSelectedAgentName(agent.name)}
+                    className={`p-space-base rounded-xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#F9ECE7]/40 border-[#D97757] shadow-sm'
+                        : 'bg-white border-[#E5DED6] hover:shadow-md'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-center text-[#D97757]">
+                          <span className="material-symbols-outlined text-2xl">
+                            {agent.role.toLowerCase().includes('sec')
+                              ? 'shield'
+                              : agent.role.toLowerCase().includes('test')
+                              ? 'bug_report'
+                              : agent.role.toLowerCase().includes('review')
+                              ? 'rate_review'
+                              : agent.role.toLowerCase().includes('deploy')
+                              ? 'cloud_upload'
+                              : 'smart_toy'}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-headline-sm text-sm font-bold text-[#2D2926]">{agent.name}</span>
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                                isOnline
+                                  ? 'bg-[#F9ECE7] border-[#D97757]/30 text-[#99462A]'
+                                  : 'bg-[#FAF7F3] border-[#E5DED6] text-[#6B625B]'
+                              }`}
+                            >
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full ${
+                                  isOnline ? 'bg-[#D97757] animate-pulse' : 'bg-[#A89F99]'
+                                }`}
+                              />
+                              {agent.status.toUpperCase()}
+                            </span>
+                          </div>
+                          <span className="font-mono text-xs text-[#6B625B]">
+                            {agent.role} · Backend: {agent.modelBackend || 'Claude 3.7 Sonnet / Gemini 1.5 Pro'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Status Toggle Buttons */}
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={agent.status}
+                          onChange={(e) => handleStatusChange(agent.id, e.target.value as AgentStatus)}
+                          className="px-2.5 py-1 rounded bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-medium text-[#2D2926] focus:outline-none cursor-pointer"
+                        >
+                          <option value="active">Active</option>
+                          <option value="processing">Processing</option>
+                          <option value="standby">Standby</option>
+                          <option value="idle">Idle</option>
+                        </select>
+                      </div>
                     </div>
-                    <span className="font-mono text-xs text-[#6B625B]">Backend: Claude 3.7 Sonnet (Hybrid CoT Reasoning)</span>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-1">
-                  <button className="px-2.5 py-1 rounded bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-medium text-[#2D2926] flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs">terminal</span>
-                    Trace
-                  </button>
-                  <button className="px-2.5 py-1 rounded bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-medium text-[#2D2926] flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs">tune</span>
-                    Config
-                  </button>
-                </div>
-              </div>
+                    <p className="text-xs text-[#6B625B] leading-relaxed mb-3">
+                      {agent.capability}
+                    </p>
 
-              <p className="text-xs text-[#6B625B] leading-relaxed mb-3">
-                Specialization: Semantic syntax tree mutations, breaking upgrade reconciliation, lockfile AST patch synthesis, and strict peer-dependency resolution.
-              </p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] text-xs">
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Pass Rate</span>
-                  <span className="font-semibold text-[#99462A]">99.4% (AST Valid)</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Avg Latency</span>
-                  <span className="font-semibold text-[#2D2926]">312ms / token</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Host Runner</span>
-                  <span className="font-semibold text-[#6B625B]">k8s-agent-worker-01</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Permissions</span>
-                  <span className="font-semibold text-[#2D2926]">Read / PR Write</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Agent 2 */}
-            <div
-              onClick={() => setSelectedAgent('Docker-Sec-Remediator')}
-              className={`p-space-base rounded-xl border transition-all cursor-pointer ${
-                selectedAgent === 'Docker-Sec-Remediator'
-                  ? 'bg-[#F9ECE7]/40 border-[#D97757] shadow-sm'
-                  : 'bg-white border-[#E5DED6] hover:shadow-md'
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-center text-[#D97757]">
-                    <span className="material-symbols-outlined text-2xl">shield</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-headline-sm text-sm font-bold text-[#2D2926]">Docker-Sec-Remediator</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462A] text-xs font-semibold">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#D97757] animate-pulse"></span>
-                        Active (2 in flight)
-                      </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] text-xs">
+                      <div>
+                        <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Pass Rate</span>
+                        <span className="font-semibold text-[#99462A]">{agent.successRate}%</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Tasks Handled</span>
+                        <span className="font-semibold text-[#2D2926]">{agent.tasksCompleted}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Host Runner</span>
+                        <span className="font-semibold text-[#6B625B] truncate block">{agent.hostRunner || 'k8s-worker-01'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Last Seen</span>
+                        <span className="font-semibold text-[#2D2926]">{agent.lastSeen}</span>
+                      </div>
                     </div>
-                    <span className="font-mono text-xs text-[#6B625B]">Backend: DevOps-LLM v2.4 (Self-Hosted H100)</span>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button className="px-2.5 py-1 rounded bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-medium text-[#2D2926] flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs">terminal</span>
-                    Trace
-                  </button>
-                </div>
-              </div>
-
-              <p className="text-xs text-[#6B625B] leading-relaxed mb-3">
-                Specialization: Base image CVE patching, Alpine / Debian multi-stage Dockerfile optimization, and non-root security context injection.
-              </p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] text-xs">
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">CVEs Patched</span>
-                  <span className="font-semibold text-[#5B7C4B]">743 zero-day</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Image Shrink</span>
-                  <span className="font-semibold text-[#2D2926]">-48% avg</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Host Runner</span>
-                  <span className="font-semibold text-[#6B625B]">k8s-agent-worker-02</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Action Policy</span>
-                  <span className="font-semibold text-[#2D2926]">Auto-Branch</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Agent 3 */}
-            <div
-              onClick={() => setSelectedAgent('Flaky-Test-Isolator')}
-              className={`p-space-base rounded-xl border transition-all cursor-pointer ${
-                selectedAgent === 'Flaky-Test-Isolator'
-                  ? 'bg-[#F9ECE7]/40 border-[#D97757] shadow-sm'
-                  : 'bg-white border-[#E5DED6] hover:shadow-md'
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-center text-[#D97757]">
-                    <span className="material-symbols-outlined text-2xl">bug_report</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-headline-sm text-sm font-bold text-[#2D2926]">Flaky-Test-Isolator</span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FAF7F3] border border-[#E5DED6] text-[#6B625B] text-xs font-semibold">
-                        Idle (Awaiting run)
-                      </span>
-                    </div>
-                    <span className="font-mono text-xs text-[#6B625B]">Backend: Gemini 1.5 Pro (2M Token Context Window)</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button className="px-2.5 py-1 rounded bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-medium text-[#2D2926] flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs">playlist_add_check</span>
-                    Quarantine (3)
-                  </button>
-                </div>
-              </div>
-
-              <p className="text-xs text-[#6B625B] leading-relaxed mb-3">
-                Specialization: Non-deterministic race condition detection, timing skew isolation, synthetic mock generation, and quarantine branch creation.
-              </p>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] text-xs">
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Stabilized Runs</span>
-                  <span className="font-semibold text-[#99462A]">84 Test Suites</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Context Processed</span>
-                  <span className="font-semibold text-[#2D2926]">1.2M lines/hr</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Host Runner</span>
-                  <span className="font-semibold text-[#6B625B]">k8s-agent-worker-03</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Action Policy</span>
-                  <span className="font-semibold text-[#2D2926]">Auto-Quarantine</span>
-                </div>
-              </div>
+                );
+              })}
             </div>
           </div>
 
@@ -404,50 +417,42 @@ export default function AIAgentsPage() {
             <div className="flex items-center justify-between border-b border-[#E5DED6] pb-2">
               <div className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-[#D97757] animate-pulse"></span>
-                <h3 className="font-headline-sm font-bold text-sm text-[#2D2926]">Live Sandboxed Trace</h3>
+                <h3 className="font-headline-sm font-bold text-sm text-[#2D2926]">Selected Agent Focus</h3>
               </div>
               <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#FAF7F3] border border-[#E5DED6] text-[#99462A]">
-                payment-service #418
+                {selectedAgent?.id || 'agent-001'}
               </span>
             </div>
 
             <div className="p-space-md rounded-xl bg-[#201B18] font-mono text-xs text-[#EDE7E3] space-y-2 max-h-96 overflow-y-auto">
               <div className="text-[#8F857D]">
-                <span className="text-[#D97757]">09:42:10.102</span> [KERNEL] Agent AST-Patch-Architect spawned
+                <span className="text-[#D97757]">Active Target:</span> {selectedAgent?.name}
               </div>
               <div className="p-1.5 rounded bg-[#2D2622] text-[#EDE7E3]">
-                <span className="text-[#D97757]">09:42:10.220</span> [STEP 1] Captured STDOUT trace (1,493 lines)
+                <span className="text-[#D97757]">Role:</span> {selectedAgent?.role}
               </div>
               <div className="p-1.5 rounded bg-[#2D2622] text-[#EDE7E3]">
-                <span className="text-[#D97757]">09:42:10.840</span> [STEP 2] AST node parsed: dependencies["@stripe/stripe-node"]
-              </div>
-              <div className="p-1.5 rounded bg-[#2D2622] text-[#EDE7E3]">
-                <span className="text-[#D97757]">09:42:11.412</span> [STEP 3] Querying semantic index: 42 CVEs verified
+                <span className="text-[#D97757]">Current Task:</span> {selectedAgent?.currentTask || 'Idle / Queue listener'}
               </div>
               <div className="p-1.5 rounded bg-[#D97757]/20 border border-[#D97757]/40 text-[#FED7AA]">
-                <span className="text-[#D97757]">09:42:12.010</span> [STEP 4] Executing isolated sandbox: ephem-val-902
+                <span className="text-[#D97757]">Capability:</span> {selectedAgent?.capability}
               </div>
               <div className="pl-4 text-[11px] text-[#A89F99] flex items-center gap-1">
                 <span className="material-symbols-outlined text-xs text-[#5B7C4B]">check_circle</span>
-                <span>Network egress restricted to internal mirror</span>
+                <span>Security Clearance: Autonomous Level 4</span>
               </div>
               <div className="p-1.5 rounded bg-[#2D2622] text-[#EDE7E3]">
-                <span className="text-[#D97757]">09:42:13.204</span> [STEP 5] Regression suite: 440/440 tests passed
+                <span className="text-[#D97757]">Success Rate:</span> {selectedAgent?.successRate}%
               </div>
               <div className="pt-1 text-[#86efac] font-semibold flex items-center gap-1">
                 <span className="material-symbols-outlined text-sm">done_all</span>
-                <span>PR #1204 created with AST diff patch</span>
-              </div>
-              <div className="text-[#8F857D] animate-pulse flex items-center gap-1 pt-1">
-                <span className="text-[#D97757]">&gt;&gt;</span>
-                <span>Awaiting CI check pass verification...</span>
+                <span>Tasks Completed: {selectedAgent?.tasksCompleted}</span>
               </div>
             </div>
 
             <div className="pt-2 border-t border-[#E5DED6] flex justify-between font-mono text-xs text-[#6B625B]">
-              <span>Cycle: <strong className="text-[#2D2926]">3.4s</strong></span>
-              <span>RAM: <strong className="text-[#2D2926]">412MB</strong></span>
-              <span>Tokens: <strong className="text-[#2D2926]">2,841</strong></span>
+              <span>Status: <strong className="text-[#2D2926]">{selectedAgent?.status}</strong></span>
+              <span>Host: <strong className="text-[#2D2926]">{selectedAgent?.hostRunner || 'k8s-pod'}</strong></span>
             </div>
           </div>
 
@@ -461,8 +466,8 @@ export default function AIAgentsPage() {
             <div className="space-y-2 text-xs">
               <div className="p-2.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between">
                 <div>
-                  <div className="font-semibold text-[#2D2926]">auth-service: JWT Secret rotation</div>
-                  <div className="text-[#6B625B] text-[11px]">Assigned to: AST-Patch-Architect</div>
+                  <div className="font-semibold text-[#2D2926]">payment-service: stripe-node v14 fix</div>
+                  <div className="text-[#6B625B] text-[11px]">Assigned to: Resolver-β / Patcher-γ</div>
                 </div>
                 <span className="px-2 py-0.5 rounded bg-[#F9ECE7] text-[#99462A] font-semibold text-[10px]">
                   P1 HIGH
@@ -472,7 +477,7 @@ export default function AIAgentsPage() {
               <div className="p-2.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between">
                 <div>
                   <div className="font-semibold text-[#2D2926]">inventory-api: alpine 3.19 bump</div>
-                  <div className="text-[#6B625B] text-[11px]">Assigned to: Docker-Sec-Remediator</div>
+                  <div className="text-[#6B625B] text-[11px]">Assigned to: Scanner-ζ</div>
                 </div>
                 <span className="px-2 py-0.5 rounded bg-[#FAF7F3] text-[#6B625B] font-semibold text-[10px]">
                   P2 NORMAL
@@ -482,7 +487,7 @@ export default function AIAgentsPage() {
               <div className="p-2.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between">
                 <div>
                   <div className="font-semibold text-[#2D2926]">order-service: flaky grpc retry</div>
-                  <div className="text-[#6B625B] text-[11px]">Assigned to: Flaky-Test-Isolator</div>
+                  <div className="text-[#6B625B] text-[11px]">Assigned to: Sentinel-α</div>
                 </div>
                 <span className="px-2 py-0.5 rounded bg-[#FAF7F3] text-[#6B625B] font-semibold text-[10px]">
                   P3 LOW
@@ -492,6 +497,95 @@ export default function AIAgentsPage() {
           </div>
         </div>
       </div>
+
+      {/* Deploy Agent Pod Modal */}
+      {showDeployModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-lg w-full p-space-lg space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-[#E5DED6] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#D97757]">smart_toy</span>
+                <h3 className="font-bold text-base text-[#2D2926]">Deploy New AI Agent Pod</h3>
+              </div>
+              <button
+                onClick={() => setShowDeployModal(false)}
+                className="text-[#6B625B] hover:text-[#2D2926] cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleDeployPod} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-[#2D2926] mb-1">Agent Pod Identifier</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. CanaryGuard-v3, Snyk-Patcher"
+                  value={newPodName}
+                  onChange={(e) => setNewPodName(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-[#E5DED6] bg-[#FAF7F3] focus:bg-white focus:outline-none focus:border-[#D97757]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#2D2926] mb-1">Specialization / Role</label>
+                <select
+                  value={newPodRole}
+                  onChange={(e) => setNewPodRole(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-[#E5DED6] bg-[#FAF7F3] focus:bg-white focus:outline-none focus:border-[#D97757]"
+                >
+                  <option value="Autonomous RCA & Healing">Autonomous RCA & Healing</option>
+                  <option value="Security Scanning & CVE Patching">Security Scanning & CVE Patching</option>
+                  <option value="Test Generation & Flake Isolation">Test Generation & Flake Isolation</option>
+                  <option value="Canary Delivery & Rollback Guard">Canary Delivery & Rollback Guard</option>
+                  <option value="Code Review & Policy Audit">Code Review & Policy Audit</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#2D2926] mb-1">Model Inference Backend</label>
+                <select
+                  value={newPodModel}
+                  onChange={(e) => setNewPodModel(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-[#E5DED6] bg-[#FAF7F3] focus:bg-white focus:outline-none focus:border-[#D97757]"
+                >
+                  <option value="Claude 3.7 Sonnet (Hybrid CoT)">Claude 3.7 Sonnet (Hybrid CoT)</option>
+                  <option value="Gemini 1.5 Pro (2M Token Context)">Gemini 1.5 Pro (2M Token Context)</option>
+                  <option value="DevOps-LLM v2.4 (Self-Hosted H100)">DevOps-LLM v2.4 (Self-Hosted H100)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-[#2D2926] mb-1">Capability Description</label>
+                <textarea
+                  rows={2}
+                  value={newPodCapability}
+                  onChange={(e) => setNewPodCapability(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-[#E5DED6] bg-[#FAF7F3] focus:bg-white focus:outline-none focus:border-[#D97757]"
+                />
+              </div>
+
+              <div className="pt-3 flex justify-end gap-2 border-t border-[#E5DED6]">
+                <button
+                  type="button"
+                  onClick={() => setShowDeployModal(false)}
+                  className="px-4 py-2 rounded-lg border border-[#E5DED6] text-[#6B625B] hover:bg-[#FAF7F3]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isDeploying || !newPodName.trim()}
+                  className="px-5 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-semibold cursor-pointer disabled:opacity-50"
+                >
+                  {isDeploying ? 'Deploying to Cluster...' : 'Deploy to Flask Backend'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

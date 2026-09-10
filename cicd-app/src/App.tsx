@@ -1,4 +1,5 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BackendProvider } from './context/BackendContext';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
 import OverviewPage from './pages/OverviewPage';
@@ -13,7 +14,9 @@ import ProfilePage from './pages/ProfilePage';
 
 export default function App() {
   return (
-    <HashRouter>
+    <BackendProvider>
+      <HashRouter>
+
       <Routes>
         {/* Public Product Landing Page */}
         <Route path="/" element={<LandingPage />} />
@@ -96,6 +99,8 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </HashRouter>
+  </BackendProvider>
   );
 }
+
 

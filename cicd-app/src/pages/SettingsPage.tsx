@@ -1,16 +1,132 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api, type SettingsData, type HealthResponse } from '../services/api';
+import { useBackend } from '../context/BackendContext';
+
+interface EndpointStatus {
+  path: string;
+  name: string;
+  status: 'idle' | 'testing' | 'success' | 'failed';
+  code?: number;
+  latency?: number;
+}
 
 export default function SettingsPage() {
+  const { isConnected, latency: currentLatency, health, recheck } = useBackend();
+
   const [confidenceThreshold, setConfidenceThreshold] = useState(95);
   const [autoMergeActive, setAutoMergeActive] = useState(true);
   const [ciSuccessRequired, setCiSuccessRequired] = useState(true);
   const [zeroCveRequired, setZeroCveRequired] = useState(true);
   const [humanApprovalRequired, setHumanApprovalRequired] = useState(false);
+  const [killSwitchEngaged, setKillSwitchEngaged] = useState(false);
   const [savedNotice, setSavedNotice] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
+  // Diagnostics State
+  const [isPinging, setIsPinging] = useState(false);
+  const [pingResult, setPingResult] = useState<{ success: boolean; latency: number; data?: HealthResponse } | null>(null);
+  const [endpoints, setEndpoints] = useState<EndpointStatus[]>([
+    { path: '/health', name: 'Health & System', status: 'idle' },
+    { path: '/overview', name: 'Dashboard Overview', status: 'idle' },
+    { path: '/pipelines', name: 'DAG Pipelines', status: 'idle' },
+    { path: '/incidents', name: 'Incident Stream', status: 'idle' },
+    { path: '/ai-agents', name: 'AI Fleet Nodes', status: 'idle' },
+    { path: '/pull-requests', name: 'PR Auto-Review', status: 'idle' },
+    { path: '/logs', name: 'Observability Logs', status: 'idle' },
+    { path: '/analytics', name: 'MTTR Analytics', status: 'idle' },
+  ]);
+  const [isTestingAll, setIsTestingAll] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    api.getSettings().then((settings: SettingsData) => {
+      if (!mounted) return;
+      if (settings.confidenceThreshold !== undefined) setConfidenceThreshold(Number(settings.confidenceThreshold));
+      if (settings.autoMergeActive !== undefined) setAutoMergeActive(Boolean(settings.autoMergeActive));
+      if (settings.ciSuccessRequired !== undefined) setCiSuccessRequired(Boolean(settings.ciSuccessRequired));
+      if (settings.zeroCveRequired !== undefined) setZeroCveRequired(Boolean(settings.zeroCveRequired));
+      if (settings.humanApprovalRequired !== undefined) setHumanApprovalRequired(Boolean(settings.humanApprovalRequired));
+      if (settings.killSwitchEngaged !== undefined) setKillSwitchEngaged(Boolean(settings.killSwitchEngaged));
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await api.saveSettings({
+        confidenceThreshold,
+        autoMergeActive,
+        ciSuccessRequired,
+        zeroCveRequired,
+        humanApprovalRequired,
+        killSwitchEngaged,
+      });
+      setSavedNotice(true);
+      setTimeout(() => setSavedNotice(false), 3500);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleKillSwitch = async () => {
+    const newState = !killSwitchEngaged;
+    setKillSwitchEngaged(newState);
+    await api.saveSettings({ killSwitchEngaged: newState });
     setSavedNotice(true);
-    setTimeout(() => setSavedNotice(false), 3000);
+    setTimeout(() => setSavedNotice(false), 3500);
+  };
+
+  const handlePingBackend = async () => {
+    setIsPinging(true);
+    const start = performance.now();
+    try {
+      const res = await api.checkHealth();
+      const lat = Math.round(performance.now() - start);
+      setPingResult({
+        success: res.isConnected,
+        latency: lat,
+        data: res.health,
+      });
+      await recheck();
+    } catch {
+      setPingResult({
+        success: false,
+        latency: Math.round(performance.now() - start),
+      });
+    } finally {
+      setIsPinging(false);
+    }
+  };
+
+  const testAllEndpoints = async () => {
+    setIsTestingAll(true);
+    const updated = [...endpoints];
+
+    for (let i = 0; i < updated.length; i++) {
+      const ep = updated[i];
+      ep.status = 'testing';
+      setEndpoints([...updated]);
+
+      const start = performance.now();
+      try {
+        const res = await fetch(`/api${ep.path}`);
+        const lat = Math.round(performance.now() - start);
+        ep.status = res.ok ? 'success' : 'failed';
+        ep.code = res.status;
+        ep.latency = lat;
+      } catch {
+        ep.status = 'failed';
+        ep.code = 0;
+        ep.latency = Math.round(performance.now() - start);
+      }
+      setEndpoints([...updated]);
+    }
+    setIsTestingAll(false);
   };
 
   return (
@@ -30,11 +146,14 @@ export default function SettingsPage() {
 
         <div className="flex items-center gap-space-sm">
           <button
+            disabled={isSaving}
             onClick={handleSave}
-            className="px-5 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium text-xs shadow-sm transition-all flex items-center gap-1.5"
+            className="px-5 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium text-xs shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
           >
-            <span className="material-symbols-outlined text-sm">save</span>
-            <span>Save Configuration</span>
+            <span className={`material-symbols-outlined text-sm ${isSaving ? 'animate-spin' : ''}`}>
+              {isSaving ? 'sync' : 'save'}
+            </span>
+            <span>{isSaving ? 'Saving to Flask...' : 'Save Configuration'}</span>
           </button>
         </div>
       </div>
@@ -42,9 +161,169 @@ export default function SettingsPage() {
       {savedNotice && (
         <div className="p-3 rounded-lg bg-[#EAF3E7] border border-[#5B7C4B]/40 text-[#5B7C4B] text-xs font-semibold flex items-center gap-2">
           <span className="material-symbols-outlined text-base">check_circle</span>
-          Policy configuration updated across all clusters in real time.
+          Policy configuration updated across all clusters and persisted to Python backend.
         </div>
       )}
+
+      {/* ── Python Backend Diagnostics Hub ────────────────────────────────── */}
+      <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card space-y-space-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5DED6] pb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-[#F9ECE7] border border-[#D97757]/40 flex items-center justify-center text-[#D97757]">
+              <span className="material-symbols-outlined text-lg">terminal</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-headline-sm text-base font-bold text-[#2D2926]">
+                  Python Backend Diagnostics &amp; Telemetry
+                </h2>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono border ${
+                    isConnected
+                      ? 'bg-[#EAF3E7] border-[#5B7C4B]/30 text-[#5B7C4B]'
+                      : 'bg-[#FAF7F3] border-[#E5DED6] text-[#6B625B]'
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      isConnected ? 'bg-[#5B7C4B] animate-pulse' : 'bg-[#A89F99]'
+                    }`}
+                  />
+                  {isConnected ? 'ONLINE (:5000)' : 'LOCAL CACHE MODE'}
+                </span>
+              </div>
+              <p className="text-xs text-[#6B625B]">
+                Python Flask server hosting REST endpoints and enterprise operational data store
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePingBackend}
+              disabled={isPinging}
+              className="px-3.5 py-1.5 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <span className={`material-symbols-outlined text-xs text-[#D97757] ${isPinging ? 'animate-spin' : ''}`}>
+                network_ping
+              </span>
+              <span>{isPinging ? 'Pinging...' : 'Ping Backend'}</span>
+            </button>
+            <button
+              onClick={testAllEndpoints}
+              disabled={isTestingAll}
+              className="px-3.5 py-1.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-xs text-[#D97757]">checklist</span>
+              <span>{isTestingAll ? 'Testing Routes...' : 'Test All Routes'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Runtime Metrics Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-space-sm text-xs">
+          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
+            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Framework</span>
+            <span className="font-bold text-[#2D2926]">Flask {health?.version || '3.1.1'}</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
+            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Python Runtime</span>
+            <span className="font-bold text-[#2D2926]">Python {health?.pythonVersion || '3.13.2'}</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
+            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Kernel Engine</span>
+            <span className="font-bold text-[#99462A] truncate block">{health?.aiKernel || 'v2.4 Autonomous'}</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
+            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Ping Latency</span>
+            <span className="font-bold text-[#5B7C4B]">
+              {currentLatency !== null ? `${currentLatency}ms` : '—'}
+            </span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
+            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Active Fleet</span>
+            <span className="font-bold text-[#2D2926]">
+              {health?.activeAgents ?? 6} nodes
+            </span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
+            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Server PID</span>
+            <span className="font-mono font-bold text-[#2D2926]">
+              {health?.pid ? `#${health.pid}` : 'Flask'}
+            </span>
+          </div>
+        </div>
+
+        {/* Live Ping Alert */}
+        {pingResult && (
+          <div
+            className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
+              pingResult.success
+                ? 'bg-[#EAF3E7] border-[#5B7C4B]/40 text-[#2D2926]'
+                : 'bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A]'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-[#5B7C4B]">
+                {pingResult.success ? 'check_circle' : 'error'}
+              </span>
+              <span>
+                {pingResult.success
+                  ? `Ping successful! Response received in ${pingResult.latency}ms from Python Flask (:5000)`
+                  : `Ping failed (${pingResult.latency}ms). Ensure Python Flask server is running via python run_backend.py`}
+              </span>
+            </div>
+            {pingResult.data?.timestamp && (
+              <span className="font-mono text-[11px] text-[#6B625B]">
+                {pingResult.data.timestamp.substring(11, 19)}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Endpoints Status Grid */}
+        <div className="space-y-2 pt-2 border-t border-[#E5DED6]">
+          <span className="text-xs font-bold text-[#2D2926] block">REST API Endpoints Connectivity</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            {endpoints.map((ep) => (
+              <div
+                key={ep.path}
+                className="p-2.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between"
+              >
+                <div>
+                  <div className="font-semibold text-[#2D2926] text-[11px]">{ep.name}</div>
+                  <div className="font-mono text-[10px] text-[#6B625B]">/api{ep.path}</div>
+                </div>
+                <div>
+                  {ep.status === 'testing' && (
+                    <span className="material-symbols-outlined text-sm text-[#D97757] animate-spin">sync</span>
+                  )}
+                  {ep.status === 'success' && (
+                    <span className="px-1.5 py-0.5 rounded bg-[#EAF3E7] text-[#5B7C4B] font-mono text-[10px] font-bold">
+                      200 ({ep.latency}ms)
+                    </span>
+                  )}
+                  {ep.status === 'failed' && (
+                    <span className="px-1.5 py-0.5 rounded bg-[#FDF0F0] text-[#C34A4A] font-mono text-[10px] font-bold">
+                      {ep.code || 'ERR'}
+                    </span>
+                  )}
+                  {ep.status === 'idle' && (
+                    <span className="px-1.5 py-0.5 rounded bg-white border border-[#E5DED6] text-[#8F857D] font-mono text-[10px]">
+                      READY
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Main Grid: Policies + Credentials */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
@@ -186,17 +465,53 @@ export default function SettingsPage() {
             </p>
             <div className="pt-2">
               <button
-                onClick={() => alert('Emergency kill-switch activated: All autonomous agents paused.')}
-                className="px-4 py-2 rounded-lg bg-[#FDF0F0] border border-[#C34A4A]/40 text-[#C34A4A] font-bold text-xs hover:bg-[#C34A4A] hover:text-white transition-all shadow-xs"
+                onClick={handleKillSwitch}
+                className={`px-4 py-2 rounded-lg border font-bold text-xs transition-all shadow-xs cursor-pointer ${
+                  killSwitchEngaged
+                    ? 'bg-[#C34A4A] text-white border-[#C34A4A]'
+                    : 'bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A] hover:bg-[#C34A4A] hover:text-white'
+                }`}
               >
-                Engage Emergency Kill-Switch
+                {killSwitchEngaged ? 'Disengage Emergency Kill-Switch (Engaged)' : 'Engage Emergency Kill-Switch'}
               </button>
             </div>
           </section>
         </div>
 
-        {/* Right Column: Access Credentials & Tokens (4 cols) */}
+        {/* Right Column: Access Credentials & Quick Commands (4 cols) */}
         <div className="lg:col-span-4 space-y-space-md">
+          {/* Quick Start Card */}
+          <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-md shadow-card space-y-3">
+            <div className="flex items-center gap-2 border-b border-[#E5DED6] pb-2">
+              <span className="material-symbols-outlined text-[#D97757]">play_circle</span>
+              <h3 className="font-headline-sm font-bold text-sm text-[#2D2926]">Backend CLI Commands</h3>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
+                <div className="text-[11px] text-[#6B625B] mb-1">Start Unified Server:</div>
+                <code className="font-mono text-[11px] text-[#99462A] block bg-white p-1.5 rounded border border-[#E5DED6]">
+                  python run_backend.py --open
+                </code>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
+                <div className="text-[11px] text-[#6B625B] mb-1">Windows One-Click Launcher:</div>
+                <code className="font-mono text-[11px] text-[#99462A] block bg-white p-1.5 rounded border border-[#E5DED6]">
+                  start_backend.bat
+                </code>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
+                <div className="text-[11px] text-[#6B625B] mb-1">Run Automated Test Suite:</div>
+                <code className="font-mono text-[11px] text-[#99462A] block bg-white p-1.5 rounded border border-[#E5DED6]">
+                  python backend/test_api.py
+                </code>
+              </div>
+            </div>
+          </section>
+
+          {/* Access Credentials */}
           <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-md shadow-card space-y-3">
             <div className="flex items-center gap-2 border-b border-[#E5DED6] pb-2">
               <span className="material-symbols-outlined text-[#D97757]">key</span>
@@ -236,14 +551,6 @@ export default function SettingsPage() {
                   <span className="material-symbols-outlined text-xs text-[#D97757] cursor-pointer">download</span>
                 </div>
               </div>
-
-              <button
-                onClick={() => alert('Add credential modal opened')}
-                className="w-full py-2.5 border border-dashed border-[#E5DED6] text-[#6B625B] rounded-xl hover:bg-[#FAF7F3] hover:text-[#2D2926] transition-colors flex items-center justify-center gap-1.5 font-semibold"
-              >
-                <span className="material-symbols-outlined text-base">add</span>
-                <span>Add Credential</span>
-              </button>
             </div>
           </section>
         </div>

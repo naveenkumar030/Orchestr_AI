@@ -72,6 +72,8 @@ export interface AIAgent {
   successRate: number;
   lastSeen: string;
   tags: string[];
+  hostRunner?: string;
+  modelBackend?: string;
 }
 
 // ─── Pull Requests ────────────────────────────────────────────────────────────
@@ -131,4 +133,47 @@ export interface RemediationStep {
   description?: string;
   time?: string;
   status: StepStatus;
+}
+
+// ─── Analytics Telemetry ──────────────────────────────────────────────────────
+export interface MicroserviceTelemetry {
+  name: string;
+  cluster: string;
+  events: string;
+  rate: string;
+  saved: string;
+  health: string;
+}
+
+export interface AnalyticsResponse {
+  timeRange?: string;
+  dora?: {
+    deploymentFrequency: string;
+    deploymentFrequencyRating: string;
+    leadTimeForChanges: string;
+    leadTimeRating: string;
+    changeFailureRate: string;
+    changeFailureRating: string;
+    mttr: string;
+    mttrRating: string;
+  };
+  velocity?: {
+    prsProcessed: number;
+    avgMergeTime: string;
+    autoFixRate: string;
+    humanOverrideRate: string;
+    hoursSaved: string;
+    costSaved: string;
+    patchesSynthesized: number;
+  };
+  mttr?: {
+    current: string;
+    previous: string;
+    reductionPercent: string;
+  };
+  failureCategories?: Array<{
+    name: string;
+    percentage: number;
+  }>;
+  microservices?: MicroserviceTelemetry[];
 }

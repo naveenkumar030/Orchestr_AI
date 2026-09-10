@@ -1,13 +1,61 @@
-import { useState } from 'react';
-import { pullRequests } from '../data/mockData';
+import { useState, useEffect } from 'react';
+import { pullRequests as initialPRs } from '../data/mockData';
+import { api } from '../services/api';
 import type { PullRequest } from '../types';
 
 export default function PullRequestsPage() {
-  const [selectedPR, setSelectedPR] = useState<PullRequest>(pullRequests[0]);
+  const [prList, setPrList] = useState<PullRequest[]>(initialPRs);
+  const [selectedPR, setSelectedPR] = useState<PullRequest>(initialPRs[0]);
   const [filter, setFilter] = useState<'all' | 'staged' | 'review' | 'merged'>('all');
   const [activeTab, setActiveTab] = useState<'review' | 'diff' | 'security'>('review');
+  const [notification, setNotification] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const filteredPRs = pullRequests.filter((pr) => {
+  useEffect(() => {
+    let mounted = true;
+    api.getPullRequests().then((data) => {
+      if (!mounted) return;
+      if (data && data.length > 0) {
+        setPrList(data);
+        setSelectedPR((prev) => data.find((p) => p.id === prev.id) || data[0]);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleReview = async () => {
+    setIsProcessing(true);
+    try {
+      const updated = await api.reviewPullRequest(selectedPR.id);
+      setPrList((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      setSelectedPR(updated);
+      setNotification(`PR #${updated.number} reviewed by SentinelOps AI Engine — Score updated to ${updated.aiReviewScore}%`);
+      setTimeout(() => setNotification(null), 4000);
+    } catch (err) {
+      console.error('Failed to review PR:', err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleMerge = async () => {
+    setIsProcessing(true);
+    try {
+      const updated = await api.mergePullRequest(selectedPR.id);
+      setPrList((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      setSelectedPR(updated);
+      setNotification(`PR #${updated.number} merged into branch '${updated.branch}' via Flask backend!`);
+      setTimeout(() => setNotification(null), 4000);
+    } catch (err) {
+      console.error('Failed to merge PR:', err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const filteredPRs = prList.filter((pr) => {
     if (filter === 'all') return true;
     if (filter === 'staged') return pr.status === 'approved' || pr.status === 'reviewing';
     if (filter === 'review') return pr.status === 'changes_requested' || pr.status === 'reviewing';
@@ -15,8 +63,22 @@ export default function PullRequestsPage() {
     return true;
   });
 
+
   return (
     <div className="space-y-space-lg">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="p-3 rounded-lg bg-[#EAF3E7] border border-[#5B7C4B]/40 text-[#5B7C4B] text-xs font-semibold flex items-center justify-between shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">task_alt</span>
+            <span>{notification}</span>
+          </div>
+          <button onClick={() => setNotification(null)} className="text-[#5B7C4B] hover:text-[#2D2926]">
+            <span className="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
         <div>
@@ -247,20 +309,24 @@ export default function PullRequestsPage() {
                   {/* Action bar */}
                   <div className="flex items-center justify-between pt-3 border-t border-[#E5DED6]">
                     <span className="text-xs text-[#6B625B]">Policy: Human override is permitted at any stage</span>
-                    <div className="flex items-center gap-2">
                       <button
-                        onClick={() => alert('Changes requested on PR #' + selectedPR.number)}
-                        className="px-3 py-1.5 rounded-lg border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926]"
+                        disabled={isProcessing}
+                        onClick={handleReview}
+                        className="px-3 py-1.5 rounded-lg border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] cursor-pointer transition-all disabled:opacity-50"
                       >
-                        Request Changes
+                        AI Re-audit &amp; Review
                       </button>
                       <button
-                        onClick={() => alert('PR #' + selectedPR.number + ' merged into ' + selectedPR.branch)}
-                        className="px-4 py-1.5 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white text-xs font-semibold shadow-sm"
+                        disabled={isProcessing || selectedPR.status === 'merged'}
+                        onClick={handleMerge}
+                        className={`px-4 py-1.5 rounded-lg text-white text-xs font-semibold shadow-sm transition-all cursor-pointer ${
+                          selectedPR.status === 'merged'
+                            ? 'bg-[#5B7C4B] cursor-default'
+                            : 'bg-[#D97757] hover:bg-[#B85D3E]'
+                        }`}
                       >
-                        Approve &amp; Merge
+                        {selectedPR.status === 'merged' ? 'Merged into ' + selectedPR.branch : 'Approve & Merge'}
                       </button>
-                    </div>
                   </div>
                 </div>
               )}

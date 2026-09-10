@@ -1,18 +1,102 @@
-import { useState } from 'react';
-import { pipelines } from '../data/mockData';
+import { useState, useEffect } from 'react';
+import { pipelines as initialPipelines } from '../data/mockData';
+import { api } from '../services/api';
 import type { Pipeline } from '../types';
 
 export default function PipelinesPage() {
-  const [selectedPipeline, setSelectedPipeline] = useState<Pipeline>(pipelines[0]);
+  const [pipelineList, setPipelineList] = useState<Pipeline[]>(initialPipelines);
+  const [selectedPipeline, setSelectedPipeline] = useState<Pipeline>(initialPipelines[0]);
   const [filter, setFilter] = useState<'all' | 'running' | 'success' | 'failed'>('all');
+  const [isTriggering, setIsTriggering] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
+  const [showTriggerModal, setShowTriggerModal] = useState(false);
+  const [customRepo, setCustomRepo] = useState('payment-service');
+  const [customBranch, setCustomBranch] = useState('main');
+  const [customName, setCustomName] = useState('Autonomous CI/CD Workflow');
 
-  const filteredPipelines = pipelines.filter((p) => {
+  useEffect(() => {
+    let mounted = true;
+    const fetchLatest = () => {
+      api.getPipelines().then((data) => {
+        if (!mounted) return;
+        if (data && data.length > 0) {
+          setPipelineList(data);
+          setSelectedPipeline((prev) => data.find((p) => p.id === prev.id) || data[0]);
+        }
+      });
+    };
+
+    fetchLatest();
+
+    const interval = setInterval(() => {
+      setPipelineList((current) => {
+        const hasRunning = current.some((p) => p.status === 'running');
+        if (hasRunning) {
+          fetchLatest();
+        }
+        return current;
+      });
+    }, 1500);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleTrigger = async (repo = customRepo, branch = customBranch, name = customName) => {
+    setIsTriggering(true);
+    try {
+      const created = await api.triggerPipeline({ repo, branch, name });
+      setPipelineList((prev) => [created, ...prev]);
+      setSelectedPipeline(created);
+      setNotification(`Pipeline ${created.id} (${name}) scheduled on branch '${branch}' via Flask backend!`);
+      setShowTriggerModal(false);
+      setTimeout(() => setNotification(null), 4500);
+    } catch (err) {
+      console.error('Failed to trigger pipeline:', err);
+      setNotification('Failed to trigger pipeline via backend API');
+    } finally {
+      setIsTriggering(false);
+    }
+  };
+
+  const handleRetry = async (pipelineId: string) => {
+    try {
+      const retried = await api.retryPipeline(pipelineId);
+      setPipelineList((prev) =>
+        prev.map((p) => (p.id === retried.id ? retried : p))
+      );
+      if (selectedPipeline.id === retried.id) {
+        setSelectedPipeline(retried);
+      }
+      setNotification(`Pipeline ${pipelineId} retry requested successfully.`);
+      setTimeout(() => setNotification(null), 3000);
+    } catch (err) {
+      console.error('Failed to retry pipeline:', err);
+    }
+  };
+
+  const filteredPipelines = pipelineList.filter((p) => {
     if (filter === 'all') return true;
     return p.status === filter;
   });
 
   return (
     <div className="space-y-space-lg">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="p-3 rounded-lg bg-[#EAF3E7] border border-[#5B7C4B]/40 text-[#5B7C4B] text-xs font-semibold flex items-center justify-between shadow-sm animate-fade-in">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-base">task_alt</span>
+            <span>{notification}</span>
+          </div>
+          <button onClick={() => setNotification(null)} className="text-[#5B7C4B] hover:text-[#2D2926]">
+            <span className="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+      )}
+
       {/* Top Breadcrumb & Actions Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
         <div>
@@ -27,16 +111,16 @@ export default function PipelinesPage() {
         </div>
 
         <div className="flex items-center gap-space-sm">
-          <button className="px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all">
-            <span className="material-symbols-outlined text-lg">tune</span>
-            <span>DAG Settings</span>
-          </button>
-          <button className="px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all">
+          <button
+            onClick={() => setShowTriggerModal(true)}
+            className="px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+          >
             <span className="material-symbols-outlined text-lg">play_arrow</span>
-            <span>Trigger Pipeline</span>
+            <span>{isTriggering ? 'Triggering...' : 'Trigger Pipeline'}</span>
           </button>
         </div>
       </div>
+
 
       {/* Top 4 Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-base">
@@ -397,15 +481,29 @@ export default function PipelinesPage() {
                       <div className="text-[11px] text-[#A89F99]">{pipeline.triggeredBy}</div>
                     </td>
                     <td className="py-4 text-right">
-                      <button
-                        className="px-3 py-1 rounded bg-[#F2EDE6] hover:bg-[#E5DED6] text-xs font-semibold text-[#2D2926] transition-all"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedPipeline(pipeline);
-                        }}
-                      >
-                        Inspect
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        {pipeline.status === 'failed' && (
+                          <button
+                            className="px-2.5 py-1 rounded bg-[#FDF0F0] border border-[#C34A4A]/30 text-[#C34A4A] hover:bg-[#C34A4A] hover:text-white text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRetry(pipeline.id);
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-xs">replay</span>
+                            <span>Retry</span>
+                          </button>
+                        )}
+                        <button
+                          className="px-3 py-1 rounded bg-[#F2EDE6] hover:bg-[#E5DED6] text-xs font-semibold text-[#2D2926] transition-all cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPipeline(pipeline);
+                          }}
+                        >
+                          Inspect
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -414,6 +512,81 @@ export default function PipelinesPage() {
           </table>
         </div>
       </div>
+
+      {/* Trigger Pipeline Modal */}
+      {showTriggerModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E5DED6] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#D97757] text-2xl">account_tree</span>
+                <h3 className="font-headline-sm font-bold text-lg text-[#2D2926]">Trigger Autonomous Pipeline</h3>
+              </div>
+              <button
+                onClick={() => setShowTriggerModal(false)}
+                className="text-[#6B625B] hover:text-[#2D2926] p-1 rounded cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[#2D2926] mb-1">Pipeline Name</label>
+                <input
+                  type="text"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                  className="w-full h-9 px-3 text-xs rounded-lg border border-[#E5DED6] bg-[#FAF7F3] focus:bg-white focus:outline-none focus:border-[#D97757]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#2D2926] mb-1">Target Repository</label>
+                <select
+                  value={customRepo}
+                  onChange={(e) => setCustomRepo(e.target.value)}
+                  className="w-full h-9 px-3 text-xs rounded-lg border border-[#E5DED6] bg-[#FAF7F3] focus:bg-white focus:outline-none focus:border-[#D97757]"
+                >
+                  <option value="payment-service">payment-service</option>
+                  <option value="auth-service">auth-service</option>
+                  <option value="gateway-service">gateway-service</option>
+                  <option value="inventory-api">inventory-api</option>
+                  <option value="order-orchestrator">order-orchestrator</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#2D2926] mb-1">Branch</label>
+                <input
+                  type="text"
+                  value={customBranch}
+                  onChange={(e) => setCustomBranch(e.target.value)}
+                  className="w-full h-9 px-3 text-xs rounded-lg border border-[#E5DED6] bg-[#FAF7F3] focus:bg-white focus:outline-none focus:border-[#D97757]"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-[#E5DED6] flex items-center justify-end gap-2">
+              <button
+                onClick={() => setShowTriggerModal(false)}
+                className="px-4 py-2 rounded-lg border border-[#E5DED6] text-xs font-medium text-[#6B625B] hover:bg-[#F2EDE6] cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={isTriggering}
+                onClick={() => handleTrigger()}
+                className="px-5 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-sm">play_arrow</span>
+                <span>{isTriggering ? 'Scheduling...' : 'Run Pipeline'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
