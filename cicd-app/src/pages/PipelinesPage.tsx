@@ -61,6 +61,35 @@ export default function PipelinesPage() {
     }
   };
 
+  const handleDispatchGitHub = async () => {
+    setIsTriggering(true);
+    try {
+      const res = await api.dispatchGitHubWorkflow(customBranch, 'deploy.yml');
+      if (res.success) {
+        setNotification(
+          res.live
+            ? `Dispatched live GitHub Actions workflow (deploy.yml) on branch '${customBranch}'!`
+            : `Autonomous simulation workflow dispatched for ${res.repo || 'SentinelOps'}@${customBranch}.`
+        );
+        setShowTriggerModal(false);
+        const latest = await api.getPipelines();
+        if (latest && latest.length > 0) {
+          setPipelineList(latest);
+          setSelectedPipeline(latest[0]);
+        }
+      } else {
+        setNotification(`GitHub Actions dispatch error: ${res.error || 'Failed'}`);
+      }
+      setTimeout(() => setNotification(null), 4500);
+    } catch (err) {
+      console.error('Dispatch error:', err);
+      setNotification('Failed to dispatch to GitHub Actions');
+    } finally {
+      setIsTriggering(false);
+    }
+  };
+
+
   const handleRetry = async (pipelineId: string) => {
     try {
       const retried = await api.retryPipeline(pipelineId);
@@ -567,21 +596,32 @@ export default function PipelinesPage() {
               </div>
             </div>
 
-            <div className="pt-3 border-t border-[#E5DED6] flex items-center justify-end gap-2">
-              <button
-                onClick={() => setShowTriggerModal(false)}
-                className="px-4 py-2 rounded-lg border border-[#E5DED6] text-xs font-medium text-[#6B625B] hover:bg-[#F2EDE6] cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                disabled={isTriggering}
-                onClick={() => handleTrigger()}
-                className="px-5 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-sm">play_arrow</span>
-                <span>{isTriggering ? 'Scheduling...' : 'Run Pipeline'}</span>
-              </button>
+            <div className="pt-3 border-t border-[#E5DED6] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-[11px] text-[#6B625B]">Choose execution runner:</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowTriggerModal(false)}
+                  className="px-3 py-1.5 rounded-lg border border-[#E5DED6] text-xs font-medium text-[#6B625B] hover:bg-[#F2EDE6] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={isTriggering}
+                  onClick={() => handleTrigger()}
+                  className="px-3.5 py-1.5 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] text-xs font-semibold flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-sm text-[#D97757]">play_arrow</span>
+                  <span>Autonomous Local</span>
+                </button>
+                <button
+                  disabled={isTriggering}
+                  onClick={handleDispatchGitHub}
+                  className="px-3.5 py-1.5 rounded-lg bg-[#24292F] hover:bg-black text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-sm">send</span>
+                  <span>Dispatch GitHub Actions</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

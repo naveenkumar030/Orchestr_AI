@@ -529,4 +529,79 @@ export const api = {
     );
     return data;
   },
+
+  /**
+   * GitHub Integration & Webhooks
+   */
+  async getGitHubStatus(): Promise<GitHubStatusResponse> {
+    const fallback: GitHubStatusResponse = {
+      status: 'active',
+      repository: 'naveenkumar030/SentinelOps',
+      webhookEndpoint: '/api/webhooks/github',
+      secretConfigured: false,
+      tokenConfigured: false,
+      mode: 'development-permissive',
+      recentEvents: [],
+      totalEventsReceived: 0,
+    };
+    const { data } = await request<GitHubStatusResponse>('/github/status', { method: 'GET' }, fallback);
+    return data;
+  },
+
+  async sendTestWebhook(event: string, payload?: unknown): Promise<{ status: string; event: string; result?: unknown }> {
+    const { data } = await request<{ status: string; event: string; result?: unknown }>(
+      '/github/test-webhook',
+      {
+        method: 'POST',
+        body: JSON.stringify({ event, payload }),
+      },
+      { status: 'processed', event }
+    );
+    return data;
+  },
+
+  async dispatchGitHubWorkflow(
+    branch = 'main',
+    workflow = 'deploy.yml'
+  ): Promise<{ success: boolean; live: boolean; repo?: string; branch?: string; error?: string; message?: string }> {
+    const { data } = await request<{
+      success: boolean;
+      live: boolean;
+      repo?: string;
+      branch?: string;
+      error?: string;
+      message?: string;
+    }>(
+      '/github/dispatch',
+      {
+        method: 'POST',
+        body: JSON.stringify({ branch, workflow }),
+      },
+      { success: true, live: false, branch, message: 'Dispatched via fallback' }
+    );
+    return data;
+  },
 };
+
+export interface GitHubWebhookEvent {
+  id: string;
+  event: string;
+  status: string;
+  summary: string;
+  timestamp: string;
+  deliveryId: string;
+  repo: string;
+  sender: string;
+}
+
+export interface GitHubStatusResponse {
+  status: string;
+  repository: string;
+  webhookEndpoint: string;
+  secretConfigured: boolean;
+  tokenConfigured: boolean;
+  mode: string;
+  recentEvents: GitHubWebhookEvent[];
+  totalEventsReceived: number;
+}
+

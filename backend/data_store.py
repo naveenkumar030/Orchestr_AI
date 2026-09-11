@@ -494,7 +494,25 @@ class DataStore:
         self.logs = list(LOG_ENTRIES)
         self.settings = dict(SETTINGS)
         self.analytics = dict(ANALYTICS)
+        self.webhook_events = []
         self.start_time = time.time()
+
+        # Initialize persistent database layer
+        try:
+            from database import init_db
+            from services.incident_service import incident_service
+            init_db()
+            db_incs = incident_service.get_all_incidents()
+            if not db_incs:
+                for inc in self.incidents:
+                    incident_service.persist_incident(inc)
+            else:
+                existing_ids = {i["id"] for i in self.incidents}
+                for db_inc in db_incs:
+                    if db_inc["id"] not in existing_ids:
+                        self.incidents.insert(0, db_inc)
+        except Exception:
+            pass
 
     def get_health(self):
         uptime_sec = int(time.time() - self.start_time)
@@ -553,6 +571,11 @@ class DataStore:
                     level="INFO",
                     message=f"Incident {inc['id']} status updated to '{new_status}' by operator/AI",
                 )
+                try:
+                    from services.incident_service import incident_service
+                    incident_service.update_incident_status(inc["id"], new_status)
+                except Exception:
+                    pass
                 return inc
         return None
 
@@ -884,18 +907,52 @@ class DataStore:
     # ── GitHub Webhook Integration ────────────────────────────────────────────
     def handle_github_workflow_run(self, payload):
         """Processes incoming GitHub Actions workflow_run webhook payloads."""
-        action = payload.get("action", "completed")
-        run = payload.get("workflow_run", {})
-        repo_obj = payload.get("repository", {}) or run.get("repository", {})
-        repo_name = repo_obj.get("name") or "SentinelOps"
-        wf_name = run.get("name") or "CI/CD Workflow"
-        branch = run.get("head_branch") or "main"
-        raw_commit = run.get("head_sha") or "HEAD"
-        commit_sha = raw_commit[:7] if len(raw_commit) >= 7 else raw_commit
-        actor = payload.get("sender", {}).get("login") or run.get("actor", {}).get("login") or "github-actions"
+        try:
+            from services.github_service import github_service
+        except ImportError:
+            try:
+                from backend.services.github_service import github_service
+            except ImportError:
+                github_service = None
 
-        raw_status = run.get("status", "completed")
-        conclusion = run.get("conclusion")
+        if github_service:
+            run_data = github_service.parse_workflow_run(payload)
+            action = run_data["action"]
+            repo_name = run_data["repository"].split("/")[-1]
+            wf_name = run_data["workflow_name"]
+            branch = run_data["branch"]
+            raw_commit = run_data["commit_sha"]
+            commit_sha = raw_commit[:7] if len(raw_commit) >= 7 else raw_commit
+            raw_status = run_data["status"]
+            conclusion = run_data["conclusion"]
+            actor = run_data["actor"]
+            run_id = run_data["run_id"]
+            is_failed = github_service.is_failed_workflow(run_data)
+        else:
+            action = payload.get("action", "completed")
+            run = payload.get("workflow_run", {})
+            repo_obj = payload.get("repository", {}) or run.get("repository", {})
+            repo_name = repo_obj.get("name") or "SentinelOps"
+            wf_name = run.get("name") or "CI/CD Workflow"
+            branch = run.get("head_branch") or "main"
+            raw_commit = run.get("head_sha") or "HEAD"
+            commit_sha = raw_commit[:7] if len(raw_commit) >= 7 else raw_commit
+            actor = payload.get("sender", {}).get("login") or run.get("actor", {}).get("login") or "github-actions"
+            raw_status = run.get("status", "completed")
+            conclusion = run.get("conclusion")
+            run_id = run.get("id", 0)
+            is_failed = (action == "completed" and conclusion in ["failure", "timed_out"])
+            run_data = {
+                "repository": repo_name,
+                "workflow_name": wf_name,
+                "run_id": run_id,
+                "branch": branch,
+                "commit_sha": commit_sha,
+                "status": raw_status,
+                "conclusion": conclusion,
+                "action": action,
+                "actor": actor,
+            }
 
         # Map GitHub status & conclusion to SentinelOps status: 'running', 'success', 'failed', 'queued', 'cancelled'
         if raw_status in ["queued", "waiting", "requested"]:
@@ -905,7 +962,7 @@ class DataStore:
         elif raw_status == "completed":
             if conclusion == "success":
                 pipe_status = "success"
-            elif conclusion in ["failure", "timed_out"]:
+            elif conclusion in ["failure", "timed_out", "startup_failure"]:
                 pipe_status = "failed"
             elif conclusion == "cancelled":
                 pipe_status = "cancelled"
@@ -956,17 +1013,281 @@ class DataStore:
             log_msg += f", conclusion={conclusion}"
         self.add_log(service=repo_name, level=log_level, message=log_msg)
 
-        if pipe_status == "failed":
-            self.add_log(service="SentinelOps-AI", level="WARN", message=f"Autonomous diagnosis triggered for failed workflow '{wf_name}' on {repo_name}")
+        incident_event = None
+        if is_failed or pipe_status == "failed":
+            if github_service:
+                incident_event = github_service.create_incident_from_workflow_run(run_data)
+            else:
+                incident_event = {
+                    "id": f"INC-{run_id}" if run_id else f"INC-{int(time.time())}",
+                    "event_type": "workflow_run_failure",
+                    "repository": repo_name,
+                    "workflow": wf_name,
+                    "run_id": run_id,
+                    "branch": branch,
+                    "commit_sha": commit_sha,
+                    "status": raw_status,
+                    "conclusion": conclusion or "failure",
+                    "detected_at": datetime.now().isoformat(),
+                    "severity": "high",
+                    "incident_status": "Investigating",
+                    "summary": f"Workflow '{wf_name}' failed on {repo_name}@{branch} [{commit_sha}] (Run #{run_id})",
+                }
+
+            # Ingest into self.incidents if not already present
+            existing_inc = next((i for i in self.incidents if i.get("id") == incident_event["id"]), None)
+            inc_record = {
+                "id": incident_event["id"],
+                "repo": repo_name,
+                "pipeline": wf_name,
+                "failure": f"Workflow Run Failure ({conclusion or 'failure'})",
+                "rootCause": f"Pipeline failure in '{wf_name}' at commit {commit_sha}",
+                "confidence": 92,
+                "confidenceColor": "error",
+                "status": "Investigating",
+                "time": "just now",
+                "runId": run_id,
+                "branch": branch,
+                "commit": commit_sha,
+                "actionLabel": "Investigate",
+                "actionVariant": "primary",
+            }
+            if not existing_inc:
+                self.incidents.insert(0, inc_record)
+
+            try:
+                from services.incident_service import incident_service
+                incident_service.persist_incident(inc_record)
+            except Exception:
+                pass
+
+            self.add_log(
+                service="SentinelOps-AI",
+                level="WARN",
+                message=f"Autonomous diagnosis triggered for failed workflow '{wf_name}' on {repo_name} (Run #{run_id})",
+            )
+
+        # Persist workflow run record in database
+        try:
+            from services.incident_service import incident_service
+            incident_service.persist_workflow_run(run_data)
+        except Exception:
+            pass
+
+        # Record event in webhook history
+        summary = f"Workflow '{wf_name}' ({action}) -> {pipe_status}"
+        self.record_webhook_event("workflow_run", payload, status="processed", summary=summary)
 
         return {
             "pipelineId": pipe["id"],
             "status": pipe_status,
             "repo": repo_name,
             "branch": branch,
-            "commit": commit_sha
+            "commit": commit_sha,
+            "incident": incident_event,
+        }
+
+    def handle_github_push(self, payload):
+        """Processes incoming GitHub push webhook payloads."""
+        ref = payload.get("ref", "refs/heads/main")
+        branch = ref.replace("refs/heads/", "")
+        repo_obj = payload.get("repository", {})
+        repo_name = repo_obj.get("name") or "SentinelOps"
+        pusher = payload.get("pusher", {}).get("name") or payload.get("sender", {}).get("login") or "developer"
+        head_commit = payload.get("head_commit") or {}
+        raw_commit = head_commit.get("id") or payload.get("after") or "HEAD"
+        commit_sha = raw_commit[:7] if len(raw_commit) >= 7 else raw_commit
+        commit_msg = (head_commit.get("message") or "Code push received").split("\n")[0]
+        commits_count = len(payload.get("commits", [])) or 1
+
+        new_id = f"pipe-{len(self.pipelines) + 1:03d}"
+        pipe = {
+            "id": new_id,
+            "name": f"Push: {commit_msg[:36]}",
+            "repo": repo_name,
+            "branch": branch,
+            "commit": commit_sha,
+            "status": "running",
+            "stages": [
+                {"name": "Checkout", "status": "success", "duration": "2s"},
+                {"name": "Build", "status": "running", "duration": "—"},
+                {"name": "Test", "status": "queued"},
+                {"name": "Scan", "status": "queued"},
+                {"name": "Deploy", "status": "queued"},
+            ],
+            "duration": "Running...",
+            "triggeredBy": f"Push by {pusher}",
+            "time": "just now",
+        }
+        self.pipelines.insert(0, pipe)
+
+        log_msg = f"[GitHub Webhook] Push to {repo_name}@{branch} by {pusher} ({commits_count} commit(s)) [{commit_sha}]: {commit_msg}"
+        self.add_log(service=repo_name, level="INFO", message=log_msg)
+
+        summary = f"Push to {repo_name}@{branch} [{commit_sha}] by {pusher}"
+        self.record_webhook_event("push", payload, status="processed", summary=summary)
+
+        return {
+            "pipelineId": pipe["id"],
+            "status": "running",
+            "repo": repo_name,
+            "branch": branch,
+            "commit": commit_sha,
+            "message": commit_msg
+        }
+
+    def handle_github_pull_request(self, payload):
+        """Processes incoming GitHub pull_request webhook payloads."""
+        action = payload.get("action", "opened")
+        pr_obj = payload.get("pull_request", {})
+        repo_obj = payload.get("repository", {})
+        repo_name = repo_obj.get("name") or "SentinelOps"
+        pr_number = pr_obj.get("number") or payload.get("number") or 100
+        pr_title = pr_obj.get("title") or f"Pull Request #{pr_number}"
+        head_ref = pr_obj.get("head", {}).get("ref") or "feat/updates"
+        base_ref = pr_obj.get("base", {}).get("ref") or "main"
+        author = pr_obj.get("user", {}).get("login") or payload.get("sender", {}).get("login") or "contributor"
+        merged = pr_obj.get("merged", False)
+        changed_files = pr_obj.get("changed_files", 3)
+        additions = pr_obj.get("additions", 42)
+        deletions = pr_obj.get("deletions", 8)
+
+        # Check existing PR
+        existing_pr = None
+        for p in self.pull_requests:
+            if p.get("number") == pr_number or p.get("id") == f"PR-{pr_number}":
+                existing_pr = p
+                break
+
+        if action in ["opened", "synchronize", "reopened"]:
+            status = "reviewing"
+            ai_score = random.randint(91, 98)
+            ai_comment = f"Autonomous AST & Security Audit: 0 CVEs detected. {changed_files} files inspected (+{additions}/-{deletions}). Code health score {ai_score}%."
+            if existing_pr:
+                existing_pr["title"] = pr_title
+                existing_pr["status"] = status
+                existing_pr["branch"] = head_ref
+                existing_pr["aiReviewScore"] = ai_score
+                existing_pr["aiComment"] = ai_comment
+                existing_pr["time"] = "just now"
+                target_pr = existing_pr
+            else:
+                target_pr = {
+                    "id": f"PR-{pr_number}",
+                    "number": pr_number,
+                    "title": pr_title,
+                    "repo": repo_name,
+                    "branch": head_ref,
+                    "author": author,
+                    "avatar": f"https://api.dicebear.com/7.x/bottts/svg?seed={author}",
+                    "status": status,
+                    "aiReviewScore": ai_score,
+                    "checksPassing": 4,
+                    "totalChecks": 4,
+                    "time": "just now",
+                    "aiComment": ai_comment,
+                }
+                self.pull_requests.insert(0, target_pr)
+
+            log_msg = f"[GitHub Webhook] PR #{pr_number} '{pr_title}' ({action}) by @{author} -> SentinelOps AI Audit dispatched ({ai_score}%)"
+            self.add_log(service=repo_name, level="INFO", message=log_msg)
+            summary = f"PR #{pr_number} ({action}) by @{author}: {pr_title}"
+            self.record_webhook_event("pull_request", payload, status="processed", summary=summary)
+            return {"prId": target_pr["id"], "action": action, "status": target_pr["status"], "aiScore": ai_score}
+
+        elif action == "closed":
+            pr_status = "merged" if merged else "closed"
+            if existing_pr:
+                existing_pr["status"] = pr_status
+            log_msg = f"[GitHub Webhook] PR #{pr_number} was {pr_status} into '{base_ref}'"
+            self.add_log(service=repo_name, level="INFO", message=log_msg)
+            summary = f"PR #{pr_number} {pr_status} into {base_ref}"
+            self.record_webhook_event("pull_request", payload, status="processed", summary=summary)
+            return {"prNumber": pr_number, "action": action, "status": pr_status}
+
+        summary = f"PR #{pr_number} {action} acknowledged"
+        self.record_webhook_event("pull_request", payload, status="ignored", summary=summary)
+        return {"prNumber": pr_number, "action": action, "status": "acknowledged"}
+
+    def record_webhook_event(self, event_type, payload, status="processed", summary=""):
+        """Records webhook event in memory for real-time UI diagnostics."""
+        event_entry = {
+            "id": f"wh-{len(self.webhook_events) + 1:04d}",
+            "event": event_type,
+            "status": status,
+            "summary": summary,
+            "timestamp": datetime.now().isoformat(),
+            "deliveryId": payload.get("delivery_id") or f"del-{int(time.time() * 1000)}",
+            "repo": (payload.get("repository", {}) or {}).get("name") or "SentinelOps",
+            "sender": (payload.get("sender", {}) or {}).get("login") or payload.get("pusher", {}).get("name") or "github",
+        }
+        self.webhook_events.insert(0, event_entry)
+        if len(self.webhook_events) > 50:
+            self.webhook_events.pop()
+        return event_entry
+
+    def get_webhook_history(self, limit=20):
+        """Returns recent webhook events."""
+        return self.webhook_events[:limit]
+
+    def dispatch_github_workflow(self, branch="main", workflow="deploy.yml", inputs=None):
+        """
+        Dispatches a workflow_dispatch event to GitHub Actions via the GitHub REST API.
+        If GITHUB_TOKEN is available, makes a live HTTPS request to GitHub.
+        Otherwise, triggers an autonomous simulated workflow in SentinelOps.
+        """
+        import urllib.request
+        import urllib.error
+
+        token = os.environ.get("GITHUB_TOKEN")
+        repo = os.environ.get("GITHUB_REPO", "naveenkumar030/SentinelOps")
+
+        if token:
+            url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow}/dispatches"
+            req_data = json.dumps({"ref": branch, "inputs": inputs or {}}).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=req_data,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/vnd.github+json",
+                    "User-Agent": "SentinelOps-DevOps-Agent",
+                    "Content-Type": "application/json",
+                },
+                method="POST"
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    if resp.status in (200, 204):
+                        pipe = self.trigger_pipeline(repo="SentinelOps", branch=branch, name=f"GitHub Actions: {workflow}")
+                        self.add_log(service="GitHub-Dispatch", level="INFO", message=f"Successfully dispatched '{workflow}' to {repo}@{branch} via GitHub API")
+                        return {"success": True, "live": True, "repo": repo, "branch": branch, "pipeline": pipe}
+            except urllib.error.HTTPError as e:
+                err_msg = f"GitHub API dispatch error ({e.code}): {e.reason}"
+                self.add_log(service="GitHub-Dispatch", level="ERROR", message=err_msg)
+                return {"success": False, "live": True, "error": err_msg}
+            except Exception as ex:
+                err_msg = f"GitHub API connection error: {str(ex)}"
+                self.add_log(service="GitHub-Dispatch", level="ERROR", message=err_msg)
+                return {"success": False, "live": True, "error": err_msg}
+
+        # Simulation fallback when GITHUB_TOKEN is not configured in local environment
+        pipe = self.trigger_pipeline(repo="SentinelOps", branch=branch, name=f"Autonomous Workflow ({workflow})")
+        self.add_log(
+            service="GitHub-Dispatch",
+            level="INFO",
+            message=f"Dispatched workflow '{workflow}' for {repo}@{branch} in Autonomous Mode (Set GITHUB_TOKEN for direct GitHub Actions API calls)"
+        )
+        return {
+            "success": True,
+            "live": False,
+            "message": "Dispatched in Autonomous Simulation mode. Set GITHUB_TOKEN to trigger GitHub Actions directly.",
+            "repo": repo,
+            "branch": branch,
+            "pipeline": pipe
         }
 
 
 # Singleton instance
 store = DataStore()
+

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api, type SettingsData, type HealthResponse } from '../services/api';
+import { api, type SettingsData, type HealthResponse, type GitHubStatusResponse } from '../services/api';
 import { useBackend } from '../context/BackendContext';
 
 interface EndpointStatus {
@@ -22,6 +22,13 @@ export default function SettingsPage() {
   const [savedNotice, setSavedNotice] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // GitHub Integration & Webhook State
+  const [gitHubStatus, setGitHubStatus] = useState<GitHubStatusResponse | null>(null);
+  const [simulatingEvent, setSimulatingEvent] = useState<string | null>(null);
+  const [simulationResult, setSimulationResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [isDispatching, setIsDispatching] = useState(false);
+
   // Diagnostics State
   const [isPinging, setIsPinging] = useState(false);
   const [pingResult, setPingResult] = useState<{ success: boolean; latency: number; data?: HealthResponse } | null>(null);
@@ -33,6 +40,7 @@ export default function SettingsPage() {
     { path: '/ai-agents', name: 'AI Fleet Nodes', status: 'idle' },
     { path: '/pull-requests', name: 'PR Auto-Review', status: 'idle' },
     { path: '/logs', name: 'Observability Logs', status: 'idle' },
+    { path: '/github/status', name: 'GitHub Integration', status: 'idle' },
     { path: '/analytics', name: 'MTTR Analytics', status: 'idle' },
   ]);
   const [isTestingAll, setIsTestingAll] = useState(false);
@@ -47,6 +55,11 @@ export default function SettingsPage() {
       if (settings.zeroCveRequired !== undefined) setZeroCveRequired(Boolean(settings.zeroCveRequired));
       if (settings.humanApprovalRequired !== undefined) setHumanApprovalRequired(Boolean(settings.humanApprovalRequired));
       if (settings.killSwitchEngaged !== undefined) setKillSwitchEngaged(Boolean(settings.killSwitchEngaged));
+    });
+
+    api.getGitHubStatus().then((status) => {
+      if (!mounted) return;
+      setGitHubStatus(status);
     });
     return () => {
       mounted = false;
@@ -127,6 +140,63 @@ export default function SettingsPage() {
       setEndpoints([...updated]);
     }
     setIsTestingAll(false);
+  };
+
+  const handleTestWebhook = async (eventType: string) => {
+    setSimulatingEvent(eventType);
+    setSimulationResult(null);
+    try {
+      await api.sendTestWebhook(eventType);
+      setSimulationResult({
+        success: true,
+        message: `Successfully simulated '${eventType}' event. Handled and recorded by Flask backend!`,
+      });
+      const updated = await api.getGitHubStatus();
+      setGitHubStatus(updated);
+    } catch (err) {
+      setSimulationResult({
+        success: false,
+        message: `Failed to simulate '${eventType}': ${(err as Error).message}`,
+      });
+    } finally {
+      setSimulatingEvent(null);
+    }
+  };
+
+  const handleCopyWebhookUrl = () => {
+    const fullUrl = `${window.location.protocol}//${window.location.host}/api/webhooks/github`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2500);
+  };
+
+  const handleDispatchWorkflow = async () => {
+    setIsDispatching(true);
+    try {
+      const res = await api.dispatchGitHubWorkflow('main', 'deploy.yml');
+      if (res.success) {
+        setSimulationResult({
+          success: true,
+          message: res.live
+            ? `Live GitHub Actions workflow dispatch sent to ${res.repo}@${res.branch}!`
+            : `Autonomous simulation pipeline dispatched for ${res.repo}@${res.branch}.`,
+        });
+        const updated = await api.getGitHubStatus();
+        setGitHubStatus(updated);
+      } else {
+        setSimulationResult({
+          success: false,
+          message: res.error || 'Failed to dispatch workflow',
+        });
+      }
+    } catch (err) {
+      setSimulationResult({
+        success: false,
+        message: `Dispatch failed: ${(err as Error).message}`,
+      });
+    } finally {
+      setIsDispatching(false);
+    }
   };
 
   return (
@@ -322,6 +392,262 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── GitHub Webhook & Actions Integration Hub ──────────────────────── */}
+      <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card space-y-space-md">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5DED6] pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#24292F] text-white flex items-center justify-center">
+              <span className="material-symbols-outlined text-lg">alt_route</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-headline-sm text-base font-bold text-[#2D2926]">
+                  GitHub Webhook &amp; Actions End-to-End Hub
+                </h2>
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono bg-[#EAF3E7] border border-[#5B7C4B]/30 text-[#5B7C4B]">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#5B7C4B] animate-pulse" />
+                  {gitHubStatus?.mode === 'production-verified' ? 'SECRET VERIFIED' : 'DEV INGESTION ACTIVE'}
+                </span>
+              </div>
+              <p className="text-xs text-[#6B625B]">
+                Bidirectional integration between GitHub Actions workflows, repository push/PR events, and SentinelOps
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <a
+              href={`https://github.com/${gitHubStatus?.repository || 'naveenkumar030/SentinelOps'}/settings/hooks`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-1.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-xs text-[#D97757]">open_in_new</span>
+              <span>Open GitHub Webhooks</span>
+            </a>
+          </div>
+        </div>
+
+        {/* Webhook Endpoint & Tunnel Info Bar */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 text-xs">
+          <div className="lg:col-span-2 p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-[#8F857D] uppercase font-bold tracking-wider">
+                Local Webhook Payload URL
+              </span>
+              <button
+                onClick={handleCopyWebhookUrl}
+                className="px-2 py-0.5 rounded bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[11px] font-semibold text-[#99462A] flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined text-xs">{copiedUrl ? 'check' : 'content_copy'}</span>
+                <span>{copiedUrl ? 'Copied!' : 'Copy URL'}</span>
+              </button>
+            </div>
+            <code className="font-mono text-xs text-[#2D2926] bg-white px-2 py-1.5 rounded border border-[#E5DED6] block truncate select-all">
+              {window.location.origin}/api/webhooks/github
+            </code>
+            <p className="text-[11px] text-[#6B625B] flex items-center gap-1 pt-0.5">
+              <span className="material-symbols-outlined text-xs text-[#D97757]">cell_tower</span>
+              <span>For external GitHub deliveries to localhost, run: <code className="font-mono text-[#99462A]">npx localtunnel --port 5000</code></span>
+            </p>
+          </div>
+
+          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] space-y-1.5">
+            <span className="text-[10px] text-[#8F857D] uppercase font-bold tracking-wider block">
+              Repository &amp; Events Target
+            </span>
+            <div className="font-semibold text-xs text-[#2D2926] flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-sm text-[#D97757]">source</span>
+              <span>{gitHubStatus?.repository || 'naveenkumar030/SentinelOps'}</span>
+            </div>
+            <div className="flex flex-wrap gap-1 pt-1">
+              {['workflow_run', 'push', 'pull_request', 'ping'].map((evt) => (
+                <span key={evt} className="px-1.5 py-0.5 rounded bg-white border border-[#E5DED6] text-[10px] font-mono text-[#6B625B]">
+                  {evt}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Simulation Feedback Alert */}
+        {simulationResult && (
+          <div
+            className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
+              simulationResult.success
+                ? 'bg-[#EAF3E7] border-[#5B7C4B]/40 text-[#2D2926]'
+                : 'bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A]'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-[#5B7C4B]">
+                {simulationResult.success ? 'check_circle' : 'error'}
+              </span>
+              <span>{simulationResult.message}</span>
+            </div>
+            <button
+              onClick={() => setSimulationResult(null)}
+              className="text-[#6B625B] hover:text-[#2D2926] cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-sm">close</span>
+            </button>
+          </div>
+        )}
+
+        {/* Interactive Webhook Simulator & Actions Dispatch Buttons */}
+        <div className="space-y-2 pt-1 border-t border-[#E5DED6]">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-[#2D2926] flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm text-[#D97757]">play_arrow</span>
+              <span>Instant Webhook Simulator &amp; GitHub Actions Dispatch</span>
+            </span>
+            <span className="text-[11px] text-[#6B625B]">Trigger live payload ingestion to Flask backend</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <button
+              disabled={simulatingEvent !== null}
+              onClick={() => handleTestWebhook('ping')}
+              className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-left text-xs cursor-pointer transition-all disabled:opacity-50"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#2D2926] text-[11px]">Send Ping</span>
+                <span className="material-symbols-outlined text-xs text-[#D97757]">sensors</span>
+              </div>
+              <div className="text-[10px] text-[#6B625B]">Verify Pong status</div>
+            </button>
+
+            <button
+              disabled={simulatingEvent !== null}
+              onClick={() => handleTestWebhook('push')}
+              className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-left text-xs cursor-pointer transition-all disabled:opacity-50"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#2D2926] text-[11px]">Simulate Push</span>
+                <span className="material-symbols-outlined text-xs text-[#5B7C4B]">upload</span>
+              </div>
+              <div className="text-[10px] text-[#6B625B]">Trigger build pipeline</div>
+            </button>
+
+            <button
+              disabled={simulatingEvent !== null}
+              onClick={() => handleTestWebhook('workflow_run')}
+              className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-left text-xs cursor-pointer transition-all disabled:opacity-50"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#2D2926] text-[11px]">Workflow (Success)</span>
+                <span className="material-symbols-outlined text-xs text-[#5B7C4B]">task_alt</span>
+              </div>
+              <div className="text-[10px] text-[#6B625B]">Sync completed build</div>
+            </button>
+
+            <button
+              disabled={simulatingEvent !== null}
+              onClick={() =>
+                handleTestWebhook(
+                  JSON.stringify({
+                    action: 'completed',
+                    workflow_run: {
+                      name: 'Deploy Production',
+                      head_branch: 'main',
+                      head_sha: 'c9f8a7b',
+                      status: 'completed',
+                      conclusion: 'failure',
+                      actor: { login: 'ci-runner' },
+                    },
+                    repository: { name: 'billing-engine' },
+                  })
+                )
+              }
+              className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#FDF0F0] text-left text-xs cursor-pointer transition-all disabled:opacity-50"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#C34A4A] text-[11px]">Workflow (Failed)</span>
+                <span className="material-symbols-outlined text-xs text-[#C34A4A]">error</span>
+              </div>
+              <div className="text-[10px] text-[#6B625B]">Trigger AI remediation</div>
+            </button>
+
+            <button
+              disabled={simulatingEvent !== null}
+              onClick={() => handleTestWebhook('pull_request')}
+              className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-left text-xs cursor-pointer transition-all disabled:opacity-50"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#2D2926] text-[11px]">Simulate PR Open</span>
+                <span className="material-symbols-outlined text-xs text-[#99462A]">call_merge</span>
+              </div>
+              <div className="text-[10px] text-[#6B625B]">Run AI AST Audit</div>
+            </button>
+
+            <button
+              disabled={isDispatching}
+              onClick={handleDispatchWorkflow}
+              className="p-2.5 rounded-xl bg-[#F9ECE7] border border-[#D97757]/40 hover:bg-[#D97757] hover:text-white group text-left text-xs cursor-pointer transition-all disabled:opacity-50"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#99462A] group-hover:text-white text-[11px]">Dispatch Actions</span>
+                <span className="material-symbols-outlined text-xs text-[#D97757] group-hover:text-white">send</span>
+              </div>
+              <div className="text-[10px] text-[#6B625B] group-hover:text-white/90">Run deploy.yml</div>
+            </button>
+          </div>
+        </div>
+
+        {/* Live Webhook Ingestion Log */}
+        <div className="space-y-2 pt-2 border-t border-[#E5DED6]">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-[#2D2926] flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm text-[#5B7C4B]">receipt_long</span>
+              <span>Recent Ingested Webhook Events ({gitHubStatus?.recentEvents?.length || 0})</span>
+            </span>
+            <button
+              onClick={() => api.getGitHubStatus().then(setGitHubStatus)}
+              className="text-[11px] text-[#99462A] hover:underline flex items-center gap-1 cursor-pointer font-semibold"
+            >
+              <span className="material-symbols-outlined text-xs">refresh</span>
+              <span>Refresh Events</span>
+            </button>
+          </div>
+
+          {gitHubStatus?.recentEvents && gitHubStatus.recentEvents.length > 0 ? (
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+              {gitHubStatus.recentEvents.map((ev) => (
+                <div
+                  key={ev.id}
+                  className="p-2 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold ${
+                        ev.event === 'workflow_run'
+                          ? 'bg-[#EAF3E7] text-[#5B7C4B]'
+                          : ev.event === 'push'
+                          ? 'bg-[#F9ECE7] text-[#99462A]'
+                          : ev.event === 'pull_request'
+                          ? 'bg-[#EFF6FF] text-[#2563EB]'
+                          : 'bg-[#FAF7F3] text-[#6B625B] border border-[#E5DED6]'
+                      }`}
+                    >
+                      {ev.event}
+                    </span>
+                    <span className="font-medium text-[#2D2926] text-[11px] truncate max-w-md">{ev.summary}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-[11px] text-[#6B625B] font-mono shrink-0">
+                    <span>@{ev.sender}</span>
+                    <span>{ev.timestamp.substring(11, 19)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] text-center text-xs text-[#6B625B]">
+              No webhooks received yet this session. Click any simulation button above or configure the webhook URL in GitHub Settings to see live incoming events!
+            </div>
+          )}
         </div>
       </section>
 
