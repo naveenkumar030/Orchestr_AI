@@ -881,5 +881,92 @@ class DataStore:
         return res
 
 
+    # ── GitHub Webhook Integration ────────────────────────────────────────────
+    def handle_github_workflow_run(self, payload):
+        """Processes incoming GitHub Actions workflow_run webhook payloads."""
+        action = payload.get("action", "completed")
+        run = payload.get("workflow_run", {})
+        repo_obj = payload.get("repository", {}) or run.get("repository", {})
+        repo_name = repo_obj.get("name") or "SentinelOps"
+        wf_name = run.get("name") or "CI/CD Workflow"
+        branch = run.get("head_branch") or "main"
+        raw_commit = run.get("head_sha") or "HEAD"
+        commit_sha = raw_commit[:7] if len(raw_commit) >= 7 else raw_commit
+        actor = payload.get("sender", {}).get("login") or run.get("actor", {}).get("login") or "github-actions"
+
+        raw_status = run.get("status", "completed")
+        conclusion = run.get("conclusion")
+
+        # Map GitHub status & conclusion to SentinelOps status: 'running', 'success', 'failed', 'queued', 'cancelled'
+        if raw_status in ["queued", "waiting", "requested"]:
+            pipe_status = "queued"
+        elif raw_status == "in_progress":
+            pipe_status = "running"
+        elif raw_status == "completed":
+            if conclusion == "success":
+                pipe_status = "success"
+            elif conclusion in ["failure", "timed_out"]:
+                pipe_status = "failed"
+            elif conclusion == "cancelled":
+                pipe_status = "cancelled"
+            else:
+                pipe_status = "success" if not conclusion else conclusion
+        else:
+            pipe_status = raw_status
+
+        # Find existing pipeline for repo/branch or create a new entry
+        pipe = None
+        for p in self.pipelines:
+            if p.get("repo") == repo_name and p.get("branch") == branch:
+                pipe = p
+                break
+
+        if pipe:
+            pipe["status"] = pipe_status
+            pipe["name"] = wf_name
+            pipe["commit"] = commit_sha
+            pipe["time"] = "just now"
+            pipe["triggeredBy"] = actor
+        else:
+            new_id = f"pipe-{len(self.pipelines) + 1:03d}"
+            pipe = {
+                "id": new_id,
+                "name": wf_name,
+                "repo": repo_name,
+                "branch": branch,
+                "commit": commit_sha,
+                "status": pipe_status,
+                "stages": [
+                    {"name": "Checkout", "status": "success", "duration": "2s"},
+                    {"name": "Build", "status": "success" if pipe_status == "success" else ("running" if pipe_status == "running" else "queued")},
+                    {"name": "Test", "status": "success" if pipe_status == "success" else ("failed" if pipe_status == "failed" else "queued")},
+                    {"name": "Scan", "status": "success" if pipe_status == "success" else "queued"},
+                    {"name": "Deploy", "status": "success" if pipe_status == "success" else "queued"},
+                ],
+                "duration": "1m 15s" if pipe_status == "success" else "—",
+                "triggeredBy": actor,
+                "time": "just now",
+            }
+            self.pipelines.insert(0, pipe)
+
+        # Record real-time log event for observability
+        log_level = "ERROR" if pipe_status == "failed" else ("WARNING" if pipe_status == "cancelled" else "INFO")
+        log_msg = f"[GitHub Webhook] Workflow '{wf_name}' ({action}) on {repo_name}@{branch} [{commit_sha}]: status={pipe_status}"
+        if conclusion:
+            log_msg += f", conclusion={conclusion}"
+        self.add_log(service=repo_name, level=log_level, message=log_msg)
+
+        if pipe_status == "failed":
+            self.add_log(service="SentinelOps-AI", level="WARN", message=f"Autonomous diagnosis triggered for failed workflow '{wf_name}' on {repo_name}")
+
+        return {
+            "pipelineId": pipe["id"],
+            "status": pipe_status,
+            "repo": repo_name,
+            "branch": branch,
+            "commit": commit_sha
+        }
+
+
 # Singleton instance
 store = DataStore()

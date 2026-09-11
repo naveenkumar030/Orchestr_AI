@@ -164,3 +164,93 @@ def test_analytics(client, range_val):
         an_7d = res.get_json()
         assert "dora" in an_7d
         assert len(an_7d.get("microservices", [])) >= 5
+
+
+# ── GitHub Webhook Integration Tests ──────────────────────────────────────────
+def test_github_webhook_ping_dev_mode(client, monkeypatch):
+    """Test ping event without secret configured (dev mode)."""
+    monkeypatch.delenv("GITHUB_WEBHOOK_SECRET", raising=False)
+    res = client.post(
+        "/api/webhooks/github",
+        headers={"X-GitHub-Event": "ping"},
+        json={"zen": "Approachable is better than simple."}
+    )
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data.get("status") == "pong"
+
+
+def test_github_webhook_ping_valid_signature(client, monkeypatch):
+    """Test ping event with strict HMAC-SHA256 signature verification."""
+    import hmac
+    import hashlib
+    import json
+
+    test_secret = "9f3a1c8e2b7d4f6a0e5c9b1d8f2a4c6e7b0d3f5a1c9e8b4d6f2a0c8e5b1d9f3a"
+    monkeypatch.setenv("GITHUB_WEBHOOK_SECRET", test_secret)
+
+    payload_bytes = json.dumps({"zen": "Mind your words."}).encode("utf-8")
+    sig = "sha256=" + hmac.new(test_secret.encode("utf-8"), payload_bytes, hashlib.sha256).hexdigest()
+
+    res = client.post(
+        "/api/webhooks/github",
+        data=payload_bytes,
+        headers={
+            "Content-Type": "application/json",
+            "X-GitHub-Event": "ping",
+            "X-Hub-Signature-256": sig,
+        }
+    )
+    assert res.status_code == 200
+    assert res.get_json().get("status") == "pong"
+
+
+def test_github_webhook_invalid_signature_rejected(client, monkeypatch):
+    """Test that requests with an invalid HMAC signature are rejected with 401."""
+    monkeypatch.setenv("GITHUB_WEBHOOK_SECRET", "super-secret-key")
+
+    res = client.post(
+        "/api/webhooks/github",
+        headers={
+            "Content-Type": "application/json",
+            "X-GitHub-Event": "ping",
+            "X-Hub-Signature-256": "sha256=invalid_tampered_signature_12345",
+        },
+        json={"zen": "Security first"}
+    )
+    assert res.status_code == 401
+    assert "Invalid HMAC" in res.get_json().get("error", "")
+
+
+def test_github_webhook_workflow_run_event(client, monkeypatch):
+    """Test that workflow_run events update SentinelOps pipeline states and logs."""
+    monkeypatch.delenv("GITHUB_WEBHOOK_SECRET", raising=False)
+    payload = {
+        "action": "completed",
+        "workflow_run": {
+            "id": 987654321,
+            "name": "Deploy SentinelOps to Production",
+            "head_branch": "main",
+            "head_sha": "a1b2c3d4e5f6",
+            "status": "completed",
+            "conclusion": "success",
+            "actor": {"login": "devops-engineer"}
+        },
+        "repository": {
+            "name": "payment-service"
+        },
+        "sender": {
+            "login": "devops-engineer"
+        }
+    }
+
+    res = client.post(
+        "/api/webhooks/github",
+        headers={"X-GitHub-Event": "workflow_run"},
+        json=payload
+    )
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data.get("status") == "processed"
+    assert data.get("event") == "workflow_run"
+    assert data.get("result", {}).get("status") == "success"

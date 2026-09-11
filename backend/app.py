@@ -1,6 +1,8 @@
 import os
 import time
 import json
+import hmac
+import hashlib
 import mimetypes
 from flask import Flask, jsonify, request, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
@@ -231,6 +233,78 @@ def save_settings():
 def get_analytics():
     time_range = request.args.get("range", "30d")
     return jsonify(store.get_analytics(time_range=time_range)), 200
+
+
+# ── GitHub Webhooks ───────────────────────────────────────────────────────────
+def verify_github_signature(req):
+    """
+    Validates the GitHub Webhook HMAC SHA-256 signature against GITHUB_WEBHOOK_SECRET.
+    Returns (True, 'OK') if valid or if no secret is configured (dev mode).
+    Returns (False, 'error message') if signature check fails.
+    """
+    secret = os.environ.get("GITHUB_WEBHOOK_SECRET")
+    if not secret:
+        # If no secret is configured on the backend, allow request for local dev
+        return True, "No secret configured (local dev mode)"
+
+    signature_header = req.headers.get("X-Hub-Signature-256")
+    if not signature_header:
+        return False, "Missing X-Hub-Signature-256 header"
+
+    if not signature_header.startswith("sha256="):
+        return False, "Malformed signature header (expected 'sha256=' prefix)"
+
+    expected_hash = hmac.new(
+        secret.encode("utf-8"),
+        req.get_data(),
+        hashlib.sha256
+    ).hexdigest()
+
+    received_hash = signature_header[len("sha256="):]
+    if not hmac.compare_digest(expected_hash, received_hash):
+        return False, "Invalid HMAC SHA-256 signature"
+
+    return True, "Signature verified"
+
+
+@app.route("/api/webhooks/github", methods=["POST"])
+def github_webhook():
+    """
+    GitHub Webhook receiver endpoint.
+    - Validates HMAC SHA-256 signature via X-Hub-Signature-256 header.
+    - Responds to 'ping' events with {"status": "pong"}.
+    - Ingests 'workflow_run' events into SentinelOps pipeline & logs store.
+    """
+    is_valid, msg = verify_github_signature(request)
+    if not is_valid:
+        return jsonify({"error": msg, "status": "unauthorized"}), 401
+
+    event = request.headers.get("X-GitHub-Event", "ping")
+    payload = request.get_json(force=True, silent=True) or {}
+
+    # 1. GitHub ping event (sent on webhook creation or test delivery)
+    if event == "ping":
+        return jsonify({
+            "status": "pong",
+            "message": "SentinelOps GitHub webhook verified successfully",
+            "zen": payload.get("zen", "Keep it logically awesome.")
+        }), 200
+
+    # 2. GitHub Actions workflow_run event
+    if event == "workflow_run":
+        result = store.handle_github_workflow_run(payload)
+        return jsonify({
+            "status": "processed",
+            "event": "workflow_run",
+            "result": result
+        }), 200
+
+    # 3. Unhandled event types
+    return jsonify({
+        "status": "ignored",
+        "event": event,
+        "message": f"Event '{event}' acknowledged"
+    }), 200
 
 
 # ── Frontend Web UI & Single-Page Application (SPA) Routing ───────────────────
