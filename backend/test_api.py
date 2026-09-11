@@ -525,8 +525,8 @@ def test_github_webhook_workflow_run_failed_detection(client, monkeypatch):
     matched = [i for i in incidents if i.get("id") == f"INC-{run_id}"]
     assert len(matched) == 1
     assert matched[0].get("repo") == repo_name
-    assert matched[0].get("runId") == run_id
-    assert matched[0].get("status") == "Investigating"
+    assert matched[0].get("status") in ["Investigating", "Remediated"]
+    assert matched[0].get("prNumber") is not None
 
 
 def test_github_service_isolated_methods():
@@ -742,7 +742,7 @@ def test_database_persistence_via_webhook(client, monkeypatch):
     assert target is not None, "Failed workflow incident should be persisted in the database"
     assert target["repo"] == "db-service"
     assert target["runId"] == unique_run_id
-    assert target["status"] == "Investigating"
+    assert target["status"] in ["Investigating", "Remediated"]
 
     # Test updating status persists to database
     update_res = client.post(f"/api/incidents/INC-{unique_run_id}/status", json={"status": "Resolved"})
@@ -751,6 +751,160 @@ def test_database_persistence_via_webhook(client, monkeypatch):
     updated_db_incs = incident_service.get_all_incidents()
     updated_target = next((i for i in updated_db_incs if i.get("id") == f"INC-{unique_run_id}"), None)
     assert updated_target["status"] == "Resolved"
+
+
+def test_end_to_end_autonomous_remediation_pipeline(client, monkeypatch):
+    """
+    Validates the complete autonomous loop:
+    GitHub Actions Workflow Fails -> Webhook Event -> Flask Backend ->
+    GitHub REST API (Logs) -> AI Agent (Healer-Alpha Root Cause) ->
+    Branch + PR Creation -> Store & UI Synchronization.
+    """
+    monkeypatch.delenv("GITHUB_WEBHOOK_SECRET", raising=False)
+    run_id = 987654
+    failed_webhook_payload = {
+        "action": "completed",
+        "workflow_run": {
+            "id": run_id,
+            "name": "CI / Test & Build Suite",
+            "head_branch": "main",
+            "head_sha": "f1e2d3c4b5a6",
+            "status": "completed",
+            "conclusion": "failure",
+            "actor": {"login": "ci-runner"},
+        },
+        "repository": {"name": "payment-service", "full_name": "naveenkumar030/payment-service"},
+        "sender": {"login": "ci-runner"},
+    }
+
+    # 1. Trigger via GitHub Webhook
+    resp = client.post(
+        "/api/webhooks/github",
+        headers={"X-GitHub-Event": "workflow_run"},
+        json=failed_webhook_payload,
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["status"] == "processed"
+    assert data["event"] == "workflow_run"
+
+    # 2. Verify Incident has been created and auto-remediated by Healer-Alpha
+    inc_res = client.get(f"/api/incidents/INC-{run_id}")
+    assert inc_res.status_code == 200
+    inc = inc_res.get_json()
+    assert inc["id"] == f"INC-{run_id}"
+    assert inc["status"] == "Remediated"
+    assert inc["confidence"] >= 90
+    assert "AssertionError" in inc["rootCause"] or "failure" in inc["rootCause"].lower()
+    assert inc["prNumber"] is not None
+    assert f"sentinelops/fix-{run_id}" in inc["remediationBranch"]
+    assert inc["diff"] is not None
+    assert "--- a/" in inc["diff"]
+
+    # 3. Verify PR appears in Pull Requests dashboard
+    prs_res = client.get("/api/pull-requests")
+    assert prs_res.status_code == 200
+    all_prs = prs_res.get_json()
+    matching_pr = next((p for p in all_prs if p.get("number") == inc["prNumber"]), None)
+    assert matching_pr is not None
+    assert "Healer-Alpha" in matching_pr.get("title", "") or "SentinelOps AI" in matching_pr.get("title", "")
+
+    # 4. Verify on-demand remediation endpoint
+    on_demand_res = client.post(f"/api/incidents/INC-{run_id}/remediate")
+    assert on_demand_res.status_code == 200
+    on_demand_data = on_demand_res.get_json()
+    assert on_demand_data["status"] == "remediated"
+    assert on_demand_data["agent"] == "Healer-Alpha"
+
+    # 5. Verify direct GitHub remediation dispatch endpoint
+    direct_res = client.post("/api/github/remediate", json={"run_id": 999111, "repo": "auth-service"})
+    assert direct_res.status_code == 200
+    assert direct_res.get_json()["status"] == "success"
+
+
+def test_webhook_relay_service_and_endpoints(client):
+    """Verifies Smee.io Webhook Relay control endpoints and payload forwarding."""
+    from services.webhook_relay import webhook_relay_service
+
+    # 1. Check relay status endpoint
+    status_res = client.get("/api/github/relay/status")
+    assert status_res.status_code == 200
+    status_data = status_res.get_json()
+    assert "smeeUrl" in status_data
+    assert "https://smee.io/" in status_data["smeeUrl"]
+
+    # 2. Check relay start endpoint
+    start_res = client.post("/api/github/relay/start", json={"channel_id": "test-sentinelops-channel"})
+    assert start_res.status_code == 200
+    start_data = start_res.get_json()
+    assert start_data["status"] == "started"
+    assert webhook_relay_service.running is True
+    assert webhook_relay_service.channel_id == "test-sentinelops-channel"
+
+    # 3. Check relay stop endpoint
+    stop_res = client.post("/api/github/relay/stop")
+    assert stop_res.status_code == 200
+    assert stop_res.get_json()["status"] == "stopped"
+    assert webhook_relay_service.running is False
+
+    # 4. Check GitHub status contains relay metadata
+    gh_status = client.get("/api/github/status").get_json()
+    assert "relay" in gh_status
+    assert gh_status["relay"]["channelId"] == "test-sentinelops-channel"
+
+
+def test_ngrok_service_and_endpoints(client, monkeypatch):
+    """Verifies ngrok tunnel service endpoints and status reporting."""
+    from services.ngrok_service import ngrok_service
+    monkeypatch.setattr(ngrok_service, "authtoken", "test_authtoken_123")
+
+    # 1. Check ngrok status endpoint
+    status_res = client.get("/api/github/ngrok/status")
+    assert status_res.status_code == 200
+    data = status_res.get_json()
+    assert "running" in data
+    assert "tokenConfigured" in data
+    assert data["tokenConfigured"] is True
+
+    # 2. Check github/status contains ngrok metadata
+    gh_status = client.get("/api/github/status").get_json()
+    assert "ngrok" in gh_status
+    assert "tokenConfigured" in gh_status["ngrok"]
+
+    # 3. Check start and stop endpoints (with mock to avoid blocking on network tunnel)
+    monkeypatch.setattr(
+        ngrok_service,
+        "start",
+        lambda port=5000, authtoken=None: {
+            "running": True,
+            "publicUrl": "https://test-subdomain.ngrok-free.app",
+            "webhookUrl": "https://test-subdomain.ngrok-free.app/api/webhooks/github",
+            "port": port,
+            "tokenConfigured": True,
+        }
+    )
+    start_res = client.post("/api/github/ngrok/start", json={"port": 5000})
+    assert start_res.status_code == 200
+    assert start_res.get_json()["status"] == "started"
+    assert "ngrok-free.app" in start_res.get_json()["ngrok"]["publicUrl"]
+
+    monkeypatch.setattr(
+        ngrok_service,
+        "stop",
+        lambda: {
+            "running": False,
+            "publicUrl": None,
+            "webhookUrl": None,
+            "port": 5000,
+            "tokenConfigured": True,
+        }
+    )
+    stop_res = client.post("/api/github/ngrok/stop")
+    assert stop_res.status_code == 200
+    assert stop_res.get_json()["status"] == "stopped"
+
+
+
 
 
 

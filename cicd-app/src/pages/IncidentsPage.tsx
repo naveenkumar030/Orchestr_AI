@@ -12,7 +12,29 @@ export default function IncidentsPage() {
   const [showExplainModal, setShowExplainModal] = useState(false);
   const [explanationData, setExplanationData] = useState<IncidentExplanation | null>(null);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
+  const [isRemediating, setIsRemediating] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
+
+  const handleRemediate = async () => {
+    setIsRemediating(true);
+    try {
+      const res = await api.remediateIncident(selectedIncident.id);
+      const updatedList = await api.getIncidents();
+      if (updatedList && updatedList.length > 0) {
+        setIncidentList(updatedList);
+        const curr = updatedList.find((i) => i.id === selectedIncident.id);
+        if (curr) setSelectedIncident(curr);
+      }
+      setNotification(`⚡ Healer-Alpha auto-remediated ${selectedIncident.id}! PR #${res?.prNumber || '144'} created on branch '${res?.remediationBranch || 'sentinelops/fix'}'`);
+      setTimeout(() => setNotification(null), 5000);
+    } catch (err) {
+      console.error('Failed to auto-remediate:', err);
+      setNotification('Failed to auto-remediate incident');
+      setTimeout(() => setNotification(null), 4000);
+    } finally {
+      setIsRemediating(false);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -136,6 +158,21 @@ export default function IncidentsPage() {
           >
             <span className="material-symbols-outlined text-lg text-[#D97757]">psychology</span>
             <span>Explain via AI</span>
+          </button>
+
+          <button
+            onClick={handleRemediate}
+            disabled={isRemediating}
+            className={`px-4 py-2 rounded-lg font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all cursor-pointer text-white ${
+              isRemediating
+                ? 'bg-[#B87A36] cursor-wait opacity-90'
+                : 'bg-[#D97757] hover:bg-[#B85D3E]'
+            }`}
+          >
+            <span className={`material-symbols-outlined text-lg ${isRemediating ? 'animate-spin' : ''}`}>
+              {isRemediating ? 'progress_activity' : 'auto_fix_high'}
+            </span>
+            <span>{isRemediating ? 'Remediating...' : 'Auto-Remediate (Healer-Alpha)'}</span>
           </button>
         </div>
       </div>
@@ -344,56 +381,94 @@ export default function IncidentsPage() {
                 </div>
               ))}
             </div>
-          </section>
-
-          {/* 3. Proposed Fix & Unified Code Diff */}
+          </section>          {/* 3. Proposed Fix & Unified Code Diff */}
           <section id="unified-diff" className="rounded-xl bg-white border border-[#E5DED6] shadow-card overflow-hidden">
             <div className="p-space-md bg-[#F2EDE6]/80 border-b border-[#E5DED6] flex items-center justify-between flex-wrap gap-space-sm">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-base text-[#D97757]">difference</span>
-                  <span className="font-headline-sm font-semibold text-[#2D2926]">Pull Request #184 Diff</span>
-                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-white border border-[#E5DED6] text-[#2D2926]">
-                    package.json
+                  <span className="font-headline-sm font-semibold text-[#2D2926]">
+                    {selectedIncident.prNumber ? `Pull Request #${selectedIncident.prNumber} Diff` : 'Auto-Remediation PR Diff'}
                   </span>
+                  <span className="font-mono text-xs px-2 py-0.5 rounded bg-white border border-[#E5DED6] text-[#2D2926]">
+                    {selectedIncident.targetFile || 'package.json'}
+                  </span>
+                  {selectedIncident.remediationBranch && (
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#EAF3E7] border border-[#5B7C4B]/30 text-[#5B7C4B]">
+                      {selectedIncident.remediationBranch}
+                    </span>
+                  )}
                 </div>
                 <p className="font-body-sm text-xs text-[#6B625B] mt-0.5">
-                  fix(deps): resolve stripe-node peer dependency conflict in payment-service
+                  {selectedIncident.rootCause || 'fix(deps): resolve dependency conflict and restore pipeline green status'}
                 </p>
               </div>
 
               <a
-                href="#"
-                onClick={(e) => { e.preventDefault(); alert('Pull Request #184 opened in GitHub tab.'); }}
+                href={selectedIncident.prUrl || '#'}
+                target={selectedIncident.prUrl ? '_blank' : undefined}
+                rel="noreferrer"
+                onClick={(e) => {
+                  if (!selectedIncident.prUrl) {
+                    e.preventDefault();
+                    alert(`Pull Request #${selectedIncident.prNumber || 184} opened in GitHub.`);
+                  }
+                }}
                 className="px-3 py-1.5 rounded bg-white hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-body-sm text-xs flex items-center gap-1 font-semibold transition-colors"
               >
                 <span className="material-symbols-outlined text-sm text-[#D97757]">open_in_new</span>
-                <span>Open in GitHub</span>
+                <span>{selectedIncident.prNumber ? `Open PR #${selectedIncident.prNumber}` : 'Open in GitHub'}</span>
               </a>
             </div>
 
             {/* Code diff container */}
             <div className="p-space-md bg-[#201B18] font-mono text-xs overflow-x-auto space-y-1">
-              <div className="text-[#8F857D] py-1 border-b border-[#3E3835]">
-                @@ -28,7 +28,7 @@ "dependencies": &#123;
-              </div>
-              <div className="text-[#D1C7BD] pl-4">
-                &nbsp;&nbsp;"@fastify/sensible": "^5.2.0",
-              </div>
-              <div className="bg-[#ba1a1a]/30 text-[#fca5a5] px-2 py-0.5 rounded flex items-center gap-2">
-                <span>-</span>
-                <span>&nbsp;&nbsp;"@stripe/stripe-node": "^12.1.0",</span>
-              </div>
-              <div className="bg-[#15803d]/30 text-[#86efac] px-2 py-0.5 rounded flex items-center gap-2">
-                <span>+</span>
-                <span>&nbsp;&nbsp;"@stripe/stripe-node": "^14.1.2",</span>
-              </div>
-              <div className="text-[#D1C7BD] pl-4">
-                &nbsp;&nbsp;"dotenv": "^16.3.1",
-              </div>
-              <div className="text-[#D1C7BD] pl-4">
-                &nbsp;&nbsp;"fastify": "^4.26.1"
-              </div>
+              {selectedIncident.diff ? (
+                selectedIncident.diff.split('\n').map((line, idx) => {
+                  const isAdd = line.startsWith('+') && !line.startsWith('+++');
+                  const isDel = line.startsWith('-') && !line.startsWith('---');
+                  const isHdr = line.startsWith('@@') || line.startsWith('---') || line.startsWith('+++');
+                  return (
+                    <div
+                      key={idx}
+                      className={`px-2 py-0.5 rounded flex items-center gap-2 ${
+                        isAdd
+                          ? 'bg-[#15803d]/30 text-[#86efac]'
+                          : isDel
+                          ? 'bg-[#ba1a1a]/30 text-[#fca5a5]'
+                          : isHdr
+                          ? 'text-[#8F857D] border-b border-[#3E3835]'
+                          : 'text-[#D1C7BD] pl-4'
+                      }`}
+                    >
+                      <span>{line}</span>
+                    </div>
+                  );
+                })
+              ) : (
+                <>
+                  <div className="text-[#8F857D] py-1 border-b border-[#3E3835]">
+                    @@ -28,7 +28,7 @@ "dependencies": &#123;
+                  </div>
+                  <div className="text-[#D1C7BD] pl-4">
+                    &nbsp;&nbsp;"@fastify/sensible": "^5.2.0",
+                  </div>
+                  <div className="bg-[#ba1a1a]/30 text-[#fca5a5] px-2 py-0.5 rounded flex items-center gap-2">
+                    <span>-</span>
+                    <span>&nbsp;&nbsp;"@stripe/stripe-node": "^12.1.0",</span>
+                  </div>
+                  <div className="bg-[#15803d]/30 text-[#86efac] px-2 py-0.5 rounded flex items-center gap-2">
+                    <span>+</span>
+                    <span>&nbsp;&nbsp;"@stripe/stripe-node": "^14.1.2",</span>
+                  </div>
+                  <div className="text-[#D1C7BD] pl-4">
+                    &nbsp;&nbsp;"dotenv": "^16.3.1",
+                  </div>
+                  <div className="text-[#D1C7BD] pl-4">
+                    &nbsp;&nbsp;"fastify": "^4.26.1"
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Validation checks footer */}

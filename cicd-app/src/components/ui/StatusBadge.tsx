@@ -7,6 +7,7 @@ const statusConfig: Record<IncidentStatus, { bg: string; dot: string; text: stri
   'PR Created':    { bg: 'bg-[#EDE0D7] border-[#D97757]/30',  dot: 'bg-[#D97757]',  text: 'text-[#4D453F]',  label: 'PR Created' },
   'Needs Approval':{ bg: 'bg-[#F9ECE7] border-[#D97757]/30',  dot: 'bg-[#D97757]',  text: 'text-[#99462A]',  label: 'Needs Approval' },
   Resolved:        { bg: 'bg-[#EDF4EA] border-[#5B7C4B]/30',  dot: 'bg-[#5B7C4B]',  text: 'text-[#5B7C4B]',  label: 'Resolved' },
+  Remediated:      { bg: 'bg-[#EAF3E7] border-[#5B7C4B]/40',  dot: 'bg-[#5B7C4B] animate-pulse', text: 'text-[#5B7C4B]',  label: 'Remediated' },
 };
 
 interface StatusBadgeProps {

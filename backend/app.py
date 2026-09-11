@@ -68,10 +68,20 @@ def explain_incident(incident_id):
     return jsonify(explanation), 200
 
 
+@app.route("/api/incidents/<incident_id>/remediate", methods=["POST"])
+def remediate_incident(incident_id):
+    """Triggers autonomous AI remediation (Healer-Alpha) on a specific incident."""
+    remediation = store.remediate_incident(incident_id)
+    if not remediation:
+        return jsonify({"error": f"Incident '{incident_id}' not found"}), 404
+    return jsonify(remediation), 200
+
+
 @app.route("/api/incidents/simulate", methods=["POST"])
 def simulate_anomaly():
     new_incident = store.simulate_anomaly()
     return jsonify(new_incident), 201
+
 
 
 # ── Pipelines ─────────────────────────────────────────────────────────────────
@@ -109,11 +119,13 @@ def retry_pipeline(pipeline_id):
 
 # ── AI Agents ─────────────────────────────────────────────────────────────────
 @app.route("/api/ai-agents", methods=["GET"])
+@app.route("/api/agents", methods=["GET"])
 def list_ai_agents():
     return jsonify(store.get_ai_agents()), 200
 
 
 @app.route("/api/ai-agents", methods=["POST"])
+@app.route("/api/agents", methods=["POST"])
 def deploy_ai_agent():
     data = request.get_json(force=True, silent=True) or {}
     new_agent = store.add_ai_agent(data)
@@ -121,6 +133,7 @@ def deploy_ai_agent():
 
 
 @app.route("/api/ai-agents/<agent_id>/status", methods=["PATCH", "POST"])
+@app.route("/api/agents/<agent_id>/status", methods=["PATCH", "POST"])
 def update_agent_status(agent_id):
     data = request.get_json(force=True, silent=True) or {}
     status = data.get("status")
@@ -134,6 +147,7 @@ def update_agent_status(agent_id):
 
 # ── Pull Requests ─────────────────────────────────────────────────────────────
 @app.route("/api/pull-requests", methods=["GET"])
+@app.route("/api/prs", methods=["GET"])
 def list_pull_requests():
     return jsonify(store.get_pull_requests()), 200
 

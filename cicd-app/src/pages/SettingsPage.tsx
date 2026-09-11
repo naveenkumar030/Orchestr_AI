@@ -27,7 +27,13 @@ export default function SettingsPage() {
   const [simulatingEvent, setSimulatingEvent] = useState<string | null>(null);
   const [simulationResult, setSimulationResult] = useState<{ success: boolean; message: string } | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedSmeeUrl, setCopiedSmeeUrl] = useState(false);
+  const [copiedNgrokUrl, setCopiedNgrokUrl] = useState(false);
+  const [isTogglingRelay, setIsTogglingRelay] = useState(false);
+  const [isTogglingNgrok, setIsTogglingNgrok] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
+
+
 
   // Diagnostics State
   const [isPinging, setIsPinging] = useState(false);
@@ -169,6 +175,58 @@ export default function SettingsPage() {
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2500);
   };
+
+  const handleCopySmeeUrl = () => {
+    const smee = gitHubStatus?.relay?.smeeUrl || 'https://smee.io/sentinelops-dev-channel';
+    navigator.clipboard.writeText(smee);
+    setCopiedSmeeUrl(true);
+    setTimeout(() => setCopiedSmeeUrl(false), 2500);
+  };
+
+  const handleToggleRelay = async () => {
+    setIsTogglingRelay(true);
+    try {
+      if (gitHubStatus?.relay?.running) {
+        await api.stopRelay();
+      } else {
+        await api.startRelay(gitHubStatus?.relay?.channelId);
+      }
+      const updated = await api.getGitHubStatus();
+      setGitHubStatus(updated);
+    } catch (err) {
+      console.error('Failed to toggle relay:', err);
+    } finally {
+      setIsTogglingRelay(false);
+    }
+  };
+
+  const handleCopyNgrokUrl = () => {
+    const url = gitHubStatus?.ngrok?.webhookUrl || (gitHubStatus?.ngrok?.publicUrl ? `${gitHubStatus.ngrok.publicUrl}/api/webhooks/github` : '');
+    if (url) {
+      navigator.clipboard.writeText(url);
+      setCopiedNgrokUrl(true);
+      setTimeout(() => setCopiedNgrokUrl(false), 2500);
+    }
+  };
+
+  const handleToggleNgrok = async () => {
+    setIsTogglingNgrok(true);
+    try {
+      if (gitHubStatus?.ngrok?.running) {
+        await api.stopNgrok();
+      } else {
+        await api.startNgrok(5000);
+      }
+      const updated = await api.getGitHubStatus();
+      setGitHubStatus(updated);
+    } catch (err) {
+      console.error('Failed to toggle ngrok:', err);
+    } finally {
+      setIsTogglingNgrok(false);
+    }
+  };
+
+
 
   const handleDispatchWorkflow = async () => {
     setIsDispatching(true);
@@ -431,28 +489,172 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Webhook Endpoint & Tunnel Info Bar */}
+        {/* Webhook Endpoint & Smee Relay Info Bar */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 text-xs">
-          <div className="lg:col-span-2 p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] space-y-1.5">
-            <div className="flex items-center justify-between">
+          <div className="lg:col-span-2 p-3.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] space-y-3">
+            {/* Smee Live Relay Forwarder */}
+            <div className="p-3 rounded-lg bg-white border border-[#E5DED6] space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base text-[#D97757]">cell_tower</span>
+                  <span className="font-bold text-[#2D2926]">Live Smee.io Webhook Relay</span>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                      gitHubStatus?.relay?.connected
+                        ? 'bg-[#EAF3E7] border-[#5B7C4B]/40 text-[#5B7C4B]'
+                        : gitHubStatus?.relay?.running
+                        ? 'bg-[#FEF7EC] border-[#B87A36]/40 text-[#B87A36]'
+                        : 'bg-[#F2EDE6] border-[#E5DED6] text-[#6B625B]'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        gitHubStatus?.relay?.connected
+                          ? 'bg-[#5B7C4B] animate-pulse'
+                          : gitHubStatus?.relay?.running
+                          ? 'bg-[#B87A36]'
+                          : 'bg-[#8F857D]'
+                      }`}
+                    />
+                    {gitHubStatus?.relay?.connected
+                      ? `Connected (${gitHubStatus.relay.eventsForwarded} forwarded)`
+                      : gitHubStatus?.relay?.running
+                      ? 'Connecting...'
+                      : 'Relay Idle'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={handleCopySmeeUrl}
+                    className="px-2 py-1 rounded bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-[11px] font-semibold text-[#99462A] flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-xs">{copiedSmeeUrl ? 'check' : 'content_copy'}</span>
+                    <span>{copiedSmeeUrl ? 'Copied Smee URL!' : 'Copy Smee URL'}</span>
+                  </button>
+                  <button
+                    disabled={isTogglingRelay}
+                    onClick={handleToggleRelay}
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold text-white flex items-center gap-1 transition-all cursor-pointer ${
+                      gitHubStatus?.relay?.running
+                        ? 'bg-[#C34A4A] hover:bg-[#A33838]'
+                        : 'bg-[#5B7C4B] hover:bg-[#476239]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-xs">
+                      {gitHubStatus?.relay?.running ? 'stop_circle' : 'play_circle'}
+                    </span>
+                    <span>{gitHubStatus?.relay?.running ? 'Stop Relay' : 'Start Relay'}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <code className="font-mono text-[11px] text-[#D97757] font-semibold bg-[#FAF7F3] px-2.5 py-1 rounded border border-[#E5DED6] flex-1 truncate select-all">
+                  {gitHubStatus?.relay?.smeeUrl || 'https://smee.io/sentinelops-dev-channel'}
+                </code>
+              </div>
+
+              <div className="text-[11px] text-[#6B625B] bg-[#FAF7F3] p-2.5 rounded border border-[#E5DED6]/80 space-y-1">
+                <div className="font-semibold text-[#2D2926] flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs text-[#D97757]">help</span>
+                  <span>GitHub Repository Setup:</span>
+                </div>
+                <ol className="list-decimal list-inside space-y-0.5 text-[10px] pl-1">
+                  <li>Go to your GitHub repo <strong>Settings → Webhooks → Add webhook</strong></li>
+                  <li>Paste the Smee URL above into <strong>Payload URL</strong></li>
+                  <li>Set Content type to <strong>application/json</strong></li>
+                  <li>Select <strong>Workflow runs</strong>, <strong>Pushes</strong>, and <strong>Pull requests</strong></li>
+                  <li>Click <strong>Add webhook</strong> — webhooks forward instantly to your local SentinelOps!</li>
+                </ol>
+              </div>
+            </div>
+
+            {/* ngrok Live Public Tunnel */}
+            <div className="p-3 rounded-lg bg-white border border-[#E5DED6] space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base text-[#2563eb]">hub</span>
+                  <span className="font-bold text-[#2D2926]">Live ngrok HTTPS Tunnel</span>
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                      gitHubStatus?.ngrok?.running
+                        ? 'bg-[#EFF6FF] border-[#3B82F6]/40 text-[#2563eb]'
+                        : 'bg-[#F2EDE6] border-[#E5DED6] text-[#6B625B]'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        gitHubStatus?.ngrok?.running ? 'bg-[#2563eb] animate-pulse' : 'bg-[#8F857D]'
+                      }`}
+                    />
+                    {gitHubStatus?.ngrok?.running
+                      ? `Active (Port ${gitHubStatus.ngrok.port || 5000})`
+                      : 'Tunnel Disconnected'}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {gitHubStatus?.ngrok?.webhookUrl && (
+                    <button
+                      onClick={handleCopyNgrokUrl}
+                      className="px-2 py-1 rounded bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-[11px] font-semibold text-[#2563eb] flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-xs">
+                        {copiedNgrokUrl ? 'check' : 'content_copy'}
+                      </span>
+                      <span>{copiedNgrokUrl ? 'Copied ngrok URL!' : 'Copy ngrok Webhook'}</span>
+                    </button>
+                  )}
+                  <button
+                    disabled={isTogglingNgrok}
+                    onClick={handleToggleNgrok}
+                    className={`px-2.5 py-1 rounded text-[11px] font-semibold text-white flex items-center gap-1 transition-all cursor-pointer ${
+                      gitHubStatus?.ngrok?.running
+                        ? 'bg-[#C34A4A] hover:bg-[#A33838]'
+                        : 'bg-[#2563eb] hover:bg-[#1d4ed8]'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-xs">
+                      {gitHubStatus?.ngrok?.running ? 'stop_circle' : 'cloud_sync'}
+                    </span>
+                    <span>{gitHubStatus?.ngrok?.running ? 'Stop ngrok' : 'Start ngrok Tunnel'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {gitHubStatus?.ngrok?.webhookUrl ? (
+                <div className="space-y-1">
+                  <div className="text-[10px] text-[#8F857D] font-semibold uppercase tracking-wider">
+                    Direct Public Webhook URL:
+                  </div>
+                  <code className="font-mono text-[11px] text-[#2563eb] font-semibold bg-[#FAF7F3] px-2.5 py-1 rounded border border-[#E5DED6] block truncate select-all">
+                    {gitHubStatus.ngrok.webhookUrl}
+                  </code>
+                </div>
+              ) : (
+                <p className="text-[10px] text-[#6B625B]">
+                  Authtoken configured. Click &ldquo;Start ngrok Tunnel&rdquo; or run <code className="font-mono text-[#99462A]">start_ngrok.bat</code> to open a direct public HTTPS endpoint for GitHub webhooks.
+                </p>
+              )}
+            </div>
+
+            {/* Local Fallback Endpoint */}
+            <div className="flex items-center justify-between pt-1">
               <span className="text-[10px] text-[#8F857D] uppercase font-bold tracking-wider">
-                Local Webhook Payload URL
+                Direct Local Endpoint (Internal)
               </span>
               <button
                 onClick={handleCopyWebhookUrl}
-                className="px-2 py-0.5 rounded bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[11px] font-semibold text-[#99462A] flex items-center gap-1 cursor-pointer transition-colors"
+                className="px-2 py-0.5 rounded bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[10px] font-semibold text-[#6B625B] flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <span className="material-symbols-outlined text-xs">{copiedUrl ? 'check' : 'content_copy'}</span>
-                <span>{copiedUrl ? 'Copied!' : 'Copy URL'}</span>
+                <span>{copiedUrl ? 'Copied!' : 'Copy Local'}</span>
               </button>
             </div>
-            <code className="font-mono text-xs text-[#2D2926] bg-white px-2 py-1.5 rounded border border-[#E5DED6] block truncate select-all">
+            <code className="font-mono text-xs text-[#2D2926] bg-white px-2 py-1 rounded border border-[#E5DED6] block truncate select-all">
               {window.location.origin}/api/webhooks/github
             </code>
-            <p className="text-[11px] text-[#6B625B] flex items-center gap-1 pt-0.5">
-              <span className="material-symbols-outlined text-xs text-[#D97757]">cell_tower</span>
-              <span>For external GitHub deliveries to localhost, run: <code className="font-mono text-[#99462A]">npx localtunnel --port 5000</code></span>
-            </p>
           </div>
 
           <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] space-y-1.5">

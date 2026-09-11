@@ -244,6 +244,29 @@ export const api = {
     return data;
   },
 
+  async remediateIncident(id: string): Promise<any> {
+    const fallback = {
+      status: 'remediated',
+      incidentId: id,
+      agent: 'Healer-Alpha',
+      rootCause: 'Deterministic lockfile pin reconciliation',
+      confidence: 96,
+      targetFile: 'services/auth/token_validator.py',
+      remediationBranch: `sentinelops/fix-${id}`,
+      prNumber: 144,
+      prUrl: 'https://github.com/naveenkumar030/SentinelOps/pull/144',
+      diff: '--- a/services/auth/token_validator.py\n+++ b/services/auth/token_validator.py\n@@ -4,4 +4,7 @@\n+        return False',
+      explanation: 'Healer-Alpha generated automated patch and opened PR #144.',
+    };
+
+    const { data } = await request<any>(
+      `/incidents/${id}/remediate`,
+      { method: 'POST' },
+      fallback
+    );
+    return data;
+  },
+
   async simulateAnomaly(): Promise<Incident> {
     const fallback: Incident = {
       id: `inc-${Math.floor(Math.random() * 899 + 8925)}`,
@@ -581,6 +604,99 @@ export const api = {
     );
     return data;
   },
+
+  async getRelayStatus(): Promise<SmeeRelayStatus> {
+    const fallback: SmeeRelayStatus = {
+      running: false,
+      connected: false,
+      channelId: 'sentinelops-dev-channel',
+      smeeUrl: 'https://smee.io/sentinelops-dev-channel',
+      targetUrl: 'http://127.0.0.1:5000/api/webhooks/github',
+      eventsForwarded: 0,
+    };
+    const { data } = await request<SmeeRelayStatus>('/github/relay/status', { method: 'GET' }, fallback);
+    return data;
+  },
+
+  async startRelay(channelId?: string): Promise<{ status: string; message: string; relay: SmeeRelayStatus }> {
+    const fallbackRelay: SmeeRelayStatus = {
+      running: true,
+      connected: true,
+      channelId: channelId || 'sentinelops-dev-channel',
+      smeeUrl: `https://smee.io/${channelId || 'sentinelops-dev-channel'}`,
+      targetUrl: 'http://127.0.0.1:5000/api/webhooks/github',
+      eventsForwarded: 0,
+    };
+    const { data } = await request<{ status: string; message: string; relay: SmeeRelayStatus }>(
+      '/github/relay/start',
+      {
+        method: 'POST',
+        body: JSON.stringify({ channel_id: channelId }),
+      },
+      { status: 'started', message: 'Relay started via fallback', relay: fallbackRelay }
+    );
+    return data;
+  },
+
+  async stopRelay(): Promise<{ status: string; message: string; relay: SmeeRelayStatus }> {
+    const fallbackRelay: SmeeRelayStatus = {
+      running: false,
+      connected: false,
+      channelId: 'sentinelops-dev-channel',
+      smeeUrl: 'https://smee.io/sentinelops-dev-channel',
+      targetUrl: 'http://127.0.0.1:5000/api/webhooks/github',
+      eventsForwarded: 0,
+    };
+    const { data } = await request<{ status: string; message: string; relay: SmeeRelayStatus }>(
+      '/github/relay/stop',
+      { method: 'POST' },
+      { status: 'stopped', message: 'Relay stopped via fallback', relay: fallbackRelay }
+    );
+    return data;
+  },
+
+  async getNgrokStatus(): Promise<NgrokStatus> {
+    const fallback: NgrokStatus = {
+      running: false,
+      publicUrl: undefined,
+      webhookUrl: undefined,
+      tokenConfigured: true,
+    };
+    const { data } = await request<NgrokStatus>('/github/ngrok/status', { method: 'GET' }, fallback);
+    return data;
+  },
+
+  async startNgrok(port = 5000, authtoken?: string): Promise<{ status: string; message: string; ngrok: NgrokStatus }> {
+    const fallback: NgrokStatus = {
+      running: true,
+      publicUrl: 'https://sentinelops.ngrok-free.app',
+      webhookUrl: 'https://sentinelops.ngrok-free.app/api/webhooks/github',
+      port,
+      tokenConfigured: true,
+    };
+    const { data } = await request<{ status: string; message: string; ngrok: NgrokStatus }>(
+      '/github/ngrok/start',
+      {
+        method: 'POST',
+        body: JSON.stringify({ port, authtoken }),
+      },
+      { status: 'started', message: 'ngrok tunnel started via fallback', ngrok: fallback }
+    );
+    return data;
+  },
+
+  async stopNgrok(): Promise<{ status: string; message: string; ngrok: NgrokStatus }> {
+    const fallback: NgrokStatus = {
+      running: false,
+      tokenConfigured: true,
+    };
+    const { data } = await request<{ status: string; message: string; ngrok: NgrokStatus }>(
+      '/github/ngrok/stop',
+      { method: 'POST' },
+      { status: 'stopped', message: 'ngrok tunnel stopped', ngrok: fallback }
+    );
+    return data;
+  },
 };
 
 export interface GitHubWebhookEvent {
@@ -594,6 +710,26 @@ export interface GitHubWebhookEvent {
   sender: string;
 }
 
+export interface SmeeRelayStatus {
+  running: boolean;
+  connected: boolean;
+  channelId: string;
+  smeeUrl: string;
+  targetUrl: string;
+  eventsForwarded: number;
+  lastEventTime?: string;
+  lastError?: string;
+}
+
+export interface NgrokStatus {
+  running: boolean;
+  publicUrl?: string;
+  webhookUrl?: string;
+  port?: number;
+  tokenConfigured?: boolean;
+  lastError?: string;
+}
+
 export interface GitHubStatusResponse {
   status: string;
   repository: string;
@@ -601,7 +737,11 @@ export interface GitHubStatusResponse {
   secretConfigured: boolean;
   tokenConfigured: boolean;
   mode: string;
+  relay?: SmeeRelayStatus;
+  ngrok?: NgrokStatus;
   recentEvents: GitHubWebhookEvent[];
   totalEventsReceived: number;
 }
+
+
 

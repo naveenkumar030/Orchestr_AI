@@ -32,10 +32,23 @@ def check_and_build_frontend(force=False):
 if __name__ == "__main__":
     force_build = "--build" in sys.argv
     open_browser = "--open" in sys.argv
+    enable_relay = "--relay" in sys.argv
+    enable_ngrok = "--ngrok" in sys.argv
 
     check_and_build_frontend(force=force_build)
 
     from app import app
+
+    if enable_relay:
+        from services.webhook_relay import webhook_relay_service
+        webhook_relay_service.start()
+        print(f"  * Smee Relay:  {webhook_relay_service.smee_url} (Forwarding live GitHub webhooks)")
+
+    if enable_ngrok:
+        from services.ngrok_service import ngrok_service
+        ng_status = ngrok_service.start(port=int(os.environ.get("PORT", 5000)))
+        if ng_status.get("running"):
+            print(f"  * Live ngrok:  {ng_status.get('webhookUrl')}")
 
     print("=" * 68)
     print("  [SentinelOps] Autonomous DevOps -- Unified Server")
@@ -44,7 +57,12 @@ if __name__ == "__main__":
     print("  * Web UI:      http://127.0.0.1:5000")
     print("  * API Health:  http://127.0.0.1:5000/api/health")
     print("  * API Root:    http://127.0.0.1:5000/api/overview")
+    if enable_relay:
+        print(f"  * Smee Relay:  https://smee.io/{webhook_relay_service.channel_id}")
+    if enable_ngrok and ng_status.get("running"):
+        print(f"  * ngrok Hook:  {ng_status.get('webhookUrl')}")
     print("=" * 68)
+
 
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", 5000))
@@ -53,4 +71,5 @@ if __name__ == "__main__":
         webbrowser.open(f"http://127.0.0.1:{port}")
 
     app.run(host=host, port=port, debug=False)
+
 

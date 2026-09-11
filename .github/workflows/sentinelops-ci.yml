@@ -1,0 +1,55 @@
+name: SentinelOps Autonomous CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      simulate_failure:
+        description: 'Deliberately induce a test failure to trigger SentinelOps Healer-Alpha auto-remediation'
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-verify:
+    name: Python API Tests & Linting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest
+
+      - name: Run Backend Integration Test Suite
+        run: |
+          pytest backend/test_api.py -v
+
+      - name: Simulated CI Failure (Healer-Alpha Auto-Remediation Trigger)
+        if: ${{ inputs.simulate_failure == true }}
+        run: |
+          echo "================================================================="
+          echo "::error::Deliberate simulated failure injected via workflow_dispatch!"
+          echo "================================================================="
+          echo "Traceback (most recent call last):"
+          echo "  File \"services/auth/token_validator.py\", line 48, in verify"
+          echo "AssertionError: assert True is False"
+          echo "E   AssertionError: TokenValidator incorrectly accepted expired token"
+          exit 1

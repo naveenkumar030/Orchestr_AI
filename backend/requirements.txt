@@ -2,3 +2,7 @@ Flask>=3.0.0
 flask-cors>=4.0.0
 pytest>=8.0.0
 SQLAlchemy>=2.0.0
+pyngrok>=8.0.0
+requests>=2.30.0
+selenium>=4.0.0
+

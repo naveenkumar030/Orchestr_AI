@@ -599,6 +599,25 @@ class DataStore:
             "policyCheck": "Complies with Zero-Regression & Auto-Merge Guardrail Policy v2.4.",
         }
 
+    def remediate_incident(self, incident_id):
+        """Triggers autonomous AI remediation for a specific incident."""
+        inc = self.get_incident(incident_id)
+        if not inc:
+            return None
+
+        from services.remediation_service import remediation_service
+        run_data = {
+            "repository": inc.get("repo", "payment-service"),
+            "workflow_name": inc.get("pipeline", "CI/CD Workflow"),
+            "run_id": inc.get("runId") or int(incident_id.replace("INC-", "").replace("inc-", "")) if any(c.isdigit() for c in incident_id) else 892401,
+            "branch": inc.get("branch", "main"),
+            "commit_sha": inc.get("commit", "HEAD"),
+            "conclusion": "failure",
+            "action": "completed",
+        }
+        res = remediation_service.remediate_workflow_failure(run_data, trigger_source="manual")
+        return res
+
     # ── Pipelines ─────────────────────────────────────────────────────────────
     def get_pipelines(self, status=None):
         if status and status.lower() != "all":
@@ -1014,6 +1033,7 @@ class DataStore:
         self.add_log(service=repo_name, level=log_level, message=log_msg)
 
         incident_event = None
+        remediation_result = None
         if is_failed or pipe_status == "failed":
             if github_service:
                 incident_event = github_service.create_incident_from_workflow_run(run_data)
@@ -1034,38 +1054,60 @@ class DataStore:
                     "summary": f"Workflow '{wf_name}' failed on {repo_name}@{branch} [{commit_sha}] (Run #{run_id})",
                 }
 
+            # Trigger Autonomous Remediation Agent (Healer-Alpha)
+            try:
+                from services.remediation_service import remediation_service
+                remediation_result = remediation_service.remediate_workflow_failure(run_data)
+            except Exception as e:
+                self.add_log(
+                    service="SentinelOps-AI",
+                    level="ERROR",
+                    message=f"Remediation error for Run #{run_id}: {str(e)}",
+                )
+
             # Ingest into self.incidents if not already present
             existing_inc = next((i for i in self.incidents if i.get("id") == incident_event["id"]), None)
-            inc_record = {
-                "id": incident_event["id"],
-                "repo": repo_name,
-                "pipeline": wf_name,
-                "failure": f"Workflow Run Failure ({conclusion or 'failure'})",
-                "rootCause": f"Pipeline failure in '{wf_name}' at commit {commit_sha}",
-                "confidence": 92,
-                "confidenceColor": "error",
-                "status": "Investigating",
-                "time": "just now",
-                "runId": run_id,
-                "branch": branch,
-                "commit": commit_sha,
-                "actionLabel": "Investigate",
-                "actionVariant": "primary",
-            }
             if not existing_inc:
+                inc_record = {
+                    "id": incident_event["id"],
+                    "repo": repo_name,
+                    "pipeline": wf_name,
+                    "failure": f"Workflow Run Failure ({conclusion or 'failure'})",
+                    "rootCause": remediation_result.get("rootCause") if remediation_result else f"Pipeline failure in '{wf_name}' at commit {commit_sha}",
+                    "confidence": remediation_result.get("confidence") if remediation_result else 92,
+                    "confidenceColor": "secondary" if (remediation_result and remediation_result.get("confidence", 0) >= 90) else "error",
+                    "status": "Remediated" if remediation_result else "Investigating",
+                    "time": "just now",
+                    "runId": run_id,
+                    "branch": branch,
+                    "commit": commit_sha,
+                    "actionLabel": f"View PR #{remediation_result['prNumber']}" if remediation_result else "Investigate",
+                    "actionVariant": "secondary" if remediation_result else "primary",
+                    "prNumber": remediation_result.get("prNumber") if remediation_result else None,
+                    "prUrl": remediation_result.get("prUrl") if remediation_result else None,
+                    "remediationBranch": remediation_result.get("remediationBranch") if remediation_result else None,
+                    "diff": remediation_result.get("diff") if remediation_result else None,
+                }
                 self.incidents.insert(0, inc_record)
+            elif remediation_result:
+                existing_inc.update({
+                    "status": "Remediated",
+                    "rootCause": remediation_result["rootCause"],
+                    "confidence": remediation_result["confidence"],
+                    "confidenceColor": "secondary",
+                    "actionLabel": f"View PR #{remediation_result['prNumber']}",
+                    "actionVariant": "secondary",
+                    "prNumber": remediation_result.get("prNumber"),
+                    "prUrl": remediation_result.get("prUrl"),
+                    "remediationBranch": remediation_result.get("remediationBranch"),
+                    "diff": remediation_result.get("diff"),
+                })
 
             try:
                 from services.incident_service import incident_service
-                incident_service.persist_incident(inc_record)
+                incident_service.persist_incident(existing_inc or inc_record)
             except Exception:
                 pass
-
-            self.add_log(
-                service="SentinelOps-AI",
-                level="WARN",
-                message=f"Autonomous diagnosis triggered for failed workflow '{wf_name}' on {repo_name} (Run #{run_id})",
-            )
 
         # Persist workflow run record in database
         try:
@@ -1076,6 +1118,8 @@ class DataStore:
 
         # Record event in webhook history
         summary = f"Workflow '{wf_name}' ({action}) -> {pipe_status}"
+        if remediation_result and remediation_result.get("prNumber"):
+            summary += f" [Auto-Remediated: PR #{remediation_result['prNumber']}]"
         self.record_webhook_event("workflow_run", payload, status="processed", summary=summary)
 
         return {

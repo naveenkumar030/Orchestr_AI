@@ -14,7 +14,8 @@ export type IncidentStatus =
   | 'Investigating'
   | 'PR Created'
   | 'Needs Approval'
-  | 'Resolved';
+  | 'Resolved'
+  | 'Remediated';
 
 export interface Incident {
   id: string;
@@ -23,11 +24,20 @@ export interface Incident {
   failure: string;
   rootCause: string;
   confidence: number;          // 0-100
-  confidenceColor: 'primary' | 'error' | 'tertiary';
+  confidenceColor: 'primary' | 'error' | 'tertiary' | 'secondary';
   status: IncidentStatus;
   time: string;
   actionLabel?: string;
-  actionVariant?: 'default' | 'primary';
+  actionVariant?: 'default' | 'primary' | 'secondary';
+  runId?: number;
+  branch?: string;
+  commit?: string;
+  prNumber?: number;
+  prUrl?: string;
+  remediationBranch?: string;
+  targetFile?: string;
+  diff?: string;
+  explanation?: string;
 }
 
 // ─── Pipelines ────────────────────────────────────────────────────────────────

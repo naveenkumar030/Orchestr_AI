@@ -134,26 +134,166 @@ class GitHubService:
             "actor": run_data.get("actor", "github-actions"),
         }
 
-    # ── GitHub REST API Methods (Phase 2 & onward) ────────────────────────────
+    # ── GitHub REST API Methods ───────────────────────────────────────────────
 
     def get_repository(self, repo: str) -> Tuple[bool, Dict[str, Any]]:
         """Fetches repository metadata from GitHub API."""
         if not self.token:
-            return True, {"name": repo, "simulated": True, "full_name": repo}
+            return True, {"name": repo, "simulated": True, "full_name": repo, "default_branch": "main"}
         return self._api_request(f"repos/{repo}")
 
     def get_workflow_run(self, repo: str, run_id: int) -> Tuple[bool, Dict[str, Any]]:
         """Fetches workflow run details by run ID."""
         if not self.token:
-            return True, {"id": run_id, "simulated": True, "status": "completed"}
+            return True, {"id": run_id, "simulated": True, "status": "completed", "conclusion": "failure"}
         return self._api_request(f"repos/{repo}/actions/runs/{run_id}")
 
-    def get_workflow_logs(self, repo: str, run_id: int) -> Tuple[bool, str]:
-        """Fetches workflow execution logs (simulated when token is not configured)."""
+    def get_workflow_jobs(self, repo: str, run_id: int) -> Tuple[bool, Dict[str, Any]]:
+        """Fetches list of jobs for a workflow run to pinpoint failed steps."""
         if not self.token:
-            return True, f"[Simulated Logs for Run {run_id}] Step 'Build' failed: Process returned non-zero code 1"
+            return True, {
+                "total_count": 1,
+                "jobs": [
+                    {
+                        "id": 892401,
+                        "run_id": run_id,
+                        "name": "test-and-build",
+                        "status": "completed",
+                        "conclusion": "failure",
+                        "started_at": datetime.now().isoformat(),
+                        "completed_at": datetime.now().isoformat(),
+                        "steps": [
+                            {"name": "Set up Python", "status": "completed", "conclusion": "success", "number": 1},
+                            {"name": "Install dependencies", "status": "completed", "conclusion": "success", "number": 2},
+                            {"name": "Run automated test suite", "status": "completed", "conclusion": "failure", "number": 3},
+                        ],
+                    }
+                ],
+            }
+        return self._api_request(f"repos/{repo}/actions/runs/{run_id}/jobs")
+
+    def get_job_logs(self, repo: str, job_id: int) -> Tuple[bool, str]:
+        """Fetches raw logs for a specific job."""
+        if not self.token:
+            sample_logs = (
+                f"=== Job {job_id} Runner Execution Log ===\n"
+                "[2026-09-11T10:00:01Z] Step 1: Set up Python 3.13 ... OK (0.8s)\n"
+                "[2026-09-11T10:00:03Z] Step 2: Install dependencies ... OK (4.2s)\n"
+                "[2026-09-11T10:00:08Z] Step 3: Run automated test suite\n"
+                "============================= test session starts ==============================\n"
+                "rootdir: /workspace/SentinelOps\n"
+                "collected 18 items\n\n"
+                "tests/test_auth_service.py ..F....\n"
+                "=================================== FAILURES ===================================\n"
+                "_________________________ test_jwt_expiry_race_condition _________________________\n"
+                "    def test_jwt_expiry_race_condition():\n"
+                ">       assert token_validator.verify(expired_token) is False\n"
+                "E       AssertionError: assert True is False\n"
+                "E       + where True = <bound method TokenValidator.verify of <services.auth.TokenValidator object at 0x7f>>('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...')\n"
+                "services/auth/token_validator.py:48: AssertionError\n"
+                "=========================== 1 failed, 17 passed in 1.42s ===========================\n"
+                "##[error]Process completed with exit code 1.\n"
+            )
+            return True, sample_logs
+
+        url = f"{self.base_url}/repos/{repo}/actions/jobs/{job_id}/logs"
+        headers = self._get_headers()
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=15) as response:
+                return True, response.read().decode("utf-8", errors="replace")
+        except Exception as ex:
+            return False, f"Error fetching job logs: {str(ex)}"
+
+    def get_workflow_logs(self, repo: str, run_id: int) -> Tuple[bool, str]:
+        """
+        Fetches workflow execution logs.
+        Attempts to fetch via workflow jobs or fallback to simulated/mock logs.
+        """
+        if not self.token:
+            return self.get_job_logs(repo, 892401)
+
+        ok, jobs_data = self.get_workflow_jobs(repo, run_id)
+        if ok and isinstance(jobs_data, dict) and jobs_data.get("jobs"):
+            for job in jobs_data["jobs"]:
+                if job.get("conclusion") in ["failure", "timed_out"]:
+                    j_ok, j_logs = self.get_job_logs(repo, job["id"])
+                    if j_ok:
+                        return True, j_logs
+
         ok, res = self._api_request(f"repos/{repo}/actions/runs/{run_id}/logs")
-        return ok, str(res)
+        if ok:
+            return True, str(res)
+        return self.get_job_logs(repo, 892401)
+
+    def get_file_content(self, repo: str, path: str, ref: Optional[str] = None) -> Tuple[bool, Dict[str, Any]]:
+        """Fetches a repository file's content and SHA."""
+        if not self.token:
+            import base64
+            mock_content = (
+                "# Token Validator Service\n"
+                "import time\n\n"
+                "class TokenValidator:\n"
+                "    def verify(self, token):\n"
+                "        # Buggy check allows expired token when grace period is not bounded\n"
+                "        return True\n"
+            )
+            return True, {
+                "name": os.path.basename(path),
+                "path": path,
+                "sha": "7b8c9d0e1f2a3b4c",
+                "size": len(mock_content),
+                "content": base64.b64encode(mock_content.encode("utf-8")).decode("utf-8"),
+                "encoding": "base64",
+                "decoded_text": mock_content,
+            }
+
+        endpoint = f"repos/{repo}/contents/{path.lstrip('/')}"
+        if ref:
+            endpoint += f"?ref={ref}"
+        ok, res = self._api_request(endpoint)
+        if ok and isinstance(res, dict) and "content" in res:
+            import base64
+            try:
+                decoded = base64.b64decode(res["content"]).decode("utf-8", errors="replace")
+                res["decoded_text"] = decoded
+            except Exception:
+                res["decoded_text"] = ""
+        return ok, res
+
+    def create_or_update_file(
+        self,
+        repo: str,
+        path: str,
+        content: str,
+        message: str,
+        branch: str,
+        sha: Optional[str] = None,
+    ) -> Tuple[bool, Dict[str, Any]]:
+        """Creates or updates a file in a branch via GitHub Contents API."""
+        import base64
+        b64_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+
+        if not self.token:
+            return True, {
+                "content": {"name": os.path.basename(path), "path": path, "sha": "new_file_sha_123"},
+                "commit": {"sha": "c0ffee123456", "message": message},
+                "simulated": True,
+            }
+
+        payload: Dict[str, Any] = {
+            "message": message,
+            "content": b64_content,
+            "branch": branch,
+        }
+        if sha:
+            payload["sha"] = sha
+
+        return self._api_request(
+            f"repos/{repo}/contents/{path.lstrip('/')}",
+            method="PUT",
+            data=payload,
+        )
 
     def get_commit(self, repo: str, sha: str) -> Tuple[bool, Dict[str, Any]]:
         """Fetches commit details by SHA."""
@@ -168,22 +308,36 @@ class GitHubService:
         return self._api_request(f"repos/{repo}/pulls/{pr_number}")
 
     def create_branch(self, repo: str, branch_name: str, sha: str) -> Tuple[bool, Dict[str, Any]]:
-        """Creates a git reference/branch."""
+        """Creates a git reference/branch from a base commit SHA."""
         if not self.token:
-            return True, {"ref": f"refs/heads/{branch_name}", "sha": sha, "simulated": True}
+            return True, {
+                "ref": f"refs/heads/{branch_name}",
+                "node_id": "REF_kwDO",
+                "url": f"https://api.github.com/repos/{repo}/git/refs/heads/{branch_name}",
+                "object": {"sha": sha, "type": "commit"},
+                "simulated": True,
+            }
         return self._api_request(
             f"repos/{repo}/git/refs",
             method="POST",
             data={"ref": f"refs/heads/{branch_name}", "sha": sha},
         )
 
-    def create_pull_request(self, repo: str, title: str, head: str, base: str, body: str) -> Tuple[bool, Dict[str, Any]]:
+    def create_pull_request(
+        self, repo: str, title: str, head: str, base: str, body: str
+    ) -> Tuple[bool, Dict[str, Any]]:
         """Creates a GitHub pull request."""
         if not self.token:
+            pr_num = int(time.time()) % 1000 + 100
             return True, {
-                "number": 199,
+                "id": pr_num,
+                "number": pr_num,
                 "title": title,
-                "html_url": f"https://github.com/{repo}/pull/199",
+                "state": "open",
+                "html_url": f"https://github.com/{repo}/pull/{pr_num}",
+                "head": {"ref": head},
+                "base": {"ref": base},
+                "body": body,
                 "simulated": True,
             }
         return self._api_request(
@@ -205,3 +359,4 @@ class GitHubService:
 
 # Singleton service instance
 github_service = GitHubService()
+
