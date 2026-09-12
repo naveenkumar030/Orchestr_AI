@@ -4,6 +4,7 @@ import json
 import mimetypes
 from flask import Flask, jsonify, request, send_from_directory, Response, stream_with_context
 from flask_cors import CORS
+import config
 from data_store import store
 from routes import register_routes
 
@@ -234,7 +235,6 @@ def save_settings():
     return jsonify(updated), 200
 
 
-# ── Analytics ─────────────────────────────────────────────────────────────────
 @app.route("/api/analytics", methods=["GET"])
 def get_analytics():
     time_range = request.args.get("range", "30d")

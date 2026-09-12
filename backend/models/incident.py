@@ -3,7 +3,7 @@ Incident model for SentinelOps pipeline failures and anomalies.
 """
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, BigInteger, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
 from models.base import SerializerMixin
@@ -27,6 +27,10 @@ class Incident(Base, SerializerMixin):
     commit = Column(String(64), nullable=True)
     actionLabel = Column(String(64), nullable=True)
     actionVariant = Column(String(32), nullable=True)
+    prNumber = Column(Integer, nullable=True)
+    prUrl = Column(String(512), nullable=True)
+    remediationBranch = Column(String(256), nullable=True)
+    diff = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 

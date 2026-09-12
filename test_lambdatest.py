@@ -119,7 +119,7 @@ def test_rest_api():
         rem_res = requests.post(
             f"{base}/api/github/remediate",
             json={"incident_id": "INC-2026-001", "action": "auto_heal"},
-            timeout=10
+            timeout=30
         )
         if rem_res.status_code == 200:
             rem_data = rem_res.json()

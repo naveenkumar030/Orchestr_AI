@@ -904,6 +904,36 @@ def test_ngrok_service_and_endpoints(client, monkeypatch):
     assert stop_res.get_json()["status"] == "stopped"
 
 
+def test_github_connect_repository(client):
+    """Test connecting a repository via /api/github/connect."""
+    res = client.post(
+        "/api/github/connect",
+        json={"repository": "naveenkumar030/payment-service", "branch": "main"}
+    )
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    assert data["repository"] == "naveenkumar030/payment-service"
+    assert data["branch"] == "main"
+    assert data["status"] == "connected"
+
+    # Reset back to SentinelOps
+    client.post("/api/github/connect", json={"repository": "naveenkumar030/SentinelOps"})
+
+
+def test_github_verify_repository(client):
+    """Test verifying a repository via /api/github/verify."""
+    res = client.post(
+        "/api/github/verify",
+        json={"repository": "naveenkumar030/SentinelOps"}
+    )
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["success"] is True
+    assert data["repository"] == "naveenkumar030/SentinelOps"
+
+
+
 
 
 

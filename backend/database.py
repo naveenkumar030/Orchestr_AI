@@ -41,6 +41,24 @@ def init_db():
     import models  # noqa: F401 - ensures all models are imported before create_all
     Base.metadata.create_all(bind=engine)
 
+    # SQLite schema auto-migration for newly added columns
+    if str(engine.url).startswith("sqlite"):
+        try:
+            with engine.connect() as conn:
+                res = conn.exec_driver_sql("PRAGMA table_info(incidents)").fetchall()
+                existing_cols = {row[1] for row in res}
+                cols_to_add = {
+                    "prNumber": "INTEGER",
+                    "prUrl": "VARCHAR(512)",
+                    "remediationBranch": "VARCHAR(256)",
+                    "diff": "TEXT",
+                }
+                for col_name, col_type in cols_to_add.items():
+                    if col_name not in existing_cols:
+                        conn.exec_driver_sql(f"ALTER TABLE incidents ADD COLUMN {col_name} {col_type}")
+        except Exception:
+            pass
+
 
 @contextmanager
 def get_db():

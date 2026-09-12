@@ -15,7 +15,9 @@ if os.path.exists(_env_path):
                 _line = _line.strip()
                 if _line and not _line.startswith("#") and "=" in _line:
                     _k, _v = _line.split("=", 1)
-                    os.environ.setdefault(_k.strip(), _v.strip().strip("'\""))
+                    _val = _v.strip().strip("'\"")
+                    if _val:
+                        os.environ[_k.strip()] = _val
     except Exception:
         pass
 
@@ -23,6 +25,16 @@ if os.path.exists(_env_path):
 GITHUB_WEBHOOK_SECRET: str | None = os.environ.get("GITHUB_WEBHOOK_SECRET")
 GITHUB_TOKEN: str | None = os.environ.get("GITHUB_TOKEN")
 GITHUB_REPO: str = os.environ.get("GITHUB_REPO", "naveenkumar030/SentinelOps")
+
+# ── AI Model & Provider Integrations ──────────────────────────────────────────
+OPENAI_API_KEY: str | None = os.environ.get("OPENAI_API_KEY")
+GROQ_API_KEY: str | None = os.environ.get("GROQ_API_KEY")
+GEMINI_API_KEY: str | None = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+GOOGLE_API_KEY: str | None = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+
+
+
+
 
 # ── Database ──────────────────────────────────────────────────────────────────
 DATABASE_URL: str | None = os.environ.get("DATABASE_URL")

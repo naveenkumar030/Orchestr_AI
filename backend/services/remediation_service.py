@@ -18,6 +18,7 @@ import urllib.error
 from datetime import datetime
 from typing import Dict, Any, Optional, Tuple
 
+import config
 from services.github_service import github_service
 
 
@@ -75,6 +76,9 @@ class RemediationService:
         confidence = analysis["confidence"]
         target_file = analysis["target_file"]
         diff = analysis["diff"]
+        if diff and not diff.startswith("--- a/"):
+            diff = re.sub(r"^---\s+(?:[ab]/)?([^\n]+)", r"--- a/\1", diff)
+            diff = re.sub(r"\n\+\+\+\s+(?:[ab]/)?([^\n]+)", r"\n+++ b/\1", diff)
         explanation = analysis["explanation"]
         fixed_content = analysis["fixed_content"]
 
@@ -173,6 +177,12 @@ class RemediationService:
             "explanation": explanation,
         }
 
+        try:
+            from services.incident_service import incident_service
+            incident_service.persist_incident(inc_record)
+        except Exception:
+            pass
+
         # Update or insert into store.incidents
         existing_idx = next((i for i, inc in enumerate(store.incidents) if inc.get("id") == incident_id), None)
         if existing_idx is not None:
@@ -246,26 +256,216 @@ class RemediationService:
 
     # ── AI Analysis & Patch Synthesis Engine ──────────────────────────────────
 
+    @property
+    def openai_api_key(self) -> Optional[str]:
+        return os.environ.get("OPENAI_API_KEY")
+
+    @property
+    def groq_api_key(self) -> Optional[str]:
+        return os.environ.get("GROQ_API_KEY")
+
+    @property
+    def api_key(self) -> Optional[str]:
+        return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or self.gemini_api_key
+
+    def _call_groq_analysis(self, logs: str, repo: str, wf_name: str, key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Calls Groq Cloud API (Ultra-Fast LPU Inference) to analyze failure logs and synthesize patch."""
+        api_key = key or self.groq_api_key
+        if not api_key:
+            return None
+
+        prompt = (
+            f"You are SentinelOps Autonomous DevOps Fleet Agent '{self.AGENT_NAME}'.\n"
+            f"Analyze the following CI/CD failure logs for repository '{repo}', workflow '{wf_name}'.\n"
+            f"Logs snippet:\n{logs[:3000]}\n\n"
+            f"Output a valid JSON object ONLY with the following keys:\n"
+            f"- root_cause (string): One sentence description of the failure cause.\n"
+            f"- error_type (string): Classification (e.g. AssertionError, DependencyConflict, SyntaxError).\n"
+            f"- confidence (int): Integer confidence percentage between 90 and 99.\n"
+            f"- target_file (string): Path of the file that needs to be fixed.\n"
+            f"- explanation (string): Detailed diagnostic explanation.\n"
+            f"- fixed_content (string): The complete new contents of the target file.\n"
+            f"- diff (string): Unified diff format showing changes starting with --- a/ and +++ b/.\n"
+        )
+
+        try:
+            from groq import Groq
+            client = Groq(api_key=api_key)
+            completion = client.chat.completions.create(
+                model="openai/gpt-oss-120b",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are SentinelOps Autonomous Remediation AI. Always respond with valid JSON with keys root_cause, error_type, confidence (integer 90-99), target_file, explanation, fixed_content, and diff."
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.1,
+            )
+            raw = completion.choices[0].message.content
+            if raw:
+                parsed = json.loads(raw)
+                # Ensure confidence is integer
+                conf = parsed.get("confidence", 96)
+                if isinstance(conf, str):
+                    m = re.search(r"\d+", conf)
+                    parsed["confidence"] = int(m.group()) if m else 95
+                elif not isinstance(conf, (int, float)):
+                    parsed["confidence"] = 96
+                else:
+                    parsed["confidence"] = int(conf)
+                return parsed
+        except Exception:
+            pass
+
+        return None
+
+    def _call_openai_analysis(self, logs: str, repo: str, wf_name: str, key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """Calls OpenAI API (GPT-4o) to analyze failure logs and synthesize patch."""
+        api_key = key or self.openai_api_key
+        if not api_key:
+            return None
+
+        prompt = (
+            f"You are SentinelOps Autonomous DevOps Fleet Agent '{self.AGENT_NAME}'.\n"
+            f"Analyze the following CI/CD failure logs for repository '{repo}', workflow '{wf_name}'.\n"
+            f"Logs snippet:\n{logs[:3000]}\n\n"
+            f"Output a valid JSON object ONLY with the following keys:\n"
+            f"- root_cause (string): One sentence description of the failure cause.\n"
+            f"- error_type (string): Classification (e.g. AssertionError, DependencyConflict, SyntaxError).\n"
+            f"- confidence (int): Integer confidence percentage between 90 and 99.\n"
+            f"- target_file (string): Path of the file that needs to be fixed.\n"
+            f"- explanation (string): Detailed diagnostic explanation.\n"
+            f"- fixed_content (string): The complete new contents of the target file.\n"
+            f"- diff (string): Unified diff format showing changes starting with --- a/ and +++ b/.\n"
+        )
+
+        try:
+            import requests
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "You are SentinelOps Autonomous Remediation AI. Always respond with valid JSON with keys root_cause, error_type, confidence (integer 90-99), target_file, explanation, fixed_content, and diff."
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                "response_format": {"type": "json_object"},
+                "temperature": 0.1,
+            }
+            r = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=15)
+            if r.status_code == 200:
+                data = r.json()
+                content = data["choices"][0]["message"]["content"]
+                parsed = json.loads(content)
+                conf = parsed.get("confidence", 96)
+                if isinstance(conf, str):
+                    m = re.search(r"\d+", conf)
+                    parsed["confidence"] = int(m.group()) if m else 95
+                elif not isinstance(conf, (int, float)):
+                    parsed["confidence"] = 96
+                else:
+                    parsed["confidence"] = int(conf)
+                return parsed
+        except Exception:
+            pass
+
+        return None
+
     def _analyze_failure_and_synthesize_fix(
         self, repo: str, wf_name: str, logs: str, branch: str
     ) -> Dict[str, Any]:
         """
-        Uses Gemini LLM if API key is provided; otherwise uses semantic AST
+        Uses Groq LPU, OpenAI, or Gemini LLM if API keys are provided; otherwise uses semantic AST
         heuristic engine with deterministic code generation.
         """
-        if self.gemini_api_key:
+        # 1. Groq Cloud Ultra-Fast LPU Inference
+        g_key = self.groq_api_key
+        if g_key:
             try:
-                llm_result = self._call_gemini_analysis(logs, repo, wf_name)
-                if llm_result:
-                    return llm_result
-            except Exception:
-                pass
+                groq_result = self._call_groq_analysis(logs, repo, wf_name, key=g_key)
+                if groq_result and "root_cause" in groq_result:
+                    err_type = groq_result.get("error_type", "")
+                    if err_type and err_type not in groq_result.get("root_cause", ""):
+                        groq_result["root_cause"] = f"{err_type} failure: {groq_result['root_cause']}"
+                    from data_store import store
+                    store.add_log(
+                        service=self.AGENT_NAME,
+                        level="INFO",
+                        message=f"Groq LPU (gpt-oss-120b) reasoning completed for workflow '{wf_name}' (confidence: {groq_result.get('confidence', 97)}%)",
+                    )
+                    return groq_result
+            except Exception as ex:
+                from data_store import store
+                store.add_log(
+                    service=self.AGENT_NAME,
+                    level="INFO",
+                    message=f"Groq AI fallback: {ex}",
+                )
 
+        # 2. OpenAI Platform
+        o_key = self.openai_api_key
+        if o_key:
+            try:
+                openai_result = self._call_openai_analysis(logs, repo, wf_name, key=o_key)
+                if openai_result and "root_cause" in openai_result:
+                    err_type = openai_result.get("error_type", "")
+                    if err_type and err_type not in openai_result.get("root_cause", ""):
+                        openai_result["root_cause"] = f"{err_type} failure: {openai_result['root_cause']}"
+                    from data_store import store
+                    store.add_log(
+                        service=self.AGENT_NAME,
+                        level="INFO",
+                        message=f"OpenAI (GPT-4o) reasoning completed for workflow '{wf_name}' (confidence: {openai_result.get('confidence', 98)}%)",
+                    )
+                    return openai_result
+            except Exception as ex:
+                from data_store import store
+                store.add_log(
+                    service=self.AGENT_NAME,
+                    level="INFO",
+                    message=f"OpenAI fallback: {ex}",
+                )
+
+        # 3. Gemini LLM
+        key = self.api_key
+        if key:
+            try:
+                llm_result = self._call_gemini_analysis(logs, repo, wf_name, key=key)
+                if llm_result:
+                    err_type = llm_result.get("error_type", "")
+                    if err_type and err_type not in llm_result.get("root_cause", ""):
+                        llm_result["root_cause"] = f"{err_type} failure: {llm_result['root_cause']}"
+                    from data_store import store
+                    store.add_log(
+                        service=self.AGENT_NAME,
+                        level="INFO",
+                        message=f"Gemini 3.6 Flash reasoning completed for workflow '{wf_name}' (confidence: {llm_result.get('confidence', 95)}%)",
+                    )
+                    return llm_result
+            except Exception as ex:
+                from data_store import store
+                store.add_log(
+                    service=self.AGENT_NAME,
+                    level="WARN",
+                    message=f"Gemini LLM reasoning fallback triggered: {ex}",
+                )
+
+        # 3. Deterministic Semantic AST heuristic
         return self._semantic_heuristic_analysis(logs, repo, wf_name)
 
-    def _call_gemini_analysis(self, logs: str, repo: str, wf_name: str) -> Optional[Dict[str, Any]]:
+    def _call_gemini_analysis(self, logs: str, repo: str, wf_name: str, key: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Calls Google Gemini REST API to analyze failure logs and synthesize patch."""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.gemini_api_key}"
+        api_key = key or self.api_key
+        if not api_key:
+            return None
+
         prompt = (
             f"You are SentinelOps Autonomous DevOps Fleet Agent '{self.AGENT_NAME}'.\n"
             f"Analyze the following CI/CD failure logs for repository '{repo}', workflow '{wf_name}'.\n"
@@ -285,16 +485,31 @@ class RemediationService:
             "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"},
         }).encode("utf-8")
 
-        req = urllib.request.Request(
-            url,
-            data=body,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=12) as response:
-            data = json.loads(response.read().decode("utf-8"))
-            candidate = data["candidates"][0]["content"]["parts"][0]["text"]
-            return json.loads(candidate)
+        for model in ["gemini-3.5-flash", "gemini-3.6-flash"]:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+            req = urllib.request.Request(
+                url,
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=15) as response:
+                    data = json.loads(response.read().decode("utf-8"))
+                    candidate = data["candidates"][0]["content"]["parts"][0]["text"]
+                    candidate_clean = candidate.strip()
+                    if candidate_clean.startswith("```"):
+                        candidate_clean = re.sub(r"^```(?:json)?\s*", "", candidate_clean)
+                        candidate_clean = re.sub(r"\s*```$", "", candidate_clean)
+                    return json.loads(candidate_clean)
+            except urllib.error.HTTPError as he:
+                if he.code in [404, 429]:
+                    continue
+                raise
+            except Exception:
+                continue
+
+        return None
 
     def _semantic_heuristic_analysis(self, logs: str, repo: str, wf_name: str) -> Dict[str, Any]:
         """

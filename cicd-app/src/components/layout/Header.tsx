@@ -114,13 +114,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           </div>
         )}
 
-        {/* Repo selector (Desktop only) */}
-        <div className="hidden xl:flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-[#E5DED6] text-[#6B625B] hover:text-[#2D2926] hover:bg-[#F2EDE6] transition-colors cursor-pointer shadow-sm text-xs">
-          <span className="material-symbols-outlined text-base text-[#D97757]">source</span>
-          <span className="font-mono text-[#2D2926] font-medium">github.com/enterprise-core</span>
-          <span className="text-[#6B625B]">(12 repos)</span>
-          <span className="material-symbols-outlined text-sm text-[#6B625B]">expand_more</span>
-        </div>
 
         {/* Agent mode badge */}
         <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F9ECE7] border border-[#D97757]/30 shadow-sm">

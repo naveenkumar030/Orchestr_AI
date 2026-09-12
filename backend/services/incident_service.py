@@ -89,15 +89,35 @@ class IncidentService:
                     commit=incident_data.get("commit"),
                     actionLabel=incident_data.get("actionLabel", "Investigate"),
                     actionVariant=incident_data.get("actionVariant", "primary"),
+                    prNumber=incident_data.get("prNumber"),
+                    prUrl=incident_data.get("prUrl"),
+                    remediationBranch=incident_data.get("remediationBranch"),
+                    diff=incident_data.get("diff"),
                 )
                 db.add(inc)
             else:
                 inc.status = incident_data.get("status", inc.status)
                 inc.rootCause = incident_data.get("rootCause", inc.rootCause)
                 inc.confidence = incident_data.get("confidence", inc.confidence)
+                if incident_data.get("prNumber") is not None:
+                    inc.prNumber = incident_data.get("prNumber")
+                if incident_data.get("prUrl") is not None:
+                    inc.prUrl = incident_data.get("prUrl")
+                if incident_data.get("remediationBranch") is not None:
+                    inc.remediationBranch = incident_data.get("remediationBranch")
+                if incident_data.get("diff") is not None:
+                    inc.diff = incident_data.get("diff")
 
             db.flush()
             return inc.to_dict()
+
+    def get_incident_by_id(self, incident_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieves a single incident by ID (case-insensitive) from the database.
+        """
+        with get_db() as db:
+            inc = db.query(Incident).filter(Incident.id.ilike(incident_id)).first()
+            return inc.to_dict() if inc else None
 
     def get_all_incidents(self, status: Optional[str] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
         """
@@ -123,10 +143,10 @@ class IncidentService:
 
     def update_incident_status(self, incident_id: str, new_status: str) -> Optional[Dict[str, Any]]:
         """
-        Updates the status of an existing incident in the database.
+        Updates the status of an existing incident in the database (case-insensitive).
         """
         with get_db() as db:
-            inc = db.query(Incident).filter_by(id=incident_id).first()
+            inc = db.query(Incident).filter(Incident.id.ilike(incident_id)).first()
             if not inc:
                 return None
             inc.status = new_status

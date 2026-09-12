@@ -382,7 +382,41 @@ export default function IncidentsPage() {
               ))}
             </div>
           </section>          {/* 3. Proposed Fix & Unified Code Diff */}
-          <section id="unified-diff" className="rounded-xl bg-white border border-[#E5DED6] shadow-card overflow-hidden">
+          <section id="unified-diff" className="rounded-xl bg-white border border-[#E5DED6] shadow-card overflow-hidden relative">
+            {isRemediating && (
+              <div className="absolute inset-0 z-10 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 rounded-xl border border-[#D97757]/50 shadow-inner overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-[#F9ECE7]">
+                  <div className="h-full bg-[#D97757] animate-[progress_2s_ease-in-out_infinite]" style={{ width: '50%', animationName: 'progress' }}></div>
+                </div>
+                <div className="flex flex-col items-center gap-4 text-[#D97757]">
+                  <div className="relative">
+                    <span className="material-symbols-outlined text-6xl animate-pulse drop-shadow-md">psychology</span>
+                    <span className="absolute -bottom-1 -right-1 h-4 w-4 bg-[#5B7C4B] rounded-full border-2 border-white animate-ping"></span>
+                  </div>
+                  <h3 className="font-headline-sm font-bold text-lg text-[#2D2926] mt-2 tracking-tight">Healer-Alpha is synthesizing fix...</h3>
+                  <div className="flex flex-col gap-3 w-full max-w-sm text-xs text-[#6B625B] font-mono bg-[#FAF7F3] p-4 rounded-lg border border-[#E5DED6]">
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-base animate-spin text-[#D97757]">sync</span>
+                      <span>Querying Gemini 3.6 Flash Engine...</span>
+                    </div>
+                    <div className="flex items-center gap-3 opacity-70">
+                      <span className="material-symbols-outlined text-base text-[#5B7C4B]">check_circle</span>
+                      <span>Parsing AST topology</span>
+                    </div>
+                    <div className="flex items-center gap-3 opacity-70">
+                      <span className="material-symbols-outlined text-base text-[#5B7C4B]">check_circle</span>
+                      <span>Enforcing zero-regression policies</span>
+                    </div>
+                  </div>
+                </div>
+                <style>{`
+                  @keyframes progress {
+                    0% { transform: translateX(-100%); }
+                    100% { transform: translateX(200%); }
+                  }
+                `}</style>
+              </div>
+            )}
             <div className="p-space-md bg-[#F2EDE6]/80 border-b border-[#E5DED6] flex items-center justify-between flex-wrap gap-space-sm">
               <div>
                 <div className="flex items-center gap-2">

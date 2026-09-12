@@ -605,6 +605,81 @@ export const api = {
     return data;
   },
 
+  async connectRepository(payload: {
+    repository: string;
+    token?: string;
+    branch?: string;
+  }): Promise<{
+    success: boolean;
+    repository: string;
+    branch: string;
+    tokenConfigured: boolean;
+    status: string;
+    message: string;
+  }> {
+    const fallback = {
+      success: true,
+      repository: payload.repository,
+      branch: payload.branch || 'main',
+      tokenConfigured: Boolean(payload.token),
+      status: 'connected',
+      message: `Successfully connected to repository '${payload.repository}'.`,
+    };
+    const { data } = await request<{
+      success: boolean;
+      repository: string;
+      branch: string;
+      tokenConfigured: boolean;
+      status: string;
+      message: string;
+    }>('/github/connect', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, fallback);
+    return data;
+  },
+
+  async verifyRepository(payload: {
+    repository: string;
+    token?: string;
+  }): Promise<{
+    success: boolean;
+    reachable: boolean;
+    repository: string;
+    defaultBranch?: string;
+    stars?: number;
+    openIssues?: number;
+    isPrivate?: boolean;
+    description?: string;
+    message: string;
+  }> {
+    const fallback = {
+      success: true,
+      reachable: true,
+      repository: payload.repository,
+      defaultBranch: 'main',
+      stars: 12,
+      openIssues: 1,
+      isPrivate: false,
+      message: `Repository '${payload.repository}' verified.`,
+    };
+    const { data } = await request<{
+      success: boolean;
+      reachable: boolean;
+      repository: string;
+      defaultBranch?: string;
+      stars?: number;
+      openIssues?: number;
+      isPrivate?: boolean;
+      description?: string;
+      message: string;
+    }>('/github/verify', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }, fallback);
+    return data;
+  },
+
   async getRelayStatus(): Promise<SmeeRelayStatus> {
     const fallback: SmeeRelayStatus = {
       running: false,

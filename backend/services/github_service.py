@@ -356,6 +356,18 @@ class GitHubService:
             data={"body": body},
         )
 
+    def list_workflow_runs(self, repo: str, per_page: int = 20) -> Tuple[bool, Dict[str, Any]]:
+        """Fetches list of workflow runs for a repository."""
+        return self._api_request(f"repos/{repo}/actions/runs?per_page={per_page}")
+
+    def list_pull_requests(self, repo: str, state: str = "all") -> Tuple[bool, Any]:
+        """Fetches list of pull requests for a repository."""
+        return self._api_request(f"repos/{repo}/pulls?state={state}")
+
+    def list_workflows(self, repo: str) -> Tuple[bool, Dict[str, Any]]:
+        """Fetches list of workflows configured in repository."""
+        return self._api_request(f"repos/{repo}/actions/workflows")
+
 
 # Singleton service instance
 github_service = GitHubService()
