@@ -38,6 +38,12 @@ export interface Incident {
   targetFile?: string;
   diff?: string;
   explanation?: string;
+  guard_status?: string;
+  risk_level?: string;
+  files_changed?: number;
+  lines_added?: number;
+  lines_deleted?: number;
+  block_reasons?: string[];
 }
 
 // ─── Pipelines ────────────────────────────────────────────────────────────────
@@ -103,6 +109,8 @@ export interface PullRequest {
   deletions: number;
   time: string;
   aiComment?: string;
+  guard_status?: string;
+  risk_level?: string;
 }
 
 // ─── Logs ─────────────────────────────────────────────────────────────────────

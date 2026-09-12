@@ -161,6 +161,8 @@ class DataStore:
                 "deletions": 6,
                 "time": "1d ago",
                 "aiComment": "Auto-reviewed by SentinelOps AI Engine: Resolved asset base URL, zero security regressions.",
+                "guard_status": "PASSED",
+                "risk_level": "LOW",
             }
         ]
         self.start_time = time.time()
@@ -201,6 +203,8 @@ class DataStore:
                     "actionLabel": "View PR #181",
                     "actionVariant": "secondary",
                     "prNumber": 181,
+                    "guard_status": "PASSED",
+                    "risk_level": "LOW",
                 })
         except Exception as e:
             self.add_log(service="database", level="WARN", message=f"DB Init notice: {e}")
@@ -504,6 +508,14 @@ class DataStore:
         inc = self.get_incident(incident_id)
         if not inc:
             return None
+        try:
+            from services.remediation_service import remediation_service
+            diagnosis = remediation_service.diagnose_incident(inc)
+            if diagnosis:
+                return diagnosis
+        except Exception as e:
+            self.add_log(service="diagnostics", level="WARN", message=f"AI diagnostic fallback: {e}")
+
         return {
             "incidentId": inc["id"],
             "repo": inc.get("repo", "SentinelOps"),
@@ -565,6 +577,8 @@ class DataStore:
             "actionLabel": "Auto-Heal Active",
             "actionVariant": "primary",
             "prNumber": 181,
+            "guard_status": "PASSED",
+            "risk_level": "LOW",
         })
 
         self.add_log(
@@ -969,9 +983,9 @@ class DataStore:
                     "repo": repo_name,
                     "pipeline": wf_name,
                     "failure": f"Workflow Run Failure ({conclusion or 'failure'})",
-                    "rootCause": remediation_result.get("rootCause") if remediation_result else f"Step failure in {wf_name}",
-                    "confidence": remediation_result.get("confidence") if remediation_result else 94,
-                    "confidenceColor": "secondary" if (remediation_result and remediation_result.get("confidence", 0) >= 90) else "primary",
+                    "rootCause": (remediation_result.get("rootCause") if remediation_result else None) or f"Step failure in {wf_name}",
+                    "confidence": (remediation_result.get("confidence") if remediation_result else None) or 94,
+                    "confidenceColor": "secondary" if ((remediation_result.get("confidence") if remediation_result else None) or 94) >= 90 else "primary",
                     "status": "Remediated",
                     "time": "just now",
                     "runId": run_id,

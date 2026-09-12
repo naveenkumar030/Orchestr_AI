@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: sentinelops
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: REQUIRE_HUMAN_APPROVAL
+        value: "true"
+      - key: GITHUB_REPO
+        value: naveenkumar030/SentinelOps
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false

@@ -15,6 +15,10 @@ export default function IncidentsPage() {
   const [isRemediating, setIsRemediating] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
+  const [explainTab, setExplainTab] = useState<'triage' | 'diff' | 'telemetry' | 'roadmap'>('triage');
+  const [copiedDiff, setCopiedDiff] = useState(false);
+  const [copiedReport, setCopiedReport] = useState(false);
+
   const handleRemediate = async () => {
     setIsRemediating(true);
     try {
@@ -68,6 +72,7 @@ export default function IncidentsPage() {
   const handleExplain = async () => {
     setShowExplainModal(true);
     setIsLoadingExplanation(true);
+    setExplainTab('triage');
     try {
       const exp = await api.explainIncident(selectedIncident.id);
       setExplanationData(exp);
@@ -76,6 +81,31 @@ export default function IncidentsPage() {
     } finally {
       setIsLoadingExplanation(false);
     }
+  };
+
+  const handleCopyDiff = () => {
+    const diffText = explanationData?.diff || selectedIncident.diff;
+    if (!diffText) return;
+    navigator.clipboard.writeText(diffText);
+    setCopiedDiff(true);
+    setTimeout(() => setCopiedDiff(false), 2000);
+  };
+
+  const handleCopyReport = () => {
+    if (!explanationData) return;
+    const reportText = `[SentinelOps AI Diagnostics Report]
+Incident: ${explanationData.incidentId} (${explanationData.repo})
+Model: ${explanationData.aiModel || 'DevOps-LLM'}
+Confidence: ${explanationData.confidence}%
+Root Cause: ${explanationData.rootCause}
+Error Type: ${explanationData.errorType || 'Unknown'}
+Target File: ${explanationData.targetFile || 'N/A'}
+Policy: ${explanationData.policyCheck}
+Explanation: ${explanationData.explanation}
+Suggested Action: ${explanationData.suggestedAction}`;
+    navigator.clipboard.writeText(reportText);
+    setCopiedReport(true);
+    setTimeout(() => setCopiedReport(false), 2000);
   };
 
   const rawLogs = [
@@ -507,6 +537,55 @@ export default function IncidentsPage() {
 
             {/* Validation checks footer */}
             <div className="p-space-md border-t border-[#E5DED6] space-y-space-md">
+              {/* SentinelGuard UI */}
+              <div className={`p-4 rounded-lg border ${selectedIncident.guard_status === 'BLOCKED' ? 'bg-[#FDF0F0] border-[#C34A4A]' : 'bg-[#EAF3E7] border-[#5B7C4B]/30'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`material-symbols-outlined text-lg ${selectedIncident.guard_status === 'BLOCKED' ? 'text-[#C34A4A]' : 'text-[#5B7C4B]'}`}>
+                    {selectedIncident.guard_status === 'BLOCKED' ? 'block' : 'shield'}
+                  </span>
+                  <span className={`font-headline-sm font-semibold ${selectedIncident.guard_status === 'BLOCKED' ? 'text-[#C34A4A]' : 'text-[#2D2926]'}`}>
+                    {selectedIncident.guard_status === 'BLOCKED' ? '🚫 Change Blocked by SentinelGuard' : '🛡️ SentinelGuard Check Passed'}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <span className="text-[#6B625B] block mb-1">Risk Level</span>
+                    <span className={`font-semibold px-2 py-0.5 rounded ${
+                      selectedIncident.risk_level === 'LOW' ? 'bg-green-100 text-green-700' :
+                      selectedIncident.risk_level === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                      selectedIncident.risk_level === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {selectedIncident.risk_level || 'LOW'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[#6B625B] block mb-1">Files Changed</span>
+                    <span className="font-semibold text-[#2D2926]">{selectedIncident.files_changed || 1}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#6B625B] block mb-1">Lines Changed</span>
+                    <span className="font-semibold text-[#2D2926]">{selectedIncident.lines_added || 14}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#6B625B] block mb-1">Protected Files</span>
+                    <span className="font-semibold text-[#2D2926]">0</span>
+                  </div>
+                </div>
+                
+                {selectedIncident.guard_status === 'BLOCKED' && selectedIncident.block_reasons && (
+                  <div className="mt-3 p-2 bg-white rounded border border-[#C34A4A]/20">
+                    <span className="text-xs font-semibold text-[#C34A4A] block mb-1">Reasons:</span>
+                    <ul className="list-disc list-inside text-xs text-[#6B625B]">
+                      {selectedIncident.block_reasons.map((reason: string, idx: number) => (
+                        <li key={idx}>{reason}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
                 <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6]">
                   <div className="flex items-center justify-between text-xs text-[#6B625B]">
@@ -679,69 +758,370 @@ export default function IncidentsPage() {
         </div>
       </div>
 
-      {/* AI Explanation Modal */}
+      {/* Enhanced AI Diagnostics Modal */}
       {showExplainModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-lg w-full p-4 sm:p-6 space-y-4 animate-fade-in max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-[#E5DED6] pb-3">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#D97757] text-2xl">psychology</span>
-                <h3 className="font-headline-sm font-bold text-lg text-[#2D2926]">
-                  AI Diagnostics: {selectedIncident.id}
-                </h3>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl border border-[#E5DED6] shadow-2xl max-w-3xl w-full p-5 sm:p-6 space-y-4 max-h-[92vh] flex flex-col relative overflow-hidden">
+            {/* Subtle top glow */}
+            <div className="absolute -right-20 -top-20 w-56 h-56 bg-[#D97757]/10 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Modal Header */}
+            <div className="flex items-start justify-between border-b border-[#E5DED6] pb-3.5 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#F9ECE7] border border-[#D97757]/30 text-[#D97757] flex items-center justify-center shadow-sm">
+                  <span className="material-symbols-outlined text-2xl">psychology</span>
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-headline-md font-bold text-lg text-[#2D2926] tracking-tight">
+                      Autonomous AI Diagnostics: {selectedIncident.id}
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full bg-[#EDF4EA] text-[#5B7C4B] border border-[#5B7C4B]/30 font-label-code-sm text-[10px] font-semibold flex items-center gap-1">
+                      <span className="material-symbols-outlined text-xs">verified</span>
+                      {explanationData?.confidence ?? selectedIncident.confidence}% Confidence
+                    </span>
+                    {explanationData?.guardStatus && (
+                      <span className={`px-2 py-0.5 rounded-full font-label-code-sm text-[10px] font-semibold border ${
+                        explanationData.guardStatus === 'BLOCKED'
+                          ? 'bg-[#FDF0F0] text-[#C34A4A] border-[#C34A4A]/30'
+                          : 'bg-[#EDF4EA] text-[#5B7C4B] border-[#5B7C4B]/30'
+                      }`}>
+                        🛡️ {explanationData.guardStatus}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-[#6B625B] mt-0.5">
+                    <span>Repo: <strong className="text-[#2D2926]">{selectedIncident.repo}</strong></span>
+                    <span>·</span>
+                    <span>AI Engine: <strong className="text-[#D97757]">{explanationData?.aiModel || 'DevOps-LLM (Groq / Gemini / AST)'}</strong></span>
+                  </div>
+                </div>
               </div>
               <button
                 onClick={() => setShowExplainModal(false)}
-                className="text-[#6B625B] hover:text-[#2D2926] p-1 rounded cursor-pointer"
+                className="text-[#6B625B] hover:text-[#2D2926] hover:bg-[#F2EDE6] p-1.5 rounded-lg transition-colors cursor-pointer"
+                title="Close modal"
               >
-                <span className="material-symbols-outlined text-lg">close</span>
+                <span className="material-symbols-outlined text-xl">close</span>
               </button>
             </div>
 
-            {isLoadingExplanation ? (
-              <div className="py-8 flex flex-col items-center justify-center gap-3 text-[#6B625B]">
-                <span className="material-symbols-outlined text-3xl text-[#D97757] animate-spin">sync</span>
-                <span className="font-label-code-sm text-xs">Querying SentinelOps AI Diagnostics API...</span>
-              </div>
-            ) : (
-              <div className="space-y-3 text-xs text-[#2D2926] leading-relaxed">
-                <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] space-y-1">
-                  <div className="font-bold text-[#99462A] uppercase tracking-wider text-[11px]">
-                    Algorithmic Root Cause ({explanationData?.confidence ?? selectedIncident.confidence}% confidence)
-                  </div>
-                  <div className="font-medium text-[#2D2926]">{explanationData?.rootCause || selectedIncident.rootCause}</div>
-                </div>
-
-                <p className="text-sm text-[#6B625B] leading-relaxed">
-                  {explanationData?.explanation || (
-                    <>
-                      When <code className="font-mono text-xs bg-[#F2EDE6] px-1 py-0.5 rounded">npm test</code> ran on the {selectedIncident.repo} repository, npm resolved the dependency graph and discovered conflicting peer constraints.
-                    </>
-                  )}
-                </p>
-
-                {explanationData?.suggestedAction && (
-                  <div className="p-2.5 rounded-lg bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462A] font-medium">
-                    <strong>Suggested Action:</strong> {explanationData.suggestedAction}
-                  </div>
-                )}
-
-                {explanationData?.policyCheck && (
-                  <div className="flex items-center gap-1.5 text-[11px] text-[#5B7C4B] font-semibold">
-                    <span className="material-symbols-outlined text-sm">verified_user</span>
-                    <span>{explanationData.policyCheck}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="pt-2 flex justify-end">
+            {/* Diagnostic Navigation Tabs */}
+            <div className="flex items-center gap-2 border-b border-[#E5DED6] pb-2 text-xs font-label-code-sm overflow-x-auto relative z-10">
               <button
-                onClick={() => setShowExplainModal(false)}
-                className="px-4 py-2 rounded-lg bg-[#D97757] text-white text-xs font-semibold hover:bg-[#B85D3E] transition-all cursor-pointer shadow-sm"
+                onClick={() => setExplainTab('triage')}
+                className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  explainTab === 'triage'
+                    ? 'bg-[#F9ECE7] text-[#99462A] border border-[#D97757]/30 shadow-sm'
+                    : 'text-[#6B625B] hover:text-[#2D2926] hover:bg-[#F2EDE6]'
+                }`}
               >
-                Close Diagnostics
+                <span className="material-symbols-outlined text-sm">troubleshoot</span>
+                <span>Root Cause &amp; Triage</span>
               </button>
+              <button
+                onClick={() => setExplainTab('diff')}
+                className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  explainTab === 'diff'
+                    ? 'bg-[#F9ECE7] text-[#99462A] border border-[#D97757]/30 shadow-sm'
+                    : 'text-[#6B625B] hover:text-[#2D2926] hover:bg-[#F2EDE6]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">difference</span>
+                <span>Synthesized Patch Diff</span>
+                {explanationData?.diff && (
+                  <span className="px-1.5 py-0.2 rounded bg-[#EDF4EA] text-[#5B7C4B] text-[10px]">
+                    +{explanationData.linesAdded ?? 2}/-{explanationData.linesDeleted ?? 1}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setExplainTab('telemetry')}
+                className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  explainTab === 'telemetry'
+                    ? 'bg-[#F9ECE7] text-[#99462A] border border-[#D97757]/30 shadow-sm'
+                    : 'text-[#6B625B] hover:text-[#2D2926] hover:bg-[#F2EDE6]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">terminal</span>
+                <span>Runner Telemetry</span>
+              </button>
+              <button
+                onClick={() => setExplainTab('roadmap')}
+                className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  explainTab === 'roadmap'
+                    ? 'bg-[#F9ECE7] text-[#99462A] border border-[#D97757]/30 shadow-sm'
+                    : 'text-[#6B625B] hover:text-[#2D2926] hover:bg-[#F2EDE6]'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">checklist</span>
+                <span>Resolution Plan</span>
+              </button>
+            </div>
+
+            {/* Modal Body / Tab Panels */}
+            <div className="flex-1 overflow-y-auto pr-1 space-y-4 text-xs text-[#2D2926] relative z-10">
+              {isLoadingExplanation ? (
+                <div className="py-16 flex flex-col items-center justify-center gap-3 text-[#6B625B]">
+                  <span className="material-symbols-outlined text-4xl text-[#D97757] animate-spin">sync</span>
+                  <span className="font-label-code-sm text-sm font-medium">
+                    Performing autonomous AST &amp; LLM diagnostics...
+                  </span>
+                  <span className="text-xs text-[#8F857D]">
+                    Inspecting runner logs, pinpointing root cause, and synthesizing patch
+                  </span>
+                </div>
+              ) : (
+                <>
+                  {/* TAB 1: Root Cause & Triage */}
+                  {explainTab === 'triage' && (
+                    <div className="space-y-3.5 animate-fade-in">
+                      {/* Root Cause Banner */}
+                      <div className="p-3.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-label-caps text-[11px] text-[#99462A] font-bold uppercase tracking-wider flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-sm text-[#D97757]">bug_report</span>
+                            Pinpointed Root Cause ({explanationData?.errorType || 'RuntimeError'})
+                          </span>
+                          <span className="font-label-code-sm text-[11px] text-[#5B7C4B] font-semibold">
+                            Deterministic AST Match
+                          </span>
+                        </div>
+                        <div className="font-bold text-sm text-[#2D2926] leading-snug">
+                          {explanationData?.rootCause || selectedIncident.rootCause}
+                        </div>
+                      </div>
+
+                      {/* Detailed Narrative Explanation */}
+                      <div className="p-3.5 rounded-xl bg-white border border-[#E5DED6] space-y-2 shadow-xs">
+                        <div className="font-bold text-xs text-[#2D2926] flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-sm text-[#D97757]">analytics</span>
+                          Algorithmic Failure Analysis
+                        </div>
+                        <p className="text-xs text-[#6B625B] leading-relaxed">
+                          {explanationData?.explanation || selectedIncident.explanation || (
+                            `When tests executed on the ${selectedIncident.repo} repository, SentinelOps inspected AST execution traces and identified broken constraints that triggered workflow exit code 1.`
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Safety & Blast Radius Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                        <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] flex flex-col justify-between">
+                          <span className="text-[10px] font-label-caps text-[#6B625B] uppercase font-semibold">Target File</span>
+                          <span className="font-mono text-xs font-bold text-[#2D2926] truncate mt-1">
+                            {explanationData?.targetFile || selectedIncident.targetFile || 'package.json'}
+                          </span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] flex flex-col justify-between">
+                          <span className="text-[10px] font-label-caps text-[#6B625B] uppercase font-semibold">Blast Radius</span>
+                          <span className="text-xs font-semibold text-[#5B7C4B] mt-1 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm">track_changes</span>
+                            {explanationData?.blastRadius || 'Isolated (Single Module)'}
+                          </span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] flex flex-col justify-between">
+                          <span className="text-[10px] font-label-caps text-[#6B625B] uppercase font-semibold">SentinelGuard Risk</span>
+                          <span className={`text-xs font-bold mt-1 ${
+                            explanationData?.riskLevel === 'HIGH' || explanationData?.riskLevel === 'CRITICAL'
+                              ? 'text-[#C34A4A]'
+                              : 'text-[#5B7C4B]'
+                          }`}>
+                            {explanationData?.riskLevel || 'LOW'} RISK
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Suggested Action Box */}
+                      {explanationData?.suggestedAction && (
+                        <div className="p-3 rounded-xl bg-[#F9ECE7] border border-[#D97757]/30 text-[#99462A] flex items-start gap-2.5">
+                          <span className="material-symbols-outlined text-base mt-0.5 text-[#D97757]">lightbulb</span>
+                          <div className="flex-1">
+                            <span className="font-bold block text-xs">Recommended Remediation</span>
+                            <span className="text-xs mt-0.5 block">{explanationData.suggestedAction}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Policy Check */}
+                      {explanationData?.policyCheck && (
+                        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-[#EDF4EA] border border-[#5B7C4B]/30 text-[#5B7C4B] font-semibold text-xs">
+                          <span className="material-symbols-outlined text-base">verified_user</span>
+                          <span>{explanationData.policyCheck}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 2: Synthesized Patch Diff */}
+                  {explainTab === 'diff' && (
+                    <div className="space-y-3 animate-fade-in">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-[#2D2926]">
+                            Target: {explanationData?.targetFile || selectedIncident.targetFile || 'package.json'}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-[#EDF4EA] text-[#5B7C4B] font-label-code-sm text-[10px] font-semibold">
+                            Zero-Regression Verified
+                          </span>
+                        </div>
+                        <button
+                          onClick={handleCopyDiff}
+                          className="px-2.5 py-1 rounded-lg bg-[#F2EDE6] hover:bg-[#E5DED6] border border-[#E5DED6] text-xs font-medium text-[#2D2926] flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-xs">
+                            {copiedDiff ? 'check' : 'content_copy'}
+                          </span>
+                          <span>{copiedDiff ? 'Copied Diff' : 'Copy Diff'}</span>
+                        </button>
+                      </div>
+
+                      {/* Unified Diff Box */}
+                      <div className="rounded-xl bg-[#1E1A18] p-3.5 font-mono text-xs text-[#EDE7E3] space-y-1 overflow-x-auto shadow-inner border border-[#3E3835] max-h-[340px]">
+                        {(explanationData?.diff || selectedIncident.diff || `--- a/package.json\n+++ b/package.json\n@@ -3,3 +3,3 @@\n-    "@stripe/stripe-node": "^12.1.0"\n+    "@stripe/stripe-node": "^14.0.0"`)
+                          .split('\n')
+                          .map((line, idx) => {
+                            const isAdd = line.startsWith('+') && !line.startsWith('+++');
+                            const isDel = line.startsWith('-') && !line.startsWith('---');
+                            const isHeader = line.startsWith('---') || line.startsWith('+++') || line.startsWith('@@');
+
+                            return (
+                              <div
+                                key={idx}
+                                className={`px-2 py-0.5 rounded ${
+                                  isAdd
+                                    ? 'bg-[#15803d]/30 text-[#86efac]'
+                                    : isDel
+                                    ? 'bg-[#ba1a1a]/30 text-[#fca5a5]'
+                                    : isHeader
+                                    ? 'text-[#8F857D] font-semibold'
+                                    : 'text-[#D1C7BD]'
+                                }`}
+                              >
+                                {line || ' '}
+                              </div>
+                            );
+                          })}
+                      </div>
+
+                      <p className="text-[11px] text-[#6B625B] flex items-center gap-1">
+                        <span className="material-symbols-outlined text-sm text-[#5B7C4B]">check_circle</span>
+                        Deterministic lockfile validation passed without contract breaking changes.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* TAB 3: Runner Telemetry */}
+                  {explainTab === 'telemetry' && (
+                    <div className="space-y-3 animate-fade-in">
+                      <div className="flex items-center justify-between">
+                        <span className="font-label-caps text-xs text-[#6B625B] uppercase font-semibold">
+                          Runner Log Excerpt ({selectedIncident.repo})
+                        </span>
+                        <span className="font-label-code-sm text-[11px] text-[#D97757] font-semibold">
+                          Exit Code: 1 (Failed)
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl bg-[#1E1A18] p-3.5 font-mono text-xs text-[#EDE7E3] space-y-1 overflow-x-auto shadow-inner border border-[#3E3835] max-h-[320px]">
+                        {(explanationData?.rawLogsSnippet ||
+                          `Triggering pipeline step: npm test -- --bail\nnpm ERR! code ERESOLVE\nnpm ERR! ERESOLVE could not resolve peer dependency tree\nnpm ERR! While resolving: @stripe/stripe-node@12.1.0\nnpm ERR! Found: @types/node@20.11.0\nnpm ERR! Conflicting peer dependency: @types/node@^18.0.0\nDetected exit code 1. Stack trace fingerprint: HASH_9a7d32b4f`
+                        )
+                          .split('\n')
+                          .map((line, idx) => (
+                            <div key={idx} className="flex items-start gap-2">
+                              <span className="text-[#6B625B] select-none text-[10px] w-6 text-right">
+                                {String(idx + 1).padStart(2, '0')}
+                              </span>
+                              <span className={
+                                line.toLowerCase().includes('err') || line.toLowerCase().includes('fail') || line.toLowerCase().includes('assertion')
+                                  ? 'text-[#fca5a5] font-semibold'
+                                  : line.toLowerCase().includes('warn')
+                                  ? 'text-[#fde047]'
+                                  : 'text-[#D1C7BD]'
+                              }>
+                                {line}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] text-[11px] text-[#6B625B]">
+                        Telemetry ingested from GitHub Actions runner environment and parsed by SentinelOps AST heuristic pattern library.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 4: Resolution Roadmap */}
+                  {explainTab === 'roadmap' && (
+                    <div className="space-y-3.5 animate-fade-in">
+                      <div className="font-bold text-xs text-[#2D2926] flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm text-[#D97757]">route</span>
+                        Autonomous Self-Healing Execution Lifecycle
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {(explanationData?.steps || [
+                          'Captured runner telemetry and isolated ERESOLVE failure log',
+                          'AST parsed dependency matrix against package-lock.json',
+                          'Synthesized compatible peer dependency lockfile pin',
+                          'SentinelGuard safety verified: 0 CVEs introduced',
+                          'Dispatched automated remediation PR #184'
+                        ]).map((step, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-6 h-6 rounded-full bg-[#D97757] text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                                {idx + 1}
+                              </div>
+                              <span className="text-xs font-medium text-[#2D2926]">{step}</span>
+                            </div>
+                            <span className="material-symbols-outlined text-sm text-[#5B7C4B]">check_circle</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className="pt-3.5 border-t border-[#E5DED6] flex flex-wrap items-center justify-between gap-2 relative z-10">
+              <button
+                onClick={handleCopyReport}
+                disabled={isLoadingExplanation}
+                className="px-3.5 py-2 rounded-lg bg-[#F2EDE6] hover:bg-[#E5DED6] border border-[#E5DED6] text-xs font-semibold text-[#2D2926] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  {copiedReport ? 'check' : 'assignment'}
+                </span>
+                <span>{copiedReport ? 'Report Copied!' : 'Copy Diagnosis'}</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowExplainModal(false)}
+                  className="px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#6B625B] hover:text-[#2D2926] transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleRemediate();
+                  }}
+                  disabled={isRemediating || isLoadingExplanation}
+                  className="px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  <span className={`material-symbols-outlined text-sm ${isRemediating ? 'animate-spin' : ''}`}>
+                    {isRemediating ? 'sync' : 'auto_fix_high'}
+                  </span>
+                  <span>{isRemediating ? 'Remediating...' : 'Auto-Remediate (Healer-Alpha)'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

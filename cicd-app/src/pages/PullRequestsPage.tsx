@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { pullRequests as initialPRs } from '../data/mockData';
 import { api } from '../services/api';
 import type { PullRequest } from '../types';
+import CreatePRModal from '../components/modals/CreatePRModal';
 
 export default function PullRequestsPage() {
   const [prList, setPrList] = useState<PullRequest[]>(initialPRs);
@@ -10,6 +11,7 @@ export default function PullRequestsPage() {
   const [activeTab, setActiveTab] = useState<'review' | 'diff' | 'security'>('review');
   const [notification, setNotification] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCreatePRModalOpen, setIsCreatePRModalOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -93,11 +95,20 @@ export default function PullRequestsPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-space-sm">
-          <button className="px-3.5 sm:px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-1.5 sm:gap-2 shadow-sm transition-all text-xs">
+          <button 
+            onClick={() => {
+              setNotification("Review Policies dashboard is currently in beta. Redirecting to settings...");
+              setTimeout(() => setNotification(null), 4000);
+            }}
+            className="px-3.5 sm:px-4 py-2 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-[#2D2926] font-medium font-body-sm flex items-center gap-1.5 sm:gap-2 shadow-sm transition-all text-xs"
+          >
             <span className="material-symbols-outlined text-base text-[#D97757]">settings</span>
             <span>Review Policies</span>
           </button>
-          <button className="px-3.5 sm:px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-1.5 sm:gap-2 shadow-sm transition-all text-xs">
+          <button 
+            onClick={() => setIsCreatePRModalOpen(true)}
+            className="px-3.5 sm:px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-1.5 sm:gap-2 shadow-sm transition-all text-xs"
+          >
             <span className="material-symbols-outlined text-base">add</span>
             <span>New PR</span>
           </button>
@@ -357,6 +368,36 @@ export default function PullRequestsPage() {
 
               {activeTab === 'security' && (
                 <div className="space-y-space-sm text-xs">
+                  {/* SentinelGuard UI */}
+                  <div className={`p-4 rounded-lg border ${selectedPR.guard_status === 'BLOCKED' ? 'bg-[#FDF0F0] border-[#C34A4A]' : 'bg-[#EAF3E7] border-[#5B7C4B]/30'}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`material-symbols-outlined text-lg ${selectedPR.guard_status === 'BLOCKED' ? 'text-[#C34A4A]' : 'text-[#5B7C4B]'}`}>
+                        {selectedPR.guard_status === 'BLOCKED' ? 'block' : 'shield'}
+                      </span>
+                      <span className={`font-headline-sm font-semibold ${selectedPR.guard_status === 'BLOCKED' ? 'text-[#C34A4A]' : 'text-[#2D2926]'}`}>
+                        {selectedPR.guard_status === 'BLOCKED' ? '🚫 PR Blocked by SentinelGuard' : '🛡️ SentinelGuard Safety Passed'}
+                      </span>
+                    </div>
+                    
+                    <div className="flex gap-4 mt-2">
+                      <div>
+                        <span className="text-[#6B625B] block mb-1 text-[10px]">Risk Level</span>
+                        <span className={`font-semibold px-2 py-0.5 rounded text-xs ${
+                          selectedPR.risk_level === 'LOW' ? 'bg-green-100 text-green-700' :
+                          selectedPR.risk_level === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                          selectedPR.risk_level === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {selectedPR.risk_level || 'LOW'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[#6B625B] block mb-1 text-[10px]">Policy</span>
+                        <span className="font-semibold text-xs text-[#2D2926]">Zero-Regression + Secrets Check</span>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6]">
                     <div className="font-bold text-[#2D2926] mb-1">Cosign Cryptographic Signature</div>
                     <p className="text-[#6B625B]">Signature Key: keyless.sigstore.dev // Subject: agent-patcher@autonomous.ci</p>
@@ -404,6 +445,15 @@ export default function PullRequestsPage() {
           </div>
         </div>
       </div>
+
+      <CreatePRModal 
+        isOpen={isCreatePRModalOpen}
+        onClose={() => setIsCreatePRModalOpen(false)}
+        onSuccess={(title, branch) => {
+          setNotification(`Successfully requested autonomous PR "${title}" on branch ${branch}. Pipeline initiated.`);
+          setTimeout(() => setNotification(null), 5000);
+        }}
+      />
     </div>
   );
 }

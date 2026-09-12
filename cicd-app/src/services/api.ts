@@ -65,6 +65,18 @@ export interface IncidentExplanation {
   explanation: string;
   suggestedAction: string;
   policyCheck: string;
+  aiModel?: string;
+  errorType?: string;
+  targetFile?: string;
+  diff?: string;
+  fixedContent?: string;
+  riskLevel?: string;
+  guardStatus?: string;
+  blastRadius?: string;
+  linesAdded?: number;
+  linesDeleted?: number;
+  steps?: string[];
+  rawLogsSnippet?: string;
 }
 
 export interface SettingsData {
@@ -234,6 +246,23 @@ export const api = {
       explanation: `Autonomous Diagnostics report for ${id}: SentinelOps AST parser inspected commit changes. The root cause was determined to be a dependency conflict with 96% algorithmic confidence. The engine proposes deterministic lockfile pin reconciliation with automated sandbox test validation.`,
       suggestedAction: 'Apply deterministic lockfile patch and trigger automated validation run.',
       policyCheck: 'Complies with Zero-Regression & Auto-Merge Guardrail Policy v2.4.',
+      aiModel: 'DevOps-LLM (Groq LPU / AST Engine)',
+      errorType: 'DependencyConflict',
+      targetFile: 'package.json',
+      diff: '--- a/package.json\n+++ b/package.json\n@@ -3,3 +3,3 @@\n-    "@stripe/stripe-node": "^12.1.0"\n+    "@stripe/stripe-node": "^14.0.0"',
+      riskLevel: 'LOW',
+      guardStatus: 'PASSED',
+      blastRadius: 'Isolated (Single Module)',
+      linesAdded: 1,
+      linesDeleted: 1,
+      steps: [
+        'Captured runner telemetry and isolated ERESOLVE failure log',
+        'AST parsed dependency matrix against package-lock.json',
+        'Synthesized compatible peer dependency lockfile pin',
+        'SentinelGuard safety verified: 0 CVEs introduced',
+        'Dispatched automated remediation PR #184'
+      ],
+      rawLogsSnippet: 'npm ERR! code ERESOLVE\nnpm ERR! ERESOLVE could not resolve peer dependency tree\nnpm ERR! While resolving: @stripe/stripe-node@12.1.0\nnpm ERR! Conflicting peer dependency: @types/node@^18.0.0'
     };
 
     const { data } = await request<IncidentExplanation>(

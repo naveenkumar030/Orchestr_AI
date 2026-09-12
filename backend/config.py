@@ -46,3 +46,11 @@ PORT: int = int(os.environ.get("PORT", 5000))
 # ── Feature Flags ─────────────────────────────────────────────────────────────
 # Set to "true" to allow webhook processing without a configured secret (dev only)
 WEBHOOK_PERMISSIVE_DEV: bool = not bool(GITHUB_WEBHOOK_SECRET)
+
+# ── SentinelGuard Policies ────────────────────────────────────────────────────
+PROTECTED_BRANCHES: str = os.environ.get("PROTECTED_BRANCHES", "main,master,production,prod")
+ALLOWED_PATHS: str = os.environ.get("ALLOWED_PATHS", "src/*,app/*,tests/*,*.py,*.js,*.ts,*.json,*.txt,*.md,*.html,*.css")
+BLOCKED_PATHS: str = os.environ.get("BLOCKED_PATHS", ".env*,.github/workflows/*,.github/actions/*,terraform/*,kubernetes/*,secrets/*,credentials/*,*.pem,*.key")
+MAX_FILES_CHANGED: int = int(os.environ.get("MAX_FILES_CHANGED", 10))
+MAX_LINES_CHANGED: int = int(os.environ.get("MAX_LINES_CHANGED", 500))
+REQUIRE_HUMAN_APPROVAL: bool = os.environ.get("REQUIRE_HUMAN_APPROVAL", "True").lower() == "true"

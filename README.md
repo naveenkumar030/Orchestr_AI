@@ -138,3 +138,40 @@ SentinelOps/
 ## 🔒 Security & Governance
 
 SentinelOps operates on strict least-privilege principles. Automated agents require signed validation hashes and policy approval before modifying production infrastructure.
+
+---
+
+## ☁️ Deploying to Render (Free Tier)
+
+SentinelOps is optimized for a 1-click deployment on [Render](https://render.com) using a unified Docker Web Service.
+
+### Quick Start Deployment
+
+1. **Push to GitHub**:
+   Ensure all changes are pushed to your `main` branch.
+2. **Connect to Render**:
+   - Create a free account at [render.com](https://render.com).
+   - In the Render Dashboard, click **New +** and select **Blueprint**.
+   - Connect your GitHub account and select the `SentinelOps` repository.
+3. **Configure Secrets**:
+   Render will automatically detect the `render.yaml` configuration. It will prompt you for the required API keys (GitHub Token, Gemini, Groq, etc.).
+   - Enter your keys securely.
+   - Click **Apply**.
+4. **Live URL**:
+   Within a few minutes, Render will build and launch your service. You'll receive a live HTTPS domain (e.g., `https://sentinelops.onrender.com`).
+
+### Setting up GitHub Webhooks on Render
+
+Once your SentinelOps instance is live on Render, you no longer need `ngrok` or `smee`!
+
+1. Go to your GitHub Repository -> **Settings** -> **Webhooks**.
+2. Click **Add webhook**.
+3. **Payload URL**: `https://YOUR_APP_NAME.onrender.com/api/webhooks/github` (replace with your Render domain).
+4. **Content type**: `application/json`.
+5. **Secret**: Enter your `GITHUB_WEBHOOK_SECRET` (if configured).
+6. **Events**: Select "Let me select individual events" and check:
+   - `Pull requests`
+   - `Push`
+   - `Workflow runs`
+   - `Issues`
+7. Click **Add webhook**.
