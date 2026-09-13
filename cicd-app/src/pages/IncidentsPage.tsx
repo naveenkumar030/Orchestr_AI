@@ -499,7 +499,17 @@ Suggested Action: ${explanationData.suggestedAction}`;
         <div className="lg:col-span-8 space-y-space-lg">
           {/* 0. Phase 3 & 4: Multi-Agent Reasoning Pipeline & Safety Gate Visualizer */}
           <MultiAgentWorkflowCard
-            reasoningData={selectedIncident.agent_reasoning || agentReasoningData}
+            reasoningData={
+              (typeof selectedIncident.agent_reasoning === 'string'
+                ? (() => {
+                    try {
+                      return JSON.parse(selectedIncident.agent_reasoning as any);
+                    } catch {
+                      return null;
+                    }
+                  })()
+                : selectedIncident.agent_reasoning) || agentReasoningData
+            }
             isLoading={isReasoning}
             onRerun={handleRunMultiAgent}
             onHumanApprove={handleHumanApprove}

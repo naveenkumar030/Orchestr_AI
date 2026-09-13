@@ -207,13 +207,33 @@ export const api = {
     });
 
     const { data } = await request<Incident[]>(`/incidents${query}`, { method: 'GET' }, fallback);
-    return data;
+    return (data || []).map((inc) => {
+      if (!inc) return inc;
+      const clean = { ...inc };
+      if (typeof (clean as any).agent_reasoning === 'string') {
+        try {
+          (clean as any).agent_reasoning = JSON.parse((clean as any).agent_reasoning);
+        } catch {
+          (clean as any).agent_reasoning = null;
+        }
+      }
+      return clean;
+    });
   },
 
   async getIncident(id: string): Promise<Incident | null> {
     const fallback = localIncidents.find((i) => i.id.toLowerCase() === id.toLowerCase()) || null;
     const { data } = await request<Incident>(`/incidents/${id}`, { method: 'GET' }, fallback as Incident);
-    return data;
+    if (!data) return null;
+    const clean = { ...data };
+    if (typeof (clean as any).agent_reasoning === 'string') {
+      try {
+        (clean as any).agent_reasoning = JSON.parse((clean as any).agent_reasoning);
+      } catch {
+        (clean as any).agent_reasoning = null;
+      }
+    }
+    return clean;
   },
 
   async updateIncidentStatus(id: string, status: IncidentStatus): Promise<Incident> {

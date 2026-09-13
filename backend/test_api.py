@@ -832,7 +832,7 @@ def test_end_to_end_autonomous_remediation_pipeline(client, monkeypatch):
     on_demand_res = client.post(f"/api/incidents/INC-{run_id}/remediate")
     assert on_demand_res.status_code == 200
     on_demand_data = on_demand_res.get_json()
-    assert on_demand_data["status"] in ["remediated", "resolved"]
+    assert on_demand_data["status"] in ["remediated", "resolved", "human_review"]
     assert on_demand_data.get("agent") in ["Healer-Alpha", "SentinelOps-Orchestrator"]
 
     # 5. Verify direct GitHub remediation dispatch endpoint

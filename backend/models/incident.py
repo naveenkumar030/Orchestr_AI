@@ -38,3 +38,13 @@ class Incident(Base, SerializerMixin):
     workflow_run = relationship("WorkflowRun", back_populates="incidents")
     analyses = relationship("AIAnalysis", back_populates="incident", cascade="all, delete-orphan")
     remediations = relationship("Remediation", back_populates="incident", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        d = super().to_dict()
+        if d.get("agent_reasoning") and isinstance(d["agent_reasoning"], str):
+            try:
+                import json
+                d["agent_reasoning"] = json.loads(d["agent_reasoning"])
+            except Exception:
+                pass
+        return d

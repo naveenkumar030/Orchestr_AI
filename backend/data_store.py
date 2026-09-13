@@ -573,6 +573,12 @@ class DataStore:
                 inc_id = item.get("id")
                 if inc_id and inc_id in self._incident_metadata:
                     item.update(self._incident_metadata[inc_id])
+                if item.get("agent_reasoning") and isinstance(item["agent_reasoning"], str):
+                    try:
+                        import json
+                        item["agent_reasoning"] = json.loads(item["agent_reasoning"])
+                    except Exception:
+                        pass
                 res.append(item)
 
         if status and status.lower() != "all":
@@ -596,6 +602,12 @@ class DataStore:
                     inc_id = item.get("id")
                     if inc_id and inc_id in self._incident_metadata:
                         item.update(self._incident_metadata[inc_id])
+                    if item.get("agent_reasoning") and isinstance(item["agent_reasoning"], str):
+                        try:
+                            import json
+                            item["agent_reasoning"] = json.loads(item["agent_reasoning"])
+                        except Exception:
+                            pass
                     return item
             return None
 
@@ -607,6 +619,12 @@ class DataStore:
                 inc_id = res.get("id")
                 if inc_id and inc_id in self._incident_metadata:
                     res.update(self._incident_metadata[inc_id])
+                if res.get("agent_reasoning") and isinstance(res["agent_reasoning"], str):
+                    try:
+                        import json
+                        res["agent_reasoning"] = json.loads(res["agent_reasoning"])
+                    except Exception:
+                        pass
                 return res
         except Exception:
             pass

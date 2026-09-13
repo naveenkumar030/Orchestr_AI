@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { BackendProvider } from './context/BackendContext';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 import LandingPage from './pages/LandingPage';
 import OverviewPage from './pages/OverviewPage';
@@ -14,10 +15,11 @@ import ProfilePage from './pages/ProfilePage';
 
 export default function App() {
   return (
-    <BackendProvider>
-      <HashRouter>
+    <ErrorBoundary>
+      <BackendProvider>
+        <HashRouter>
 
-      <Routes>
+        <Routes>
         {/* Public Product Landing Page */}
         <Route path="/" element={<LandingPage />} />
 
@@ -100,6 +102,7 @@ export default function App() {
       </Routes>
     </HashRouter>
   </BackendProvider>
+</ErrorBoundary>
   );
 }
 
