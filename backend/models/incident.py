@@ -31,6 +31,7 @@ class Incident(Base, SerializerMixin):
     prUrl = Column(String(512), nullable=True)
     remediationBranch = Column(String(256), nullable=True)
     diff = Column(Text, nullable=True)
+    agent_reasoning = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 

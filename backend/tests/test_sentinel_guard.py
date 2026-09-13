@@ -12,7 +12,7 @@ if CURRENT_DIR not in sys.path:
 
 import config
 config.PROTECTED_BRANCHES = "main,master,production,prod"
-config.ALLOWED_PATHS = "src/*,app/*,tests/*,*.py,*.js,*.ts,*.json,*.txt,*.md,*.html,*.css"
+config.ALLOWED_PATHS = "src/*,app/*,tests/*,migrations/*,db/*,*.py,*.js,*.ts,*.json,*.txt,*.md,*.html,*.css,*.sql,*.yml,*.yaml,*.sh"
 config.BLOCKED_PATHS = ".env*,.github/workflows/*,.github/actions/*,terraform/*,kubernetes/*,secrets/*,credentials/*,*.pem,*.key"
 config.MAX_FILES_CHANGED = 10
 config.MAX_LINES_CHANGED = 500

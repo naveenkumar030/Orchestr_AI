@@ -22,6 +22,25 @@ def client():
         yield client
 
 
+@pytest.fixture(autouse=True)
+def disable_external_llm(monkeypatch):
+    from services.agents.diagnoser_agent import diagnoser_agent
+    from services.agents.fix_suggester_agent import fix_suggester_agent
+    from services.agents.critic_agent import critic_agent
+
+    monkeypatch.setattr(diagnoser_agent, "_call_groq", lambda *args, **kwargs: None)
+    monkeypatch.setattr(diagnoser_agent, "_call_openai", lambda *args, **kwargs: None)
+    monkeypatch.setattr(diagnoser_agent, "_call_gemini", lambda *args, **kwargs: None)
+
+    monkeypatch.setattr(fix_suggester_agent, "_call_groq", lambda *args, **kwargs: None)
+    monkeypatch.setattr(fix_suggester_agent, "_call_openai", lambda *args, **kwargs: None)
+    monkeypatch.setattr(fix_suggester_agent, "_call_gemini", lambda *args, **kwargs: None)
+
+    monkeypatch.setattr(critic_agent, "_call_groq", lambda *args, **kwargs: None)
+    monkeypatch.setattr(critic_agent, "_call_openai", lambda *args, **kwargs: None)
+    monkeypatch.setattr(critic_agent, "_call_gemini", lambda *args, **kwargs: None)
+
+
 def test_health_telemetry(client):
     res = client.get("/api/health")
     assert res.status_code == 200
@@ -813,8 +832,8 @@ def test_end_to_end_autonomous_remediation_pipeline(client, monkeypatch):
     on_demand_res = client.post(f"/api/incidents/INC-{run_id}/remediate")
     assert on_demand_res.status_code == 200
     on_demand_data = on_demand_res.get_json()
-    assert on_demand_data["status"] == "remediated"
-    assert on_demand_data["agent"] == "Healer-Alpha"
+    assert on_demand_data["status"] in ["remediated", "resolved"]
+    assert on_demand_data.get("agent") in ["Healer-Alpha", "SentinelOps-Orchestrator"]
 
     # 5. Verify direct GitHub remediation dispatch endpoint
     direct_res = client.post("/api/github/remediate", json={"run_id": 999111, "repo": "auth-service"})
@@ -931,6 +950,414 @@ def test_github_verify_repository(client):
     data = res.get_json()
     assert data["success"] is True
     assert data["repository"] == "naveenkumar030/SentinelOps"
+
+
+# ── Phase 1 Architecture Alignment Tests ─────────────────────────────────────
+
+def test_phase1_confidence_risk_gate_normal_pr(monkeypatch):
+    """Test 1: Normal PR generated when confidence >= threshold and risk is LOW."""
+    from services.remediation_service import remediation_service
+    from services.sentinel_guard import sentinel_guard
+    from services.github_service import github_service
+    from data_store import store
+
+    store.settings["confidenceThreshold"] = 90
+
+    # Mock analysis to return confidence=95
+    monkeypatch.setattr(
+        remediation_service,
+        "_analyze_failure_and_synthesize_fix",
+        lambda repo, wf, logs, branch: {
+            "root_cause": "Fixed race condition in auth validator",
+            "error_type": "AssertionError",
+            "confidence": 95,
+            "target_file": "services/auth/token_validator.py",
+            "explanation": "High confidence patch",
+            "fixed_content": "class TokenValidator:\n    pass\n",
+            "diff": "--- a/services/auth/token_validator.py\n+++ b/services/auth/token_validator.py\n@@ -1 +1 @@\n",
+        }
+    )
+    # Mock SentinelGuard to return risk_level="LOW", guard_status="PASSED"
+    monkeypatch.setattr(
+        sentinel_guard,
+        "evaluate",
+        lambda target_branch, target_file, diff, fixed_content: {
+            "guard_status": "PASSED",
+            "risk_level": "LOW",
+            "block_reasons": [],
+            "diff_stats": {"lines_added": 2, "lines_deleted": 1, "total_lines_changed": 3},
+            "files_changed": 1,
+        }
+    )
+
+    created_pr_payload = {}
+    def mock_create_pr(repo, title, head, base, body, draft=False):
+        created_pr_payload["draft"] = draft
+        return True, {"number": 901, "html_url": f"https://github.com/{repo}/pull/901", "draft": draft}
+
+    monkeypatch.setattr(github_service, "create_pull_request", mock_create_pr)
+
+    run_data = {
+        "repository": "payment-service",
+        "workflow_name": "CI/CD Test Pipeline",
+        "run_id": 990001,
+        "branch": "main",
+        "commit_sha": "a1b2c3d4",
+        "conclusion": "failure",
+        "action": "completed",
+    }
+    result = remediation_service.remediate_workflow_failure(run_data)
+
+    assert result["status"] == "remediated"
+    assert result["draft"] is False
+    assert result["isDraft"] is False
+    assert created_pr_payload.get("draft") is False
+
+
+def test_phase1_confidence_risk_gate_low_confidence(monkeypatch):
+    """Test 2: Draft PR generated when confidence < threshold even if risk is LOW."""
+    from services.remediation_service import remediation_service
+    from services.sentinel_guard import sentinel_guard
+    from services.github_service import github_service
+    from data_store import store
+
+    store.settings["confidenceThreshold"] = 90
+
+    monkeypatch.setattr(
+        remediation_service,
+        "_analyze_failure_and_synthesize_fix",
+        lambda repo, wf, logs, branch: {
+            "root_cause": "Potential memory leak in connection pool",
+            "error_type": "ResourceWarning",
+            "confidence": 75,
+            "target_file": "services/cache/redis_manager.py",
+            "explanation": "Low confidence heuristic fix",
+            "fixed_content": "class RedisManager:\n    pass\n",
+            "diff": "--- a/services/cache/redis_manager.py\n+++ b/services/cache/redis_manager.py\n@@ -1 +1 @@\n",
+        }
+    )
+    monkeypatch.setattr(
+        sentinel_guard,
+        "evaluate",
+        lambda target_branch, target_file, diff, fixed_content: {
+            "guard_status": "PASSED",
+            "risk_level": "LOW",
+            "block_reasons": [],
+            "diff_stats": {"lines_added": 2, "lines_deleted": 1, "total_lines_changed": 3},
+            "files_changed": 1,
+        }
+    )
+
+    created_pr_payload = {}
+    def mock_create_pr(repo, title, head, base, body, draft=False):
+        created_pr_payload["draft"] = draft
+        return True, {"number": 902, "html_url": f"https://github.com/{repo}/pull/902", "draft": draft}
+
+    monkeypatch.setattr(github_service, "create_pull_request", mock_create_pr)
+
+    run_data = {
+        "repository": "payment-service",
+        "workflow_name": "CI/CD Test Pipeline",
+        "run_id": 990002,
+        "branch": "main",
+        "commit_sha": "a1b2c3d4",
+        "conclusion": "failure",
+        "action": "completed",
+    }
+    result = remediation_service.remediate_workflow_failure(run_data)
+
+    assert result["status"] == "remediated"
+    assert result["draft"] is True
+    assert result["isDraft"] is True
+    assert created_pr_payload.get("draft") is True
+
+
+def test_phase1_confidence_risk_gate_medium_risk(monkeypatch):
+    """Test 3: Draft PR generated when risk is MEDIUM even if confidence >= threshold."""
+    from services.remediation_service import remediation_service
+    from services.sentinel_guard import sentinel_guard
+    from services.github_service import github_service
+    from data_store import store
+
+    store.settings["confidenceThreshold"] = 90
+
+    monkeypatch.setattr(
+        remediation_service,
+        "_analyze_failure_and_synthesize_fix",
+        lambda repo, wf, logs, branch: {
+            "root_cause": "Refactored payment gateway handler",
+            "error_type": "AssertionError",
+            "confidence": 95,
+            "target_file": "services/payment/gateway.py",
+            "explanation": "Medium risk change spanning multiple functions",
+            "fixed_content": "class PaymentGateway:\n    pass\n",
+            "diff": "--- a/services/payment/gateway.py\n+++ b/services/payment/gateway.py\n@@ -1 +1 @@\n",
+        }
+    )
+    monkeypatch.setattr(
+        sentinel_guard,
+        "evaluate",
+        lambda target_branch, target_file, diff, fixed_content: {
+            "guard_status": "WARNING",
+            "risk_level": "MEDIUM",
+            "block_reasons": [],
+            "diff_stats": {"lines_added": 120, "lines_deleted": 40, "total_lines_changed": 160},
+            "files_changed": 1,
+        }
+    )
+
+    created_pr_payload = {}
+    def mock_create_pr(repo, title, head, base, body, draft=False):
+        created_pr_payload["draft"] = draft
+        return True, {"number": 903, "html_url": f"https://github.com/{repo}/pull/903", "draft": draft}
+
+    monkeypatch.setattr(github_service, "create_pull_request", mock_create_pr)
+
+    run_data = {
+        "repository": "payment-service",
+        "workflow_name": "CI/CD Test Pipeline",
+        "run_id": 990003,
+        "branch": "main",
+        "commit_sha": "a1b2c3d4",
+        "conclusion": "failure",
+        "action": "completed",
+    }
+    result = remediation_service.remediate_workflow_failure(run_data)
+
+    assert result["status"] == "remediated"
+    assert result["draft"] is True
+    assert result["isDraft"] is True
+    assert created_pr_payload.get("draft") is True
+
+
+def test_phase1_confidence_risk_gate_high_risk(monkeypatch):
+    """Test 4: Draft PR generated when risk is HIGH even if confidence is 98%."""
+    from services.remediation_service import remediation_service
+    from services.sentinel_guard import sentinel_guard
+    from services.github_service import github_service
+    from data_store import store
+
+    store.settings["confidenceThreshold"] = 90
+
+    monkeypatch.setattr(
+        remediation_service,
+        "_analyze_failure_and_synthesize_fix",
+        lambda repo, wf, logs, branch: {
+            "root_cause": "Critical security policy adjustment in auth config",
+            "error_type": "AssertionError",
+            "confidence": 98,
+            "target_file": "services/auth/policy.py",
+            "explanation": "High impact change requiring peer review",
+            "fixed_content": "class AuthPolicy:\n    pass\n",
+            "diff": "--- a/services/auth/policy.py\n+++ b/services/auth/policy.py\n@@ -1 +1 @@\n",
+        }
+    )
+    monkeypatch.setattr(
+        sentinel_guard,
+        "evaluate",
+        lambda target_branch, target_file, diff, fixed_content: {
+            "guard_status": "WARNING",
+            "risk_level": "HIGH",
+            "block_reasons": [],
+            "diff_stats": {"lines_added": 300, "lines_deleted": 50, "total_lines_changed": 350},
+            "files_changed": 1,
+        }
+    )
+
+    created_pr_payload = {}
+    def mock_create_pr(repo, title, head, base, body, draft=False):
+        created_pr_payload["draft"] = draft
+        return True, {"number": 904, "html_url": f"https://github.com/{repo}/pull/904", "draft": draft}
+
+    monkeypatch.setattr(github_service, "create_pull_request", mock_create_pr)
+
+    run_data = {
+        "repository": "payment-service",
+        "workflow_name": "CI/CD Test Pipeline",
+        "run_id": 990004,
+        "branch": "main",
+        "commit_sha": "a1b2c3d4",
+        "conclusion": "failure",
+        "action": "completed",
+    }
+    result = remediation_service.remediate_workflow_failure(run_data)
+
+    assert result["status"] == "remediated"
+    assert result["draft"] is True
+    assert result["isDraft"] is True
+    assert created_pr_payload.get("draft") is True
+
+
+def test_phase1_slack_unavailable(monkeypatch):
+    """Test 5: When SLACK_WEBHOOK_URL is unset, SentinelOps functions normally without error."""
+    from services.slack_service import SlackService
+    import os
+
+    monkeypatch.delenv("SLACK_WEBHOOK_URL", raising=False)
+    slack = SlackService(webhook_url=None)
+
+    # Calling send_incident_alert and send_pr_notification succeeds gracefully
+    assert slack.send_incident_alert({"id": "INC-TEST-1", "repo": "payment-service", "status": "Investigating"}) is True
+    assert slack.send_pr_notification({"number": 199, "title": "Auto-fix", "repo": "payment-service", "draft": False}) is True
+
+
+def test_phase1_slack_failure_resilience(monkeypatch):
+    """Test 6: When Slack webhook fails/errors, it is logged and does not crash remediation."""
+    from services.slack_service import SlackService
+    from services.remediation_service import remediation_service
+
+    # Point Slack service to an unreachable invalid URL
+    bad_slack = SlackService(webhook_url="http://127.0.0.1:59999/invalid-slack-webhook")
+    # Sending alert returns False and logs error without raising exception
+    result = bad_slack._send_message({"text": "Test alert"})
+    assert result is False
+
+    # End-to-end remediation runs cleanly without raising
+    run_data = {
+        "repository": "payment-service",
+        "workflow_name": "CI/CD Test Pipeline",
+        "run_id": 990005,
+        "branch": "main",
+        "commit_sha": "a1b2c3d4",
+        "conclusion": "failure",
+        "action": "completed",
+    }
+    rem_res = remediation_service.remediate_workflow_failure(run_data)
+    assert rem_res["status"] == "remediated"
+    assert "prNumber" in rem_res
+
+
+def test_phase1_simulated_incident(client):
+    """Test 7: POST /api/incidents/simulate generates incident and maintains full functional flow."""
+    res = client.post("/api/incidents/simulate")
+    assert res.status_code == 201
+    sim = res.get_json()
+    assert sim["id"].startswith("INC-")
+    assert sim["status"] == "Investigating"
+
+    # Verify incident is retrievable via GET /api/incidents/<id>
+    get_res = client.get(f"/api/incidents/{sim['id']}")
+    assert get_res.status_code == 200
+    assert get_res.get_json()["id"] == sim["id"]
+
+
+# ── Phase 2 API Endpoint Tests ────────────────────────────────────────────────
+
+def test_phase2_api_orchestrate_success(client):
+    """Tests POST /api/github/orchestrate with successful CI outcome."""
+    payload = {
+        "run_id": 992001,
+        "repo": "payment-service",
+        "branch": "main",
+        "commit_sha": "a1b2c3d4e5",
+        "workflow_name": "CI / Test Suite",
+        "override_ci_status": "SUCCESS",
+        "override_confidence": 95,
+        "override_risk": "LOW",
+        "override_merge_success": True,
+    }
+    res = client.post("/api/github/orchestrate", json=payload)
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["status"] == "success"
+    assert data["data"]["status"] == "resolved"
+    assert data["data"]["incidentId"] == "INC-992001"
+
+    # Verify timeline endpoint
+    t_res = client.get("/api/incidents/INC-992001/timeline")
+    assert t_res.status_code == 200
+    assert len(t_res.get_json()) > 0
+
+    # Verify attempts endpoint
+    a_res = client.get("/api/incidents/INC-992001/attempts")
+    assert a_res.status_code == 200
+    assert len(a_res.get_json()) > 0
+
+
+def test_phase2_api_merge_guard_check(client):
+    """Tests POST /api/github/merge-guard/check endpoint."""
+    # Allow case
+    res_allow = client.post("/api/github/merge-guard/check", json={
+        "confidence": 95,
+        "risk_level": "LOW",
+        "sentinel_status": "PASS",
+        "ci_status": "SUCCESS",
+    })
+    assert res_allow.status_code == 200
+    assert res_allow.get_json()["allowed"] is True
+
+    # Deny case (Medium risk)
+    res_deny = client.post("/api/github/merge-guard/check", json={
+        "confidence": 95,
+        "risk_level": "MEDIUM",
+        "sentinel_status": "PASS",
+        "ci_status": "SUCCESS",
+    })
+    assert res_deny.status_code == 200
+    assert res_deny.get_json()["allowed"] is False
+    assert res_deny.get_json()["decision"] == "HUMAN_REVIEW"
+
+
+def test_phase2_api_validate_branch(client):
+    """Tests POST /api/github/validate-branch endpoint."""
+    res = client.post("/api/github/validate-branch", json={
+        "repo": "payment-service",
+        "branch": "sentinelops/fix-992001",
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert "status" in data
+    assert "workflow" in data
+
+
+# ── Phase 3: Multi-Agent Reasoning API Tests ─────────────────────────────────
+def test_api_agents_reason(client):
+    """Tests POST /api/agents/reason endpoint."""
+    logs = (
+        "npm ERR! code ERESOLVE\n"
+        "npm ERR! ERESOLVE could not resolve peer dependency tree\n"
+        "npm ERR! While resolving: @stripe/stripe-node@12.1.0\n"
+    )
+    res = client.post("/api/agents/reason", json={
+        "logs": logs,
+        "repository": "payment-service",
+        "workflow_name": "CI Build",
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data["status"] == "approved"
+    assert "diagnosis" in data
+    assert "fix" in data
+    assert "critic" in data
+    assert len(data["agent_timeline"]) >= 4
+    assert data["diagnosis"]["category"] == "dependency_error"
+
+
+def test_api_incident_agent_reasoning_get(client):
+    """Tests GET /api/incidents/<incident_id>/agent-reasoning."""
+    res = client.get("/api/incidents/INC-8924/agent-reasoning")
+    assert res.status_code in [200, 404]
+    if res.status_code == 200:
+        data = res.get_json()
+        assert "status" in data
+        assert "diagnosis" in data
+        assert "fix" in data
+        assert "critic" in data
+
+
+def test_api_incident_agent_reasoning_post(client):
+    """Tests POST /api/incidents/<incident_id>/agent-reasoning."""
+    res = client.post("/api/incidents/INC-8924/agent-reasoning", json={
+        "logs": "SyntaxError in src/app.py at line 12: invalid syntax",
+    })
+    assert res.status_code in [200, 404]
+    if res.status_code == 200:
+        data = res.get_json()
+        assert data["status"] == "approved"
+        assert data["diagnosis"]["category"] == "syntax_or_lint_error"
+
+
+
 
 
 

@@ -52,6 +52,7 @@ def init_db():
                     "prUrl": "VARCHAR(512)",
                     "remediationBranch": "VARCHAR(256)",
                     "diff": "TEXT",
+                    "agent_reasoning": "TEXT",
                 }
                 for col_name, col_type in cols_to_add.items():
                     if col_name not in existing_cols:

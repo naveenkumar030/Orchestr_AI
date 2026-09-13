@@ -319,6 +319,30 @@ export const aiAgents: AIAgent[] = [
     lastSeen: 'now',
     tags: ['cve', 'sast', 'trivy', 'groq'],
   },
+  {
+    id: 'agent-007',
+    name: 'Validator-Beta',
+    role: 'Autonomous CI Validation',
+    status: 'active',
+    capability: 'Real-time GitHub Actions CI validation polling, log inspection & fix effectiveness evaluation',
+    tasksCompleted: 412,
+    currentTask: 'Polling workflow runs, verifying patch effectiveness & guarding against regressions',
+    successRate: 99.2,
+    lastSeen: 'now',
+    tags: ['ci-validation', 'github-actions', 'regression-check', 'groq'],
+  },
+  {
+    id: 'agent-008',
+    name: 'MergeGuard-Zero',
+    role: 'Autonomous Merge Safety Boundary',
+    status: 'active',
+    capability: 'Enforces 7-point strict safety policy before authorizing autonomous merges',
+    tasksCompleted: 356,
+    currentTask: 'Auditing PR safety conditions, secret scans, confidence & CI status for auto-merge',
+    successRate: 100.0,
+    lastSeen: 'now',
+    tags: ['auto-merge', 'safety-gate', 'zero-downtime', 'sentinelguard'],
+  },
 ];
 
 // ─── Pull Requests ────────────────────────────────────────────────────────────

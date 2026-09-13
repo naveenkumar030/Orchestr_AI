@@ -23,3 +23,9 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: SLACK_WEBHOOK_URL
+        sync: false
+      - key: LT_USERNAME
+        sync: false
+      - key: LT_ACCESS_KEY
+        sync: false

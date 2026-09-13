@@ -3,6 +3,7 @@ Incident and Workflow Persistence Service for SentinelOps.
 Handles database storage, retrieval, and updates for incidents and workflow runs.
 """
 
+import json
 from typing import Optional, List, Dict, Any
 from database import get_db
 from models.workflow import Repository, WorkflowRun
@@ -93,6 +94,7 @@ class IncidentService:
                     prUrl=incident_data.get("prUrl"),
                     remediationBranch=incident_data.get("remediationBranch"),
                     diff=incident_data.get("diff"),
+                    agent_reasoning=json.dumps(incident_data["agent_reasoning"]) if isinstance(incident_data.get("agent_reasoning"), (dict, list)) else incident_data.get("agent_reasoning"),
                 )
                 db.add(inc)
             else:
@@ -107,6 +109,9 @@ class IncidentService:
                     inc.remediationBranch = incident_data.get("remediationBranch")
                 if incident_data.get("diff") is not None:
                     inc.diff = incident_data.get("diff")
+                if incident_data.get("agent_reasoning") is not None:
+                    ar = incident_data.get("agent_reasoning")
+                    inc.agent_reasoning = json.dumps(ar) if isinstance(ar, (dict, list)) else ar
 
             db.flush()
             return inc.to_dict()
@@ -152,6 +157,18 @@ class IncidentService:
             inc.status = new_status
             db.flush()
             return inc.to_dict()
+
+    def delete_incident(self, incident_id: str) -> bool:
+        """
+        Deletes an incident by ID (case-insensitive) from the database.
+        """
+        with get_db() as db:
+            inc = db.query(Incident).filter(Incident.id.ilike(incident_id)).first()
+            if inc:
+                db.delete(inc)
+                db.flush()
+                return True
+            return False
 
 
 # Singleton incident service

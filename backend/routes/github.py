@@ -149,6 +149,129 @@ def github_trigger_remediation():
     }), 200
 
 
+@github_bp.route("/api/github/orchestrate", methods=["POST"])
+def github_trigger_orchestration():
+    """
+    Phase 2 Closed-Loop Autonomous Self-Healing Orchestration:
+    Detect -> Diagnose -> Fix -> SentinelGuard -> PR -> CI Validation -> ValidatorAgent -> MergeGuard -> Auto-Merge / Retry / Escalate.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    run_id = data.get("run_id", 892401)
+    repo = data.get("repo", "payment-service")
+    branch = data.get("branch", "main")
+    commit_sha = data.get("commit_sha", "a1b2c3d4")
+    wf_name = data.get("workflow_name", "CI/CD Pipeline")
+
+    from services.remediation_orchestrator import remediation_orchestrator
+    run_data = {
+        "repository": repo,
+        "workflow_name": wf_name,
+        "run_id": run_id,
+        "branch": branch,
+        "commit_sha": commit_sha,
+        "conclusion": "failure",
+        "action": "completed",
+    }
+    result = remediation_orchestrator.handle_remediation(
+        run_data,
+        trigger_source="orchestrate_api",
+        override_ci_status=data.get("override_ci_status"),
+        override_ci_logs=data.get("override_ci_logs"),
+        override_confidence=data.get("override_confidence"),
+        override_risk=data.get("override_risk"),
+        override_merge_success=data.get("override_merge_success"),
+        override_deployment_status=data.get("override_deployment_status"),
+        override_health_status=data.get("override_health_status"),
+        override_rollback_success=data.get("override_rollback_success"),
+        override_rollback_health_status=data.get("override_rollback_health_status"),
+    )
+    return jsonify({
+        "status": "success",
+        "message": f"Autonomous orchestration finished for Run #{run_id} (Outcome: {result.get('status')})",
+        "data": result,
+    }), 200
+
+
+@github_bp.route("/api/github/validate-branch", methods=["POST"])
+def github_validate_branch():
+    """Validates CI status for a branch."""
+    data = request.get_json(force=True, silent=True) or {}
+    repo = data.get("repo", "payment-service")
+    branch = data.get("branch", "sentinelops/fix-892401")
+    commit_sha = data.get("commit_sha")
+    from services.validation_service import validation_service
+    res = validation_service.validate_branch(repo, branch, commit_sha)
+    return jsonify(res), 200
+
+
+@github_bp.route("/api/github/merge-guard/check", methods=["POST"])
+def github_merge_guard_check():
+    """Evaluates MergeGuard 7-point policy against provided parameters."""
+    data = request.get_json(force=True, silent=True) or {}
+    confidence = data.get("confidence", 95)
+    risk_level = data.get("risk_level", "LOW")
+    sentinel_status = data.get("sentinel_status", "PASS")
+    ci_status = data.get("ci_status", "SUCCESS")
+    attempt_number = data.get("attempt_number", 1)
+    restricted_paths = data.get("restricted_paths", False)
+    secret_scan = data.get("secret_scan", "PASS")
+
+    from services.merge_guard import merge_guard
+    res = merge_guard.can_auto_merge(
+        confidence=confidence,
+        risk_level=risk_level,
+        sentinel_status=sentinel_status,
+        ci_status=ci_status,
+        attempt_number=attempt_number,
+        restricted_paths=restricted_paths,
+        secret_scan=secret_scan,
+    )
+    return jsonify(res), 200
+
+
+@github_bp.route("/api/github/deployment-guard/check", methods=["POST"])
+def github_deployment_guard_check():
+    """Evaluates DeploymentGuard 5-point safety policy against provided parameters."""
+    data = request.get_json(force=True, silent=True) or {}
+    ci_status = data.get("ci_status", "SUCCESS")
+    merge_guard_status = data.get("merge_guard_status", "APPROVED")
+    pr_merged = data.get("pr_merged", True)
+    deployment_status = data.get("deployment_status", "SUCCESS")
+    health_check_status = data.get("health_check_status", "HEALTHY")
+
+    from services.deployment_guard import deployment_guard
+    res = deployment_guard.can_declare_resolved(
+        ci_status=ci_status,
+        merge_guard_status=merge_guard_status,
+        pr_merged=pr_merged,
+        deployment_status=deployment_status,
+        health_check_status=health_check_status,
+    )
+    return jsonify(res), 200
+
+
+@github_bp.route("/api/github/health-check", methods=["POST"])
+def github_health_check():
+    """Performs probe verification on a service endpoint using HealthCheckService."""
+    data = request.get_json(force=True, silent=True) or {}
+    url = data.get("url")
+    incident_id = data.get("incident_id")
+    timeout = data.get("timeout_seconds")
+    interval = data.get("interval_seconds")
+    threshold = data.get("success_threshold")
+
+    from services.health_check_service import health_check_service
+    res = health_check_service.verify_service_health(
+        url=url,
+        incident_id=incident_id,
+        timeout_seconds=timeout,
+        interval_seconds=interval,
+        success_threshold=threshold,
+    )
+    return jsonify(res), 200
+
+
+
 @github_bp.route("/api/github/relay/status", methods=["GET"])
 def github_relay_status():
     """Returns current status and telemetry of the Smee.io Webhook Relay."""

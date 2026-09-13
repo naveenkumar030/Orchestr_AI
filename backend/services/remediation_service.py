@@ -21,6 +21,7 @@ from typing import Dict, Any, Optional, Tuple
 import config
 from services.github_service import github_service
 from services.sentinel_guard import sentinel_guard
+from services.slack_service import slack_service
 
 
 class RemediationService:
@@ -139,6 +140,11 @@ class RemediationService:
             except Exception:
                 pass
 
+            try:
+                slack_service.send_incident_alert(inc_record)
+            except Exception:
+                pass
+
             existing_idx = next((i for i, inc in enumerate(store.incidents) if inc.get("id") == incident_id), None)
             if existing_idx is not None:
                 store.incidents[existing_idx].update(inc_record)
@@ -212,12 +218,19 @@ class RemediationService:
             guard_result=guard_result
         )
 
+        confidence_threshold = store.get_settings().get("confidenceThreshold", 90)
+        create_draft = (
+            confidence < confidence_threshold
+            or risk_level in ["MEDIUM", "HIGH"]
+        )
+
         pr_ok, pr_res = github_service.create_pull_request(
             repo=repo,
             title=pr_title,
             head=remediation_branch,
             base=branch,
             body=pr_body,
+            draft=create_draft
         )
 
         pr_number = pr_res.get("number") or (int(time.time()) % 1000 + 100)
@@ -226,7 +239,7 @@ class RemediationService:
         store.add_log(
             service=self.AGENT_NAME,
             level="INFO",
-            message=f"Pull Request #{pr_number} created: {pr_url} — Status: Awaiting automated check/merge",
+            message=f"Pull Request #{pr_number} ({'Draft' if create_draft else 'Normal'}) created: {pr_url} — Status: Awaiting automated check/merge",
         )
 
         # ── Step 7: Synchronize with SentinelOps In-Memory Data Store ──────────
@@ -314,8 +327,14 @@ class RemediationService:
                 "time": "just now",
                 "htmlUrl": pr_url,
                 "incidentId": incident_id,
+                "draft": create_draft,
+                "isDraft": create_draft,
             }
             store.pull_requests.insert(0, new_pr_entry)
+            try:
+                slack_service.send_pr_notification(new_pr_entry)
+            except Exception:
+                pass
 
         # Persist incident to SQLite if available
         try:
@@ -334,6 +353,8 @@ class RemediationService:
             "remediationBranch": remediation_branch,
             "prNumber": pr_number,
             "prUrl": pr_url,
+            "draft": create_draft,
+            "isDraft": create_draft,
             "diff": diff,
             "explanation": explanation,
             "guard_status": guard_status,

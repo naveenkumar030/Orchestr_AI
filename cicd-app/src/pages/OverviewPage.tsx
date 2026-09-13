@@ -7,6 +7,7 @@ import RemediationTimeline from '../components/ui/RemediationTimeline';
 import ConnectRepoModal from '../components/modals/ConnectRepoModal';
 import { kpiMetrics as defaultKpis, incidents as defaultIncidents, remediationSteps as defaultSteps } from '../data/mockData';
 import { api } from '../services/api';
+import { ReliabilitySummaryCard } from '../components/ui/ReliabilitySummaryCard';
 import type { Incident, KpiMetric, RemediationStep } from '../types';
 
 const timeFilters = ['24H', '7D', '30D'] as const;
@@ -723,6 +724,9 @@ export default function OverviewPage() {
           </div>
         </section>
       </div>
+
+      {/* ── Phase 6: Reliability, Resilience & Cost Control Matrix ─────────── */}
+      <ReliabilitySummaryCard />
 
       {/* ── Recent Incidents Table ────────────────────────────────────────── */}
       <section className="rounded-xl bg-white border border-[#E5DED6] p-4 sm:p-6 lg:p-space-lg shadow-panel flex flex-col">

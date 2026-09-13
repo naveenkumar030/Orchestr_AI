@@ -324,7 +324,7 @@ class GitHubService:
         )
 
     def create_pull_request(
-        self, repo: str, title: str, head: str, base: str, body: str
+        self, repo: str, title: str, head: str, base: str, body: str, draft: bool = False
     ) -> Tuple[bool, Dict[str, Any]]:
         """Creates a GitHub pull request."""
         if not self.token:
@@ -334,16 +334,19 @@ class GitHubService:
                 "number": pr_num,
                 "title": title,
                 "state": "open",
+                "draft": draft,
                 "html_url": f"https://github.com/{repo}/pull/{pr_num}",
                 "head": {"ref": head},
                 "base": {"ref": base},
                 "body": body,
                 "simulated": True,
             }
+        
+        payload = {"title": title, "head": head, "base": base, "body": body, "draft": draft}
         return self._api_request(
             f"repos/{repo}/pulls",
             method="POST",
-            data={"title": title, "head": head, "base": base, "body": body},
+            data=payload,
         )
 
     def create_comment(self, repo: str, pr_or_issue_number: int, body: str) -> Tuple[bool, Dict[str, Any]]:
@@ -368,7 +371,49 @@ class GitHubService:
         """Fetches list of workflows configured in repository."""
         return self._api_request(f"repos/{repo}/actions/workflows")
 
+    def list_workflow_runs_for_branch(
+        self, repo: str, branch: str, event: Optional[str] = None
+    ) -> Tuple[bool, Dict[str, Any]]:
+        """Fetches workflow runs filtered by branch and optional event."""
+        endpoint = f"repos/{repo}/actions/runs?branch={branch}"
+        if event:
+            endpoint += f"&event={event}"
+        return self._api_request(endpoint)
+
+    def merge_pull_request(
+        self,
+        repo: str,
+        pull_number: int,
+        commit_title: Optional[str] = None,
+        commit_message: Optional[str] = None,
+        merge_method: str = "squash",
+    ) -> Tuple[bool, Dict[str, Any]]:
+        """
+        Merges a pull request using GitHub REST API.
+        Enforces real GitHub responses (handles branch protection, approval requirements, merge conflicts).
+        """
+        if not self.token:
+            return True, {
+                "sha": "c0ffee1234567890abcdef",
+                "merged": True,
+                "message": f"Simulated {merge_method} merge for PR #{pull_number}",
+                "simulated": True,
+            }
+
+        payload: Dict[str, Any] = {"merge_method": merge_method}
+        if commit_title:
+            payload["commit_title"] = commit_title
+        if commit_message:
+            payload["commit_message"] = commit_message
+
+        return self._api_request(
+            f"repos/{repo}/pulls/{pull_number}/merge",
+            method="PUT",
+            data=payload,
+        )
+
 
 # Singleton service instance
 github_service = GitHubService()
+
 

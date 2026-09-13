@@ -55,19 +55,24 @@ class SentinelGuard:
 
         # Note: We are primarily blocking bad paths. We can optionally enforce allowed paths strictly,
         # but blocking is safer for a "default deny" on specific sensitive things.
-        # Let's enforce that it MUST match at least one allowed path if allowed paths are configured.
         is_allowed = False
-        for allowed in self.allowed_paths:
+        allowed_list = [p.strip() for p in (os.getenv("ALLOWED_PATHS") or config.ALLOWED_PATHS).split(",") if p.strip()]
+        for allowed in allowed_list:
             if self._match_path(file_path, allowed) or allowed == "*":
                 is_allowed = True
                 break
             if allowed.endswith("/*"):
                 dir_pattern = allowed[:-2]
-                if file_path.startswith(dir_pattern + "/"):
+                if file_path.startswith(dir_pattern + "/") or file_path == dir_pattern:
+                    is_allowed = True
+                    break
+            if allowed.startswith("*."):
+                ext = allowed[1:]
+                if file_path.endswith(ext):
                     is_allowed = True
                     break
                     
-        if not is_allowed and self.allowed_paths:
+        if not is_allowed and allowed_list:
             return False, f"Operation blocked: File path '{file_path}' is not in the allowed paths list."
 
         return True, ""
