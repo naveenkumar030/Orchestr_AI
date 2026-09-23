@@ -1,8 +1,9 @@
-import os
 import json
-import urllib.request
+import os
 import urllib.error
-from typing import Dict, Any, Optional
+import urllib.request
+from typing import Any
+
 import config
 
 
@@ -12,11 +13,11 @@ class SlackService:
     Fails gracefully if Slack is unconfigured, disabled, or unreachable.
     """
 
-    def __init__(self, webhook_url: Optional[str] = None):
+    def __init__(self, webhook_url: str | None = None):
         self._webhook_url = webhook_url
 
     @property
-    def webhook_url(self) -> Optional[str]:
+    def webhook_url(self) -> str | None:
         return self._webhook_url or os.environ.get("SLACK_WEBHOOK_URL") or config.SLACK_WEBHOOK_URL
 
     def _is_notifications_enabled(self) -> bool:
@@ -27,7 +28,7 @@ class SlackService:
         except Exception:
             return True
 
-    def _send_message(self, payload: Dict[str, Any]) -> bool:
+    def _send_message(self, payload: dict[str, Any]) -> bool:
         """
         Sends an HTTP POST message payload to the Slack Incoming Webhook URL.
         Never raises exceptions; returns True if delivered or skipped, False on failure.
@@ -91,7 +92,7 @@ class SlackService:
                 pass
             return False
 
-    def send_incident_alert(self, incident: Dict[str, Any]) -> bool:
+    def send_incident_alert(self, incident: dict[str, Any]) -> bool:
         """
         Sends a structured alert when an incident occurs or SentinelGuard blocks remediation.
         Includes repository, workflow/pipeline, branch, incident ID, confidence, risk level, and status.
@@ -136,7 +137,7 @@ class SlackService:
         }
         return self._send_message(payload)
 
-    def send_pr_notification(self, pr_data: Dict[str, Any]) -> bool:
+    def send_pr_notification(self, pr_data: dict[str, Any]) -> bool:
         """
         Sends a structured notification when a remediation Pull Request is created.
         Includes repository, PR number, title, HTML URL, branch, confidence, risk level, draft status, and author.
@@ -181,7 +182,7 @@ class SlackService:
 
     # ── Phase 2 Lifecycle Notifications ───────────────────────────────────────
 
-    def send_validation_started(self, incident_id: str, repo: str, branch: str, pr_number: Optional[int] = None) -> bool:
+    def send_validation_started(self, incident_id: str, repo: str, branch: str, pr_number: int | None = None) -> bool:
         """Sends a notification when CI validation polling begins."""
         payload = {
             "attachments": [
@@ -206,7 +207,7 @@ class SlackService:
                 {
                     "color": "#E5A93D",
                     "title": f"🔁 [AUTONOMOUS RETRY #{attempt}/{max_attempts}] {incident_id}",
-                    "text": f"CI validation failed. Healer-Alpha is re-diagnosing and synthesizing a revised patch.",
+                    "text": "CI validation failed. Healer-Alpha is re-diagnosing and synthesizing a revised patch.",
                     "fields": [
                         {"title": "Repository", "value": repo, "short": True},
                         {"title": "Attempt", "value": f"{attempt} of {max_attempts}", "short": True},
@@ -218,11 +219,11 @@ class SlackService:
         }
         return self._send_message(payload)
 
-    def send_merge_decision(self, incident_id: str, pr_number: int, repo: str, decision_data: Dict[str, Any]) -> bool:
+    def send_merge_decision(self, incident_id: str, pr_number: int, repo: str, decision_data: dict[str, Any]) -> bool:
         """Sends a notification for MergeGuard decision (Approved or Human Review)."""
         allowed = decision_data.get("allowed", False)
         color = "#10B981" if allowed else "#F59E0B"
-        title = f"🛡️ [MERGEGUARD APPROVED]" if allowed else f"⚠️ [HUMAN REVIEW REQUIRED]"
+        title = "🛡️ [MERGEGUARD APPROVED]" if allowed else "⚠️ [HUMAN REVIEW REQUIRED]"
         reason = decision_data.get("reason", "")
 
         fields = [
@@ -243,7 +244,7 @@ class SlackService:
         }
         return self._send_message(payload)
 
-    def send_resolution_notification(self, incident_id: str, pr_number: int, repo: str, mttr_seconds: Optional[int] = None) -> bool:
+    def send_resolution_notification(self, incident_id: str, pr_number: int, repo: str, mttr_seconds: int | None = None) -> bool:
         """Sends a notification when an incident is fully resolved and merged."""
         mttr_str = f"{mttr_seconds}s" if mttr_seconds else "< 1m"
         payload = {
@@ -264,7 +265,7 @@ class SlackService:
         }
         return self._send_message(payload)
 
-    def send_escalation_alert(self, incident: Dict[str, Any], attempt_count: int, reason: str) -> bool:
+    def send_escalation_alert(self, incident: dict[str, Any], attempt_count: int, reason: str) -> bool:
         """Sends a high-priority alert when max remediation retries are exhausted."""
         inc_id = incident.get("id", "INC-UNKNOWN")
         repo = incident.get("repo", "SentinelOps")
@@ -293,7 +294,7 @@ class SlackService:
         repo: str,
         commit_sha: str,
         environment: str = "production",
-        deployment_url: Optional[str] = None,
+        deployment_url: str | None = None,
     ) -> bool:
         """Sends notification when autonomous deployment starts."""
         payload = {

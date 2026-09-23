@@ -8,15 +8,17 @@ Orchestrates:
 5. Strict Timeouts (SENTINEL_LLM_TIMEOUT)
 """
 
-import os
 import json
-import time
-import random
 import logging
+import os
+import random
+import time
+from typing import Any
+
 import requests
-from typing import Optional, Dict, Any, List, Tuple
 from config import Config
-from services.resilience.circuit_breaker import circuit_breaker_registry, CircuitState
+
+from services.resilience.circuit_breaker import circuit_breaker_registry
 from services.resilience.reliability_telemetry import reliability_telemetry
 
 logger = logging.getLogger("sentinel.resilience.llm_manager")
@@ -41,7 +43,7 @@ class LLMResilienceManager:
         self.max_retries = int(getattr(Config, "SENTINEL_LLM_MAX_RETRIES", 3))
         self.default_timeout = float(getattr(Config, "SENTINEL_LLM_TIMEOUT", 30))
 
-    def _get_provider_chain(self) -> List[str]:
+    def _get_provider_chain(self) -> list[str]:
         """Builds the ordered list of LLM providers to attempt."""
         chain = []
         if self.primary_provider:
@@ -62,7 +64,7 @@ class LLMResilienceManager:
         jitter = random.uniform(0.05, 0.25) * delay
         return delay + jitter
 
-    def _is_permanent_error(self, status_code: Optional[int], error_str: str) -> bool:
+    def _is_permanent_error(self, status_code: int | None, error_str: str) -> bool:
         """Identifies permanent client errors that should NOT be retried."""
         if status_code in (400, 401, 403, 404):
             return True
@@ -78,7 +80,7 @@ class LLMResilienceManager:
         temperature: float,
         timeout: float,
         json_mode: bool,
-    ) -> Tuple[Optional[str], Optional[int], int]:
+    ) -> tuple[str | None, int | None, int]:
         """
         Executes raw Groq LLM call.
         Returns (content, status_code, approx_tokens).
@@ -88,7 +90,7 @@ class LLMResilienceManager:
 
         from groq import Groq
         client = Groq(api_key=self.groq_api_key, timeout=timeout)
-        kwargs: Dict[str, Any] = {
+        kwargs: dict[str, Any] = {
             "model": "openai/gpt-oss-120b",
             "messages": [
                 {"role": "system", "content": system_prompt},
@@ -114,7 +116,7 @@ class LLMResilienceManager:
         temperature: float,
         timeout: float,
         json_mode: bool,
-    ) -> Tuple[Optional[str], Optional[int], int]:
+    ) -> tuple[str | None, int | None, int]:
         """
         Executes raw Gemini REST call.
         """
@@ -149,7 +151,7 @@ class LLMResilienceManager:
         temperature: float,
         timeout: float,
         json_mode: bool,
-    ) -> Tuple[Optional[str], Optional[int], int]:
+    ) -> tuple[str | None, int | None, int]:
         """
         Executes raw OpenAI REST call.
         """
@@ -157,7 +159,7 @@ class LLMResilienceManager:
             return None, 401, 0
 
         headers = {"Authorization": f"Bearer {self.openai_api_key}", "Content-Type": "application/json"}
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "model": "gpt-4o-mini",
             "messages": [
                 {"role": "system", "content": system_prompt},
@@ -183,7 +185,7 @@ class LLMResilienceManager:
         temperature: float,
         timeout: float,
         json_mode: bool,
-    ) -> Tuple[Optional[str], Optional[int], int]:
+    ) -> tuple[str | None, int | None, int]:
         """
         Executes local Ollama call.
         """
@@ -212,7 +214,7 @@ class LLMResilienceManager:
         temperature: float,
         timeout: float,
         json_mode: bool,
-    ) -> Tuple[Optional[str], Optional[int], int]:
+    ) -> tuple[str | None, int | None, int]:
         """Dispatches request to specific provider implementation."""
         p = provider.lower().strip()
         if p == "groq":
@@ -231,9 +233,9 @@ class LLMResilienceManager:
         system_prompt: str,
         user_prompt: str,
         temperature: float = 0.1,
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         json_mode: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Executes LLM completion with retries, exponential backoff, circuit breaking,
         and multi-provider fallback.
@@ -242,7 +244,7 @@ class LLMResilienceManager:
         providers = self._get_provider_chain()
         last_error = None
         total_retries = 0
-        provider_attempts: List[str] = []
+        provider_attempts: list[str] = []
 
         start_time = time.time()
 
@@ -361,8 +363,8 @@ class LLMResilienceManager:
         system_prompt: str,
         user_prompt: str,
         temperature: float = 0.1,
-        timeout: Optional[float] = None,
-    ) -> Optional[Dict[str, Any]]:
+        timeout: float | None = None,
+    ) -> dict[str, Any] | None:
         """
         Executes LLM completion and parses JSON output safely.
         Returns parsed dict or None on failure.
@@ -383,8 +385,7 @@ class LLMResilienceManager:
             raw = raw[7:]
         elif raw.startswith("```"):
             raw = raw[3:]
-        if raw.endswith("```"):
-            raw = raw[:-3]
+        raw = raw.removesuffix("```")
 
         try:
             return json.loads(raw.strip())

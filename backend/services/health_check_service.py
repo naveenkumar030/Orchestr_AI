@@ -6,11 +6,10 @@ by performing consecutive HTTP health probes against configured endpoints.
 
 import os
 import time
-import json
-import urllib.request
 import urllib.error
+import urllib.request
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any
 
 import config
 
@@ -25,9 +24,9 @@ class HealthCheckService:
 
     def __init__(
         self,
-        success_threshold: Optional[int] = None,
-        timeout_seconds: Optional[int] = None,
-        interval_seconds: Optional[int] = None,
+        success_threshold: int | None = None,
+        timeout_seconds: int | None = None,
+        interval_seconds: int | None = None,
     ):
         self.success_threshold = success_threshold or config.HEALTH_CHECK_SUCCESS_THRESHOLD
         self.timeout_seconds = timeout_seconds or config.HEALTH_CHECK_TIMEOUT_SECONDS
@@ -37,11 +36,11 @@ class HealthCheckService:
         self,
         target_url: str,
         timeout: int = 5,
-        override_status: Optional[str] = None,
-        override_code: Optional[int] = None,
-        override_latency: Optional[int] = None,
-        override_reason: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        override_status: str | None = None,
+        override_code: int | None = None,
+        override_latency: int | None = None,
+        override_reason: str | None = None,
+    ) -> dict[str, Any]:
         """
         Executes a single HTTP health probe against target_url.
         """
@@ -107,8 +106,8 @@ class HealthCheckService:
                 "http_status": 0,
                 "response_time_ms": latency,
                 "checked_at": datetime.now(timezone.utc).isoformat(),
-                "reason": f"Connection Error: {str(e.reason)}",
-                "error": f"Connection Error: {str(e.reason)}",
+                "reason": f"Connection Error: {e.reason!s}",
+                "error": f"Connection Error: {e.reason!s}",
             }
         except Exception as e:
             latency = int((time.perf_counter() - start_time) * 1000)
@@ -128,18 +127,18 @@ class HealthCheckService:
 
     def verify_service_health(
         self,
-        url: Optional[str] = None,
-        incident_id: Optional[str] = None,
-        success_threshold: Optional[int] = None,
-        timeout_seconds: Optional[int] = None,
-        interval_seconds: Optional[int] = None,
-        override_status: Optional[str] = None,
-        override_code: Optional[int] = None,
-        override_latency: Optional[int] = None,
-        override_reason: Optional[str] = None,
-        target_url: Optional[str] = None,
+        url: str | None = None,
+        incident_id: str | None = None,
+        success_threshold: int | None = None,
+        timeout_seconds: int | None = None,
+        interval_seconds: int | None = None,
+        override_status: str | None = None,
+        override_code: int | None = None,
+        override_latency: int | None = None,
+        override_reason: str | None = None,
+        target_url: str | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Polls health check until `success_threshold` consecutive healthy checks pass,
         or max attempts/timeout is reached. Returns structured results with probes list.
@@ -194,9 +193,9 @@ class HealthCheckService:
 
         consecutive_successes = 0
         total_attempts = 0
-        probes: List[Dict[str, Any]] = []
+        probes: list[dict[str, Any]] = []
         start_time = time.time()
-        last_result: Dict[str, Any] = {}
+        last_result: dict[str, Any] = {}
 
         while time.time() - start_time < timeout:
             total_attempts += 1
@@ -263,16 +262,16 @@ class HealthCheckService:
 
     def verify_health(
         self,
-        target_url: Optional[str] = None,
-        success_threshold: Optional[int] = None,
-        timeout_seconds: Optional[int] = None,
-        interval_seconds: Optional[int] = None,
-        override_status: Optional[str] = None,
-        override_code: Optional[int] = None,
-        override_latency: Optional[int] = None,
-        override_reason: Optional[str] = None,
+        target_url: str | None = None,
+        success_threshold: int | None = None,
+        timeout_seconds: int | None = None,
+        interval_seconds: int | None = None,
+        override_status: str | None = None,
+        override_code: int | None = None,
+        override_latency: int | None = None,
+        override_reason: str | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Polls health check until `success_threshold` consecutive healthy checks pass.
         Aliases verify_service_health for backwards compatibility.

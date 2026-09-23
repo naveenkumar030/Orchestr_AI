@@ -9,10 +9,11 @@ Architectural Rule:
 - Cache entries have configurable TTL (SENTINEL_DIAGNOSIS_CACHE_TTL) and repo-context validation.
 """
 
-import time
 import logging
 import threading
-from typing import Optional, Dict, Any, List
+import time
+from typing import Any
+
 from config import Config
 
 logger = logging.getLogger("sentinel.resilience.diagnosis_cache")
@@ -24,9 +25,9 @@ class DiagnosisCacheEntry:
     def __init__(
         self,
         error_signature: str,
-        diagnosis_data: Dict[str, Any],
+        diagnosis_data: dict[str, Any],
         ttl_seconds: int = 86400,
-        repo_context_hash: Optional[str] = None,
+        repo_context_hash: str | None = None,
         repository: str = "SentinelOps",
     ):
         self.error_signature = error_signature
@@ -42,7 +43,7 @@ class DiagnosisCacheEntry:
         """Returns True if entry has surpassed its TTL."""
         return time.time() > self.expires_at
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "error_signature": self.error_signature,
             "diagnosis_data": self.diagnosis_data,
@@ -63,9 +64,9 @@ class DiagnosisCache:
     hit/miss telemetry tracking, and manual invalidation.
     """
 
-    def __init__(self, default_ttl: Optional[int] = None):
+    def __init__(self, default_ttl: int | None = None):
         self._lock = threading.Lock()
-        self._entries: Dict[str, DiagnosisCacheEntry] = {}
+        self._entries: dict[str, DiagnosisCacheEntry] = {}
         self.default_ttl = (
             default_ttl if default_ttl is not None else getattr(Config, "SENTINEL_DIAGNOSIS_CACHE_TTL", 86400)
         )
@@ -80,8 +81,8 @@ class DiagnosisCache:
     def get(
         self,
         error_signature: str,
-        current_repo_context_hash: Optional[str] = None,
-    ) -> Optional[Dict[str, Any]]:
+        current_repo_context_hash: str | None = None,
+    ) -> dict[str, Any] | None:
         """
         Retrieves a cached diagnosis by error signature.
         Returns None if cache miss, expired, or if repository context has changed.
@@ -125,9 +126,9 @@ class DiagnosisCache:
     def put(
         self,
         error_signature: str,
-        diagnosis_data: Dict[str, Any],
-        ttl: Optional[int] = None,
-        repo_context_hash: Optional[str] = None,
+        diagnosis_data: dict[str, Any],
+        ttl: int | None = None,
+        repo_context_hash: str | None = None,
         repository: str = "SentinelOps",
     ) -> None:
         """
@@ -205,7 +206,7 @@ class DiagnosisCache:
             logger.info(f"Invalidated {len(to_delete)} cache entries for repo {repository}")
             return len(to_delete)
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Returns cache telemetry and statistics."""
         with self._lock:
             active_entries = [e for e in self._entries.values() if not e.is_expired()]

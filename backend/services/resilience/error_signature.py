@@ -8,9 +8,9 @@ Guarantees:
 3. Produces consistent hashes across identical repeated CI failures.
 """
 
-import re
 import hashlib
-from typing import Optional, Dict, Any
+import re
+
 from services.secret_sanitizer import secret_sanitizer
 
 
@@ -43,7 +43,7 @@ class ErrorSignatureGenerator:
             (re.compile(r"\s+"), " "),
         ]
 
-    def normalize_text(self, text: Optional[str]) -> str:
+    def normalize_text(self, text: str | None) -> str:
         """Normalizes error text, strips dynamic artifacts, and sanitizes secrets."""
         if not text or not isinstance(text, str):
             return ""
@@ -61,12 +61,12 @@ class ErrorSignatureGenerator:
     def generate_signature(
         self,
         repository: str = "SentinelOps",
-        workflow_name: Optional[str] = None,
-        job_name: Optional[str] = None,
-        failed_step: Optional[str] = None,
-        category: Optional[str] = None,
-        error_message: Optional[str] = None,
-        stack_trace: Optional[str] = None,
+        workflow_name: str | None = None,
+        job_name: str | None = None,
+        failed_step: str | None = None,
+        category: str | None = None,
+        error_message: str | None = None,
+        stack_trace: str | None = None,
     ) -> str:
         """
         Produces a canonical SHA-256 error signature hex digest.
@@ -97,10 +97,10 @@ class ErrorSignatureGenerator:
         self,
         logs: str,
         repository: str = "SentinelOps",
-        workflow_name: Optional[str] = None,
-        job_name: Optional[str] = None,
-        failed_step: Optional[str] = None,
-        category: Optional[str] = None,
+        workflow_name: str | None = None,
+        job_name: str | None = None,
+        failed_step: str | None = None,
+        category: str | None = None,
     ) -> str:
         """Extracts primary error signals from logs and generates signature."""
         clean_logs = self.normalize_text(logs or "")

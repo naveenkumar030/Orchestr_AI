@@ -5,8 +5,7 @@ enabling real GitHub Webhooks and GitHub Actions delivery.
 """
 
 import os
-from typing import Optional, Dict, Any
-
+from typing import Any
 
 DEFAULT_AUTHTOKEN = os.environ.get("NGROK_AUTHTOKEN", "")
 
@@ -17,16 +16,16 @@ class NgrokService:
     directly to the SentinelOps Flask server.
     """
 
-    def __init__(self, authtoken: Optional[str] = None):
+    def __init__(self, authtoken: str | None = None):
         self.authtoken = authtoken or DEFAULT_AUTHTOKEN
-        self.public_url: Optional[str] = None
-        self.webhook_url: Optional[str] = None
+        self.public_url: str | None = None
+        self.webhook_url: str | None = None
         self.tunnel = None
         self.port = 5000
         self.running = False
-        self.last_error: Optional[str] = None
+        self.last_error: str | None = None
 
-    def start(self, port: int = 5000, authtoken: Optional[str] = None) -> Dict[str, Any]:
+    def start(self, port: int = 5000, authtoken: str | None = None) -> dict[str, Any]:
         """Starts an ngrok tunnel on the specified port."""
         if self.running and self.public_url:
             return self.get_status()
@@ -35,7 +34,7 @@ class NgrokService:
         token_to_use = authtoken or self.authtoken
 
         try:
-            from pyngrok import ngrok, conf
+            from pyngrok import ngrok
 
             if token_to_use:
                 ngrok.set_auth_token(token_to_use)
@@ -80,7 +79,7 @@ class NgrokService:
                 "error": str(ex),
             }
 
-    def stop(self) -> Dict[str, Any]:
+    def stop(self) -> dict[str, Any]:
         """Disconnects the ngrok tunnel and kills the process."""
         try:
             from pyngrok import ngrok
@@ -108,7 +107,7 @@ class NgrokService:
 
         return self.get_status()
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Returns the current state and URLs for the ngrok tunnel."""
         return {
             "running": self.running,

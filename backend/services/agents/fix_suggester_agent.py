@@ -4,14 +4,15 @@ Responsible for proposing minimal, safe, and targeted code/dependency/configurat
 in unified diff format based on the diagnosis and repository context.
 """
 
+import json
 import os
 import re
-import json
-import urllib.request
 import urllib.error
-from typing import Dict, Any, List, Optional
+import urllib.request
+from typing import Any
 
 import config
+
 from services.secret_sanitizer import secret_sanitizer
 
 VALID_FIX_TYPES = {
@@ -47,7 +48,7 @@ def normalize_unified_diff(diff: str, target_file: str = "src/app.py") -> str:
     return diff_str
 
 
-def validate_fix_suggester_output(data: Dict[str, Any], fallback_target_file: str = "src/app.py") -> Dict[str, Any]:
+def validate_fix_suggester_output(data: dict[str, Any], fallback_target_file: str = "src/app.py") -> dict[str, Any]:
     """
     Validates and normalizes FixSuggester structured output.
     """
@@ -105,25 +106,25 @@ class FixSuggesterAgent:
         pass
 
     @property
-    def openai_api_key(self) -> Optional[str]:
+    def openai_api_key(self) -> str | None:
         return os.environ.get("OPENAI_API_KEY") or config.OPENAI_API_KEY
 
     @property
-    def groq_api_key(self) -> Optional[str]:
+    def groq_api_key(self) -> str | None:
         return os.environ.get("GROQ_API_KEY") or config.GROQ_API_KEY
 
     @property
-    def gemini_api_key(self) -> Optional[str]:
+    def gemini_api_key(self) -> str | None:
         return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or config.GEMINI_API_KEY
 
     def suggest_fix(
         self,
         failure_log: str,
-        diagnosis: Dict[str, Any],
-        repo_context: Optional[Dict[str, str]] = None,
-        source_files: Optional[Dict[str, str]] = None,
-        critic_feedback: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        diagnosis: dict[str, Any],
+        repo_context: dict[str, str] | None = None,
+        source_files: dict[str, str] | None = None,
+        critic_feedback: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Synthesizes a minimal unified diff patch to fix the diagnosed failure.
         """
@@ -158,9 +159,9 @@ class FixSuggesterAgent:
     def _build_prompt(
         self,
         logs: str,
-        diagnosis: Dict[str, Any],
-        context: Dict[str, str],
-        critic_feedback: Optional[Dict[str, Any]],
+        diagnosis: dict[str, Any],
+        context: dict[str, str],
+        critic_feedback: dict[str, Any] | None,
     ) -> str:
         feedback_str = ""
         if critic_feedback and not critic_feedback.get("approved", True):
@@ -194,7 +195,7 @@ class FixSuggesterAgent:
             f"- Do not propose destructive shell commands.\n"
         )
 
-    def _call_groq(self, logs: str, diag: Dict[str, Any], ctx: Dict[str, str], feedback: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def _call_groq(self, logs: str, diag: dict[str, Any], ctx: dict[str, str], feedback: dict[str, Any] | None) -> dict[str, Any] | None:
         try:
             from groq import Groq
             client = Groq(api_key=self.groq_api_key, timeout=3.0)
@@ -216,7 +217,7 @@ class FixSuggesterAgent:
             pass
         return None
 
-    def _call_openai(self, logs: str, diag: Dict[str, Any], ctx: Dict[str, str], feedback: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def _call_openai(self, logs: str, diag: dict[str, Any], ctx: dict[str, str], feedback: dict[str, Any] | None) -> dict[str, Any] | None:
         try:
             import requests
             prompt = self._build_prompt(logs, diag, ctx, feedback)
@@ -238,7 +239,7 @@ class FixSuggesterAgent:
             pass
         return None
 
-    def _call_gemini(self, logs: str, diag: Dict[str, Any], ctx: Dict[str, str], feedback: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def _call_gemini(self, logs: str, diag: dict[str, Any], ctx: dict[str, str], feedback: dict[str, Any] | None) -> dict[str, Any] | None:
         try:
             prompt = self._build_prompt(logs, diag, ctx, feedback)
             body = json.dumps({
@@ -265,10 +266,10 @@ class FixSuggesterAgent:
     def _heuristic_suggest(
         self,
         logs: str,
-        diagnosis: Dict[str, Any],
-        context: Dict[str, str],
-        critic_feedback: Optional[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        diagnosis: dict[str, Any],
+        context: dict[str, str],
+        critic_feedback: dict[str, Any] | None,
+    ) -> dict[str, Any]:
         """
         Deterministic, robust patch synthesis generator tailored to diagnosis category and critic feedback.
         """

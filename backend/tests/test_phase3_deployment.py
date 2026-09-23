@@ -5,29 +5,28 @@ Autonomous Deployment Verification, Health Check Probing, DeploymentGuard Policy
 
 import os
 import sys
+from unittest.mock import patch
+
 import pytest
-import time
-from unittest.mock import patch, MagicMock
 
 CURRENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
-from services.deployment_service import deployment_service, DeploymentService
-from services.health_check_service import health_check_service, HealthCheckService
-from services.deployment_guard import deployment_guard, DeploymentGuard
-from services.rollback_service import rollback_service, RollbackService
+from services.deployment_guard import DeploymentGuard
+from services.health_check_service import HealthCheckService
 from services.remediation_orchestrator import remediation_orchestrator
-from services.slack_service import slack_service
-import config
-
+from services.rollback_service import RollbackService
 
 # ── Fixtures & Setup ──────────────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
-def reset_services_state():
-    """Resets services and store between tests."""
+def reset_services_state(monkeypatch):
+    """Resets services and store between tests and isolates from external state."""
     from data_store import store
+    from services.mongo_service import mongo_service
+
+    monkeypatch.setattr(mongo_service, "_is_connected", False)
     store.deployments.clear()
     store.rollbacks.clear()
     store.incidents = [i for i in store.incidents if not str(i.get("id", "")).startswith("INC-9010")]
@@ -287,7 +286,7 @@ def test_phase3_rollback_failure_escalates_to_human():
     assert result["incident"]["status"] == "Escalated"
 
     timeline_titles = [e["title"] for e in result["timeline"]]
-    assert any("Rollback Failed" in t for t in timeline_titles or "Escalated" in t for t in timeline_titles)
+    assert any("Rollback Failed" in t or "Escalated" in t for t in timeline_titles)
 
 
 # ── Test 8: DeploymentGuard 5-Point Safety Policy Verification ──

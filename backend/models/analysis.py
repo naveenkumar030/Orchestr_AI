@@ -3,9 +3,11 @@ AI Analysis and Root Cause Analysis (RCA) model for SentinelOps.
 """
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+
 from database import Base
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+
 from models.base import SerializerMixin
 
 

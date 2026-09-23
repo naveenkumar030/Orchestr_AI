@@ -5,8 +5,10 @@ Enforces branch protections, file path restrictions, and change size limits.
 
 import os
 import re
-from typing import Dict, Any, Tuple, List
+from typing import Any
+
 import config
+
 
 class SentinelGuard:
     def __init__(self):
@@ -18,7 +20,7 @@ class SentinelGuard:
         self.max_lines_changed = config.MAX_LINES_CHANGED
         self.require_human_approval = config.REQUIRE_HUMAN_APPROVAL
 
-    def check_branch_protection(self, target_branch: str) -> Tuple[bool, str]:
+    def check_branch_protection(self, target_branch: str) -> tuple[bool, str]:
         """Check if the target branch is protected and direct modification should be blocked."""
         # AI should never push directly to a protected branch
         for protected in self.protected_branches:
@@ -32,7 +34,7 @@ class SentinelGuard:
         regex = "^" + pattern.replace(".", "\\.").replace("*", ".*") + "$"
         return bool(re.match(regex, path))
 
-    def check_file_protection(self, file_path: str) -> Tuple[bool, str]:
+    def check_file_protection(self, file_path: str) -> tuple[bool, str]:
         """Check if a file modification violates the file protection policy."""
         # Check against blocked paths first
         for blocked in self.blocked_paths:
@@ -77,7 +79,7 @@ class SentinelGuard:
 
         return True, ""
 
-    def detect_secrets_in_content(self, content: str) -> Tuple[bool, str]:
+    def detect_secrets_in_content(self, content: str) -> tuple[bool, str]:
         """Basic secret detection using regex."""
         # Simple patterns that might indicate secrets
         patterns = [
@@ -93,7 +95,7 @@ class SentinelGuard:
                 return False, "Operation blocked: Detected potential secret or credential in the proposed AI change."
         return True, ""
 
-    def analyze_diff(self, diff: str) -> Dict[str, int]:
+    def analyze_diff(self, diff: str) -> dict[str, int]:
         """Calculates lines added and deleted from a unified diff."""
         lines_added = 0
         lines_deleted = 0
@@ -110,7 +112,7 @@ class SentinelGuard:
             "total_lines_changed": lines_added + lines_deleted
         }
 
-    def evaluate(self, target_branch: str, target_file: str, diff: str, fixed_content: str) -> Dict[str, Any]:
+    def evaluate(self, target_branch: str, target_file: str, diff: str, fixed_content: str) -> dict[str, Any]:
         """
         Aggregates all SentinelGuard checks.
         Returns a dictionary with status, risk_level, and any block reasons.

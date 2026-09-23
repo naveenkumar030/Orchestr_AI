@@ -4,9 +4,12 @@ Manages deterministic human approval lifecycle, state transitions,
 audit trails, and idempotency guarantees for risky AI remediation actions.
 """
 
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+import logging
 import threading
+from datetime import datetime, timezone
+from typing import Any
+
+logger = logging.getLogger("sentinelops.human_approval")
 
 
 class HumanApprovalService:
@@ -24,17 +27,17 @@ class HumanApprovalService:
     def __init__(self):
         self._lock = threading.RLock()
         # In-memory store for approval records and audit log
-        self._approvals: Dict[str, Dict[str, Any]] = {}
-        self._audit_logs: List[Dict[str, Any]] = []
+        self._approvals: dict[str, dict[str, Any]] = {}
+        self._audit_logs: list[dict[str, Any]] = []
 
     def initialize_record(
         self,
         incident_id: str,
-        safety_gate_result: Dict[str, Any],
-        run_id: Optional[int] = None,
-        repo: Optional[str] = None,
-        workflow_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        safety_gate_result: dict[str, Any],
+        run_id: int | None = None,
+        repo: str | None = None,
+        workflow_name: str | None = None,
+    ) -> dict[str, Any]:
         """Creates or updates the initial safety approval record for an incident."""
         with self._lock:
             status = safety_gate_result.get("approval_status", "pending_review")
@@ -71,14 +74,31 @@ class HumanApprovalService:
             }
 
             self._approvals[incident_id] = record
+            try:
+                from services.mongo_service import mongo_service
+                if mongo_service.is_connected():
+                    mongo_service.save_approval(incident_id, record)
+            except Exception as e:
+                logger.warning("Failed to save approval for incident %s to MongoDB: %s", incident_id, e)
             return record
 
-    def get_approval_state(self, incident_id: str) -> Optional[Dict[str, Any]]:
+    def get_approval_state(self, incident_id: str) -> dict[str, Any] | None:
         """Retrieves the current approval record and audit history for an incident."""
         with self._lock:
             # Check in-memory store
             if incident_id in self._approvals:
                 return self._approvals[incident_id]
+
+            # Try MongoDB Atlas
+            try:
+                from services.mongo_service import mongo_service
+                if mongo_service.is_connected():
+                    m_rec = mongo_service.get_approval(incident_id)
+                    if m_rec:
+                        self._approvals[incident_id] = m_rec
+                        return m_rec
+            except Exception as e:
+                logger.warning("Failed to get approval for incident %s from MongoDB: %s", incident_id, e)
 
             # Try to build fallback from incident store if available
             try:
@@ -105,8 +125,8 @@ class HumanApprovalService:
                         "updated_at": datetime.now(timezone.utc).isoformat(),
                         "audit_trail": [],
                     }
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Failed to build approval fallback from incident store for %s: %s", incident_id, e)
 
             return None
 
@@ -114,9 +134,9 @@ class HumanApprovalService:
         self,
         incident_id: str,
         decision: str,
-        comment: Optional[str] = None,
-        approver: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        comment: str | None = None,
+        approver: str | None = None,
+    ) -> dict[str, Any]:
         """
         Processes human decision on a pending incident fix.
         decision: 'approve' | 'reject'
@@ -194,6 +214,14 @@ class HumanApprovalService:
             self._approvals[incident_id] = record
             self._audit_logs.append(audit_entry)
 
+            # Persist to MongoDB Atlas
+            try:
+                from services.mongo_service import mongo_service
+                if mongo_service.is_connected():
+                    mongo_service.save_approval(incident_id, record)
+            except Exception as e:
+                logger.warning("Failed to persist updated approval for incident %s to MongoDB: %s", incident_id, e)
+
             # Sync to data_store and database if incident exists
             try:
                 from data_store import store
@@ -208,8 +236,8 @@ class HumanApprovalService:
                             "decided_at": now,
                         }
                     store.save_agent_reasoning(incident_id, inc.get("agent_reasoning", {}))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Failed to sync approval state to incident store for %s: %s", incident_id, e)
 
             return {
                 "success": True,

@@ -9,17 +9,18 @@ Guarantees:
   5. Fail-safe isolation (never raises exceptions to caller).
 """
 
-import os
 import json
-import time
-import urllib.request
-import urllib.error
-from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List, Tuple
-from enum import Enum
+import os
 import threading
+import time
+import urllib.error
+import urllib.request
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any
 
 import config
+
 from services.secret_sanitizer import secret_sanitizer
 
 
@@ -36,14 +37,14 @@ class SlackNotificationService:
     Dedicated notification service for SentinelOps AI pipeline and safety decisions.
     """
 
-    def __init__(self, webhook_url: Optional[str] = None):
+    def __init__(self, webhook_url: str | None = None):
         self._webhook_url = webhook_url
         self._sent_keys: set = set()
-        self._notification_history: List[Dict[str, Any]] = []
+        self._notification_history: list[dict[str, Any]] = []
         self._lock = threading.RLock()
 
     @property
-    def webhook_url(self) -> Optional[str]:
+    def webhook_url(self) -> str | None:
         return (
             self._webhook_url
             or os.environ.get("SENTINEL_SLACK_WEBHOOK_URL")
@@ -51,7 +52,7 @@ class SlackNotificationService:
             or config.SLACK_WEBHOOK_URL
         )
 
-    def _mask_url(self, url: Optional[str]) -> str:
+    def _mask_url(self, url: str | None) -> str:
         """Masks webhook URL for safe logging."""
         if not url:
             return "[UNCONFIGURED]"
@@ -83,22 +84,22 @@ class SlackNotificationService:
         workflow_name: str,
         incident_id: str,
         failure: str,
-        root_cause: Optional[str] = None,
-        job_name: Optional[str] = None,
-        diagnosis_confidence: Optional[float] = None,
-        fix_confidence: Optional[float] = None,
+        root_cause: str | None = None,
+        job_name: str | None = None,
+        diagnosis_confidence: float | None = None,
+        fix_confidence: float | None = None,
         risk_level: str = "low",
         critic_approved: bool = True,
-        critic_score: Optional[float] = None,
+        critic_score: float | None = None,
         decision: str = "approved",
-        suggested_fix: Optional[str] = None,
-        reasons: Optional[List[str]] = None,
-        run_id: Optional[int] = None,
-        run_url: Optional[str] = None,
-        incident_url: Optional[str] = None,
-        actor: Optional[str] = None,
-        comment: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        suggested_fix: str | None = None,
+        reasons: list[str] | None = None,
+        run_id: int | None = None,
+        run_url: str | None = None,
+        incident_url: str | None = None,
+        actor: str | None = None,
+        comment: str | None = None,
+    ) -> dict[str, Any]:
         """
         Builds a concise, structured Slack payload with secret redaction across 5 distinct states:
           1. AUTO_APPROVED
@@ -130,25 +131,25 @@ class SlackNotificationService:
         # Determine color, title, and banner based on state
         if norm_type in ["auto_approved", "approved"]:
             color = "#10B981"  # Green
-            title = f"🚨 SENTINELOPS CI FAILURE — AUTO-APPROVED"
+            title = "🚨 SENTINELOPS CI FAILURE — AUTO-APPROVED"
             headline = f"*Decision:* `AUTO_APPROVED` ✅\n*Suggested Fix:* {safe_fix}"
         elif norm_type in ["human_review_required", "pending_review"]:
             color = "#F59E0B"  # Amber/Yellow
-            title = f"⚠️ SENTINELOPS CI FAILURE — HUMAN REVIEW REQUIRED"
+            title = "⚠️ SENTINELOPS CI FAILURE — HUMAN REVIEW REQUIRED"
             reason_str = "; ".join(reasons) if reasons else f"Risk level {risk_upper} requires operator authorization"
             headline = f"*Decision:* `HUMAN_REVIEW_REQUIRED` ⚠️\n*Reason:* {reason_str}"
         elif norm_type in ["rejected", "auto_rejected"]:
             color = "#EF4444"  # Red
-            title = f"🛑 SENTINELOPS CI FAILURE — REMEDIATION REJECTED"
+            title = "🛑 SENTINELOPS CI FAILURE — REMEDIATION REJECTED"
             reason_str = "; ".join(reasons) if reasons else "Failed hard security policies or critic evaluation"
             headline = f"*Decision:* `REJECTED` 🛑\n*Reason:* {reason_str}"
         elif norm_type in ["approved_by_human", "human_approved"]:
             color = "#10B981"  # Green
-            title = f"✅ SENTINELOPS — APPROVED BY HUMAN"
+            title = "✅ SENTINELOPS — APPROVED BY HUMAN"
             headline = f"*Approved By:* `{safe_actor}`\n*Comment:* {safe_comment}\n*Action:* Ready for Draft PR creation"
         elif norm_type in ["rejected_by_human", "human_rejected"]:
             color = "#DC2626"  # Dark Red
-            title = f"🛑 SENTINELOPS — REJECTED BY HUMAN"
+            title = "🛑 SENTINELOPS — REJECTED BY HUMAN"
             headline = f"*Rejected By:* `{safe_actor}`\n*Comment:* {safe_comment}\n*Action:* PR creation blocked by operator"
         else:
             color = "#3B82F6"
@@ -228,23 +229,23 @@ class SlackNotificationService:
         workflow_name: str,
         incident_id: str,
         failure: str,
-        root_cause: Optional[str] = None,
-        job_name: Optional[str] = None,
-        diagnosis_confidence: Optional[float] = None,
-        fix_confidence: Optional[float] = None,
+        root_cause: str | None = None,
+        job_name: str | None = None,
+        diagnosis_confidence: float | None = None,
+        fix_confidence: float | None = None,
         risk_level: str = "low",
         critic_approved: bool = True,
-        critic_score: Optional[float] = None,
+        critic_score: float | None = None,
         decision: str = "approved",
-        suggested_fix: Optional[str] = None,
-        reasons: Optional[List[str]] = None,
-        run_id: Optional[int] = None,
-        run_url: Optional[str] = None,
-        incident_url: Optional[str] = None,
-        actor: Optional[str] = None,
-        comment: Optional[str] = None,
+        suggested_fix: str | None = None,
+        reasons: list[str] | None = None,
+        run_id: int | None = None,
+        run_url: str | None = None,
+        incident_url: str | None = None,
+        actor: str | None = None,
+        comment: str | None = None,
         force_resend: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Dispatches Slack notification with duplicate protection and fail-safe error isolation.
         Never raises exceptions.
@@ -376,7 +377,7 @@ class SlackNotificationService:
                 if e.code in (400, 401, 403, 404):
                     break
             except Exception as e:
-                last_error = f"Network exception: {str(e)}"
+                last_error = f"Network exception: {e!s}"
 
             if attempt < max_attempts:
                 time.sleep(0.5)
@@ -416,7 +417,7 @@ class SlackNotificationService:
             "record": record,
         }
 
-    def _send_http_request(self, url: str, payload: Dict[str, Any]) -> Tuple[bool, int, str]:
+    def _send_http_request(self, url: str, payload: dict[str, Any]) -> tuple[bool, int, str]:
         """Low-level HTTP request dispatcher with non-leaking error handling."""
         data_bytes = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
@@ -430,7 +431,7 @@ class SlackNotificationService:
                 return True, response.status, "ok"
             return False, response.status, f"HTTP {response.status}"
 
-    def format_slack_payload(self, event_type: str, reasoning_data: Dict[str, Any]) -> Dict[str, Any]:
+    def format_slack_payload(self, event_type: str, reasoning_data: dict[str, Any]) -> dict[str, Any]:
         """Formats Slack payload from MultiAgentReasoningResult dictionary."""
         diag = reasoning_data.get("diagnosis", {}) or {}
         fix = reasoning_data.get("fix", {}) or {}
@@ -463,11 +464,11 @@ class SlackNotificationService:
     def send_notification(
         self,
         event_type: str,
-        reasoning_data: Dict[str, Any],
+        reasoning_data: dict[str, Any],
         force_resend: bool = False,
-        actor: Optional[str] = None,
-        comment: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        actor: str | None = None,
+        comment: str | None = None,
+    ) -> dict[str, Any]:
         """High-level dispatch from multi-agent reasoning dictionary."""
         repo = reasoning_data.get("repository", "SentinelOps")
         incident_id = reasoning_data.get("incident_id", "INC-001")
@@ -534,11 +535,11 @@ class SlackNotificationService:
                 "status": NotificationStatus.FAILED.value,
                 "notification_key": notification_key,
                 "incident_id": incident_id,
-                "error": f"Network exception: {str(e)}",
+                "error": f"Network exception: {e!s}",
                 "timestamp": now_iso,
             }
 
-    def get_notification_history(self, incident_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_notification_history(self, incident_id: str | None = None) -> list[dict[str, Any]]:
         """Retrieves sent notification records."""
         with self._lock:
             if incident_id:

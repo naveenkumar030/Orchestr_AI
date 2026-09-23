@@ -5,10 +5,10 @@ risk bounds, SentinelGuard compliance, and human approval transitions.
 """
 
 import os
-from typing import Dict, Any, Optional, List
-from services.sentinel_guard import sentinel_guard
-from services.risk_assessor import risk_assessor
+from typing import Any
 
+from services.risk_assessor import risk_assessor
+from services.sentinel_guard import sentinel_guard
 
 # Centralized Configuration Source (overridable via environment variables)
 CONFIDENCE_GATE_CONFIG = {
@@ -32,7 +32,7 @@ class ConfidenceGate:
       7. Fail-closed on any missing/null inputs
     """
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or CONFIDENCE_GATE_CONFIG
 
     @property
@@ -53,20 +53,20 @@ class ConfidenceGate:
 
     def evaluate(
         self,
-        diagnosis: Optional[Dict[str, Any]],
-        fix: Optional[Dict[str, Any]],
-        critic: Optional[Dict[str, Any]],
-        risk_assessment: Optional[Dict[str, Any]] = None,
+        diagnosis: dict[str, Any] | None,
+        fix: dict[str, Any] | None,
+        critic: dict[str, Any] | None,
+        risk_assessment: dict[str, Any] | None = None,
         target_branch: str = "sentinelops/remediation",
-        target_file: Optional[str] = None,
-        patch: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        target_file: str | None = None,
+        patch: str | None = None,
+    ) -> dict[str, Any]:
         """
         Executes deterministic multi-dimensional safety evaluation.
         Returns SafetyGateResult dictionary.
         """
-        reasons: List[str] = []
-        security_findings: List[str] = []
+        reasons: list[str] = []
+        security_findings: list[str] = []
 
         # ── 1. FAIL-CLOSED CHECK: Validate Presence of All Required Inputs ─────
         if not diagnosis or not isinstance(diagnosis, dict):
@@ -227,7 +227,7 @@ class ConfidenceGate:
             },
         }
 
-    def _fail_closed_response(self, reason: str) -> Dict[str, Any]:
+    def _fail_closed_response(self, reason: str) -> dict[str, Any]:
         """Returns safe default fail-closed response requiring human review."""
         return {
             "decision": "human_review_required",

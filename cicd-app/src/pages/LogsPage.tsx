@@ -18,7 +18,7 @@ export default function LogsPage() {
         level: selectedLevel,
         query: searchQuery,
       });
-      if (data && data.length > 0) {
+      if (data) {
         setLogsList(data);
       }
     } catch (err) {
@@ -28,13 +28,21 @@ export default function LogsPage() {
 
   // Initial load
   useEffect(() => {
-    fetchLogs();
+    let isMounted = true;
+    const run = async () => {
+      if (isMounted) {
+        await fetchLogs();
+      }
+    };
+    void run();
+    return () => {
+      isMounted = false;
+    };
   }, [fetchLogs]);
 
   // Server-Sent Events (SSE) stream for sub-second log delivery
   useEffect(() => {
     if (!isLive) {
-      setSseActive(false);
       return;
     }
 
@@ -60,7 +68,7 @@ export default function LogsPage() {
         es?.close();
       };
     } catch {
-      setSseActive(false);
+      // Stream failed to initialize
     }
 
     // Fallback polling if SSE is disconnected
@@ -212,43 +220,55 @@ export default function LogsPage() {
 
           {/* Log Stream Body */}
           <div className="p-4 bg-[#201B18] font-mono text-xs space-y-1.5 min-h-[480px] max-h-[640px] overflow-y-auto">
-            {filteredLogs.map((log) => {
-              const isError = log.level === 'ERROR';
-              const isWarn = log.level === 'WARN';
-              const isDebug = log.level === 'DEBUG' || log.level === 'TRACE';
+            {filteredLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center text-[#8F857D] space-y-3">
+                <span className="material-symbols-outlined text-4xl text-[#3E3835]">terminal</span>
+                <p className="text-[#EDE7E3] font-semibold text-sm">No Log Entries Recorded</p>
+                <p className="text-xs text-[#8F857D] max-w-sm">
+                  {isLive
+                    ? 'Listening for incoming operational telemetry events and SSE log stream...'
+                    : 'Log stream is paused. Resume live stream or trigger a pipeline run to stream telemetry.'}
+                </p>
+              </div>
+            ) : (
+              filteredLogs.map((log) => {
+                const isError = log.level === 'ERROR';
+                const isWarn = log.level === 'WARN';
+                const isDebug = log.level === 'DEBUG' || log.level === 'TRACE';
 
-              return (
-                <div
-                  key={log.id}
-                  className={`flex items-start gap-3 p-1.5 rounded transition-colors ${
-                    isError
-                      ? 'bg-[#ba1a1a]/20 border border-[#ba1a1a]/40 text-[#fca5a5]'
-                      : isWarn
-                      ? 'bg-[#B87A36]/15 border border-[#B87A36]/30 text-[#fde047]'
-                      : isDebug
-                      ? 'text-[#8F857D]'
-                      : 'text-[#EDE7E3]'
-                  }`}
-                >
-                  <span className="text-[#8F857D] select-none shrink-0 w-20">{log.timestamp}</span>
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                return (
+                  <div
+                    key={log.id}
+                    className={`flex items-start gap-3 p-1.5 rounded transition-colors ${
                       isError
-                        ? 'bg-[#ba1a1a] text-white'
+                        ? 'bg-[#ba1a1a]/20 border border-[#ba1a1a]/40 text-[#fca5a5]'
                         : isWarn
-                        ? 'bg-[#B87A36] text-white'
+                        ? 'bg-[#B87A36]/15 border border-[#B87A36]/30 text-[#fde047]'
                         : isDebug
-                        ? 'bg-[#3E3835] text-[#D1C7BD]'
-                        : 'bg-[#D97757] text-white'
+                        ? 'text-[#8F857D]'
+                        : 'text-[#EDE7E3]'
                     }`}
                   >
-                    {log.level}
-                  </span>
-                  <span className="text-[#D97757] shrink-0 font-medium">[{log.service}]</span>
-                  <span className="break-all">{log.message}</span>
-                </div>
-              );
-            })}
+                    <span className="text-[#8F857D] select-none shrink-0 w-20">{log.timestamp}</span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                        isError
+                          ? 'bg-[#ba1a1a] text-white'
+                          : isWarn
+                          ? 'bg-[#B87A36] text-white'
+                          : isDebug
+                          ? 'bg-[#3E3835] text-[#D1C7BD]'
+                          : 'bg-[#D97757] text-white'
+                      }`}
+                    >
+                      {log.level}
+                    </span>
+                    <span className="text-[#D97757] shrink-0 font-medium">[{log.service}]</span>
+                    <span className="break-all">{log.message}</span>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -257,29 +277,32 @@ export default function LogsPage() {
           <div className="rounded-2xl bg-white border border-[#E5DED6] p-space-md shadow-card space-y-3">
             <div className="flex items-center justify-between border-b border-[#E5DED6] pb-2">
               <h3 className="font-headline-sm font-bold text-sm text-[#2D2926]">Anomaly Fingerprint</h3>
-              <span className="px-2 py-0.5 rounded bg-[#F9ECE7] text-[#99462A] font-mono text-[10px] font-bold">
-                CLUSTER_9A
+              <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
+                filteredLogs.some(l => l.level === 'ERROR') ? 'bg-[#F9ECE7] text-[#99462A]' : 'bg-[#F2EDE6] text-[#6B625B]'
+              }`}>
+                {filteredLogs.some(l => l.level === 'ERROR') ? 'ACTIVE_CLUSTER' : 'ALL_CLEAR'}
               </span>
             </div>
 
             <div className="space-y-2 text-xs">
-              <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] space-y-1">
-                <span className="text-[#8F857D] uppercase text-[10px] font-bold block">Fingerprint Hash</span>
-                <span className="font-mono font-bold text-[#2D2926]">HASH_9a7d32b4f</span>
-              </div>
-
-              <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] space-y-1">
-                <span className="text-[#8F857D] uppercase text-[10px] font-bold block">Correlated Exception</span>
-                <p className="text-[#2D2926]">npm ERR! ERESOLVE could not resolve peer dependency tree</p>
-              </div>
-
-              <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] space-y-1">
-                <span className="text-[#8F857D] uppercase text-[10px] font-bold block">Auto-Triaged Action</span>
-                <span className="text-[#5B7C4B] font-semibold flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">done_all</span>
-                  Remediation PR #184 Synthesized
-                </span>
-              </div>
+              {filteredLogs.some(l => l.level === 'ERROR') ? (
+                <>
+                  <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] space-y-1">
+                    <span className="text-[#8F857D] uppercase text-[10px] font-bold block">Fingerprint Hash</span>
+                    <span className="font-mono font-bold text-[#2D2926]">HASH_LIVE_STREAM</span>
+                  </div>
+                  <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] space-y-1">
+                    <span className="text-[#8F857D] uppercase text-[10px] font-bold block">Correlated Exception</span>
+                    <p className="text-[#2D2926] line-clamp-2">{filteredLogs.find(l => l.level === 'ERROR')?.message}</p>
+                  </div>
+                </>
+              ) : (
+                <div className="p-4 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] text-center space-y-1 text-[#6B625B]">
+                  <span className="material-symbols-outlined text-2xl text-[#5B7C4B]">check_circle</span>
+                  <p className="font-semibold text-xs text-[#2D2926]">Zero Active Anomalies</p>
+                  <p className="text-[11px] text-[#6B625B]">Cluster signatures nominal. No error patterns detected.</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -287,20 +310,21 @@ export default function LogsPage() {
             <h3 className="font-headline-sm font-bold text-sm text-[#2D2926] border-b border-[#E5DED6] pb-2">
               Trace Propagation
             </h3>
-            <div className="space-y-2 font-mono text-xs">
-              <div className="p-2.5 rounded bg-[#FAF7F3] border border-[#E5DED6] flex justify-between">
-                <span className="text-[#2D2926]">trace-8924a</span>
-                <span className="text-[#D97757] font-bold">6 spans</span>
+            {filteredLogs.length === 0 ? (
+              <div className="p-4 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] text-center text-[#6B625B] text-xs">
+                <p className="font-semibold text-[#2D2926]">No Active Spans</p>
+                <p className="text-[11px] text-[#6B625B] mt-1">Distributed trace context is waiting for requests.</p>
               </div>
-              <div className="p-2.5 rounded bg-[#FAF7F3] border border-[#E5DED6] flex justify-between">
-                <span className="text-[#2D2926]">trace-8922b</span>
-                <span className="text-[#B87A36] font-bold">3 spans</span>
+            ) : (
+              <div className="space-y-2 font-mono text-xs">
+                {Array.from(new Set(filteredLogs.map(l => l.service))).slice(0, 3).map((svc) => (
+                  <div key={svc} className="p-2.5 rounded bg-[#FAF7F3] border border-[#E5DED6] flex justify-between">
+                    <span className="text-[#2D2926]">span-{svc}</span>
+                    <span className="text-[#D97757] font-bold">{filteredLogs.filter(l => l.service === svc).length} events</span>
+                  </div>
+                ))}
               </div>
-              <div className="p-2.5 rounded bg-[#FAF7F3] border border-[#E5DED6] flex justify-between">
-                <span className="text-[#2D2926]">trace-8920c</span>
-                <span className="text-[#C34A4A] font-bold">2 spans</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

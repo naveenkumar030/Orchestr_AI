@@ -32,7 +32,16 @@ export default function AIAgentsPage() {
   };
 
   useEffect(() => {
-    fetchAgents();
+    let isMounted = true;
+    const run = async () => {
+      if (isMounted) {
+        await fetchAgents();
+      }
+    };
+    void run();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleStatusChange = async (agentId: string, newStatus: AgentStatus) => {

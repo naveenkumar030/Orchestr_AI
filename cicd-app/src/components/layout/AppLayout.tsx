@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import StatusBanner from '../common/StatusBanner';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -29,6 +30,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <div className="pl-0 lg:pl-72 flex flex-col min-h-screen relative z-10 transition-[padding] duration-300 ease-in-out">
         <main className="w-full pt-20 pb-12 px-3 sm:px-6 lg:px-8 bg-transparent flex-1 max-w-full overflow-x-hidden">
           <div className="w-full max-w-[1600px] mx-auto space-y-6">
+            <StatusBanner />
             {children}
           </div>
         </main>

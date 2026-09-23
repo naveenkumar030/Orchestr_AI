@@ -5,7 +5,7 @@ based on patch size, affected file categories, destructive commands, and securit
 """
 
 import re
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 
 class RiskAssessor:
@@ -50,7 +50,7 @@ class RiskAssessor:
     def __init__(self):
         pass
 
-    def analyze_diff(self, patch: str) -> Dict[str, int]:
+    def analyze_diff(self, patch: str) -> dict[str, int]:
         """Calculates added, deleted, and total modified lines from a unified diff."""
         if not patch:
             return {"lines_added": 0, "lines_deleted": 0, "total_lines": 0}
@@ -69,7 +69,7 @@ class RiskAssessor:
             "total_lines": lines_added + lines_deleted,
         }
 
-    def detect_destructive_patterns(self, patch: str) -> List[str]:
+    def detect_destructive_patterns(self, patch: str) -> list[str]:
         """Detects destructive commands, raw shell execution, or credential leaks in patch."""
         findings = []
         if not patch:
@@ -106,12 +106,12 @@ class RiskAssessor:
     def assess(
         self,
         patch: str,
-        affected_files: List[str],
+        affected_files: list[str],
         target_branch: str = "main",
         fix_type: str = "code",
         diagnoser_category: str = "unknown",
-        repository_context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        repository_context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Executes full deterministic risk assessment on proposed fix.
         Returns structured RiskAssessmentResult.

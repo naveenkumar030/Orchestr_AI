@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { api } from '../../services/api';
 
 interface ConnectRepoModalProps {
@@ -15,12 +15,11 @@ const PRESET_REPOS = [
   { name: 'naveenkumar030/order-orchestrator', label: 'Redis & Queue Worker Service', defaultBranch: 'main', active: false },
 ];
 
-export default function ConnectRepoModal({
-  isOpen,
+function ConnectRepoModalContent({
   onClose,
   currentRepo = 'naveenkumar030/SentinelOps',
   onConnected,
-}: ConnectRepoModalProps) {
+}: Omit<ConnectRepoModalProps, 'isOpen'>) {
   const [activeTab, setActiveTab] = useState<'configure' | 'webhook' | 'dispatch'>('configure');
   const [repoInput, setRepoInput] = useState<string>(currentRepo);
   const [branchInput, setBranchInput] = useState<string>('main');
@@ -43,23 +42,13 @@ export default function ConnectRepoModal({
   const [isDispatching, setIsDispatching] = useState<boolean>(false);
   const [dispatchResult, setDispatchResult] = useState<string | null>(null);
   const [copiedWebhook, setCopiedWebhook] = useState<boolean>(false);
-
-  // Sync with currentRepo prop
-  useEffect(() => {
-    if (isOpen) {
-      setRepoInput(currentRepo);
-      setConnectedSuccess(false);
-      setVerificationResult(null);
-      setDispatchResult(null);
-    }
-  }, [isOpen, currentRepo]);
-
-  if (!isOpen) return null;
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const handleVerify = async () => {
     if (!repoInput.trim()) return;
     setIsVerifying(true);
     setVerificationResult(null);
+    setActionError(null);
     try {
       const res = await api.verifyRepository({
         repository: repoInput.trim(),
@@ -69,11 +58,11 @@ export default function ConnectRepoModal({
       if (res.defaultBranch) {
         setBranchInput(res.defaultBranch);
       }
-    } catch {
+    } catch (err) {
       setVerificationResult({
-        success: true,
+        success: false,
         reachable: false,
-        message: 'Repository reachable in autonomous development mode.',
+        message: err instanceof Error ? err.message : 'Repository verification failed: Backend offline or unreachable.',
       });
     } finally {
       setIsVerifying(false);
@@ -83,6 +72,7 @@ export default function ConnectRepoModal({
   const handleConnect = async () => {
     if (!repoInput.trim()) return;
     setIsConnecting(true);
+    setActionError(null);
     try {
       const res = await api.connectRepository({
         repository: repoInput.trim(),
@@ -97,11 +87,11 @@ export default function ConnectRepoModal({
         setTimeout(() => {
           onClose();
         }, 1200);
+      } else {
+        setActionError(res.message || 'Failed to connect repository.');
       }
-    } catch {
-      setConnectedSuccess(true);
-      if (onConnected) onConnected(repoInput.trim());
-      setTimeout(() => onClose(), 1200);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Connection failed: Backend offline or repository unreachable.');
     } finally {
       setIsConnecting(false);
     }
@@ -112,9 +102,13 @@ export default function ConnectRepoModal({
     setDispatchResult(null);
     try {
       const res = await api.dispatchGitHubWorkflow(branchInput, 'deploy.yml');
-      setDispatchResult(res.message || `Workflow dispatched successfully to ${repoInput}@${branchInput}! Ingestion started.`);
-    } catch {
-      setDispatchResult(`Workflow dispatch simulated for ${repoInput}@${branchInput}.`);
+      if (res.success) {
+        setDispatchResult(res.message || `Workflow dispatched successfully to ${repoInput}@${branchInput}!`);
+      } else {
+        setDispatchResult(res.error || res.message || 'Workflow dispatch rejected.');
+      }
+    } catch (err) {
+      setDispatchResult(err instanceof Error ? `Dispatch error: ${err.message}` : 'Workflow dispatch failed: Backend unreachable.');
     } finally {
       setIsDispatching(false);
     }
@@ -298,17 +292,34 @@ export default function ConnectRepoModal({
                 </div>
               </div>
 
+              {/* Action Error Alert */}
+              {actionError && (
+                <div className="p-3 rounded-xl border bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A] flex items-center justify-between text-xs font-body-sm animate-fade-in">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-base">error</span>
+                    <span>{actionError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActionError(null)}
+                    className="text-[#C34A4A] hover:underline text-[11px] font-semibold"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
               {/* Verification Info Box */}
               {verificationResult && (
                 <div className={`p-3 rounded-xl border flex items-start gap-2 text-xs font-body-sm animate-fade-in ${
                   verificationResult.reachable
                     ? 'bg-[#EDF4EA] border-[#5B7C4B]/40 text-[#2D2926]'
-                    : 'bg-[#FEF7EC] border-[#B87A36]/40 text-[#2D2926]'
+                    : 'bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A]'
                 }`}>
                   <span className={`material-symbols-outlined text-base ${
-                    verificationResult.reachable ? 'text-[#5B7C4B]' : 'text-[#B87A36]'
+                    verificationResult.reachable ? 'text-[#5B7C4B]' : 'text-[#C34A4A]'
                   }`}>
-                    {verificationResult.reachable ? 'check_circle' : 'info'}
+                    {verificationResult.reachable ? 'check_circle' : 'cancel'}
                   </span>
                   <div className="flex-1">
                     <span className="font-semibold block">{verificationResult.message}</span>
@@ -451,5 +462,22 @@ export default function ConnectRepoModal({
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ConnectRepoModal({
+  isOpen,
+  onClose,
+  currentRepo = 'naveenkumar030/SentinelOps',
+  onConnected,
+}: ConnectRepoModalProps) {
+  if (!isOpen) return null;
+  return (
+    <ConnectRepoModalContent
+      key={currentRepo}
+      onClose={onClose}
+      currentRepo={currentRepo}
+      onConnected={onConnected}
+    />
   );
 }

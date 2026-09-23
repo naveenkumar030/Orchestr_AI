@@ -10,20 +10,21 @@ Guarantees:
   6. Idempotency & duplicate PR prevention.
 """
 
-import os
+import logging
 import re
-import time
 import threading
+import time
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List, Tuple
 from enum import Enum
-from dataclasses import dataclass, asdict
+from typing import Any
 
 from services.github_service import github_service
-from services.sentinel_guard import sentinel_guard
-from services.risk_assessor import risk_assessor
-from services.confidence_gate import confidence_gate
 from services.human_approval_service import human_approval_service
+from services.sentinel_guard import sentinel_guard
+
+logger = logging.getLogger("sentinelops.github_action_service")
+
 
 
 class ActionStatus(str, Enum):
@@ -39,15 +40,15 @@ class SafeActionRecord:
     incident_id: str
     action_type: str
     status: str
-    pr_number: Optional[int] = None
-    pr_url: Optional[str] = None
-    branch_name: Optional[str] = None
-    target_branch: Optional[str] = "main"
-    blocking_reasons: Optional[List[str]] = None
-    created_at: Optional[str] = None
-    details: Optional[Dict[str, Any]] = None
+    pr_number: int | None = None
+    pr_url: str | None = None
+    branch_name: str | None = None
+    target_branch: str | None = "main"
+    blocking_reasons: list[str] | None = None
+    created_at: str | None = None
+    details: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -58,16 +59,16 @@ class GitHubActionService:
 
     def __init__(self):
         self._lock = threading.RLock()
-        self._action_records: Dict[str, Dict[str, Any]] = {}
-        self._created_prs: Dict[str, Dict[str, Any]] = {}
-        self._created_branches: Dict[str, str] = {}
+        self._action_records: dict[str, dict[str, Any]] = {}
+        self._created_prs: dict[str, dict[str, Any]] = {}
+        self._created_branches: dict[str, str] = {}
 
     def _generate_pr_key(self, repository: str, incident_id: str, branch: str) -> str:
         return f"{repository.strip().lower()}:{str(incident_id).strip().lower()}:{branch.strip().lower()}"
 
     def validate_patch_syntax_and_paths(
-        self, patch: str, affected_files: List[str]
-    ) -> Tuple[bool, List[str]]:
+        self, patch: str, affected_files: list[str]
+    ) -> tuple[bool, list[str]]:
         """
         Validates patch syntax, file paths, path traversal, and sensitive path restrictions.
         """
@@ -108,14 +109,14 @@ class GitHubActionService:
         self,
         incident_id: str,
         repository: str,
-        diagnosis: Optional[Dict[str, Any]],
-        fix: Optional[Dict[str, Any]],
-        critic: Optional[Dict[str, Any]],
-        risk_assessment: Optional[Dict[str, Any]],
-        safety_gate: Optional[Dict[str, Any]],
+        diagnosis: dict[str, Any] | None,
+        fix: dict[str, Any] | None,
+        critic: dict[str, Any] | None,
+        risk_assessment: dict[str, Any] | None,
+        safety_gate: dict[str, Any] | None,
         target_branch: str,
         base_branch: str = "main",
-    ) -> Tuple[bool, List[str], Dict[str, Any]]:
+    ) -> tuple[bool, list[str], dict[str, Any]]:
         """
         Evaluates the 10 strict preconditions required before any Draft PR may be created.
         """
@@ -206,17 +207,17 @@ class GitHubActionService:
         self,
         incident_id: str,
         repository: str,
-        diagnosis: Dict[str, Any],
-        fix: Dict[str, Any],
-        critic: Dict[str, Any],
-        risk_assessment: Dict[str, Any],
-        safety_gate: Dict[str, Any],
-        run_id: Optional[int] = None,
+        diagnosis: dict[str, Any],
+        fix: dict[str, Any],
+        critic: dict[str, Any],
+        risk_assessment: dict[str, Any],
+        safety_gate: dict[str, Any],
+        run_id: int | None = None,
         base_branch: str = "main",
-        base_commit_sha: Optional[str] = None,
-        incident_url: Optional[str] = None,
-        custom_branch_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        base_commit_sha: str | None = None,
+        incident_url: str | None = None,
+        custom_branch_name: str | None = None,
+    ) -> dict[str, Any]:
         """
         Safely creates a dedicated branch, applies the patch via GitHub API,
         and generates a Draft PR with duplicate prevention.
@@ -389,10 +390,10 @@ class GitHubActionService:
                     if inc.get("agent_reasoning"):
                         inc["agent_reasoning"]["github_action"] = success_record
                     store.save_agent_reasoning(clean_inc, inc.get("agent_reasoning", {}))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Failed to attach PR details to incident %s: %s", clean_inc, e)
 
-    def generate_isolation_branch(self, incident_id: str, run_id: Optional[int] = None) -> str:
+    def generate_isolation_branch(self, incident_id: str, run_id: int | None = None) -> str:
         """Generates a dedicated, isolated branch name matching sentinelops/fix/..."""
         clean_inc = str(incident_id or run_id or "fix").lower().replace("inc-", "")
         clean_name = re.sub(r"[^a-z0-9\-]", "-", clean_inc).strip("-")
@@ -400,8 +401,8 @@ class GitHubActionService:
         return f"sentinelops/fix/{clean_name}-{suffix}"
 
     def verify_action_preconditions(
-        self, reasoning_data: Dict[str, Any], target_branch: str = "main"
-    ) -> Dict[str, Any]:
+        self, reasoning_data: dict[str, Any], target_branch: str = "main"
+    ) -> dict[str, Any]:
         """Verifies all 10 safety and quality preconditions from a reasoning dictionary."""
         diag = reasoning_data.get("diagnosis", {}) or {}
         fix = reasoning_data.get("fix", {}) or {}
@@ -526,7 +527,7 @@ class GitHubActionService:
             "checks": checks,
         }
 
-    def generate_draft_pr_body(self, reasoning_data: Dict[str, Any], branch_name: str) -> str:
+    def generate_draft_pr_body(self, reasoning_data: dict[str, Any], branch_name: str) -> str:
         """Generates structured Markdown body for Draft PR."""
         diag = reasoning_data.get("diagnosis", {}) or {}
         fix = reasoning_data.get("fix", {}) or {}
@@ -560,11 +561,11 @@ class GitHubActionService:
 
     def create_safe_draft_pr(
         self,
-        reasoning_data: Dict[str, Any],
+        reasoning_data: dict[str, Any],
         target_branch: str = "main",
-        actor: Optional[str] = None,
-        custom_notes: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        actor: str | None = None,
+        custom_notes: str | None = None,
+    ) -> dict[str, Any]:
         """Creates a safe Draft Pull Request with strict 10-precondition enforcement."""
         inc_id = reasoning_data.get("incident_id", "INC-001")
         repo = reasoning_data.get("repository", "SentinelOps")
@@ -650,12 +651,32 @@ class GitHubActionService:
             self._created_branches[inc_id] = branch_name
             self._action_records[inc_id] = record
 
+        # Persist to MongoDB Atlas
+        try:
+            from services.mongo_service import mongo_service
+            if mongo_service.is_connected():
+                mongo_service.save_action_record(inc_id, record)
+        except Exception as e:
+            logger.warning("Failed to save action record for incident %s to MongoDB: %s", inc_id, e)
+
         return record
 
-    def get_action_record(self, incident_id: str) -> Optional[Dict[str, Any]]:
+    def get_action_record(self, incident_id: str) -> dict[str, Any] | None:
         """Retrieves action record for an incident."""
         with self._lock:
-            return self._action_records.get(incident_id)
+            if incident_id in self._action_records:
+                return self._action_records.get(incident_id)
+
+            try:
+                from services.mongo_service import mongo_service
+                if mongo_service.is_connected():
+                    m_rec = mongo_service.get_action_record(incident_id)
+                    if m_rec:
+                        self._action_records[incident_id] = m_rec
+                        return m_rec
+            except Exception as e:
+                logger.warning("Failed to get action record for incident %s from MongoDB: %s", incident_id, e)
+            return None
 
 
 # Singleton instance

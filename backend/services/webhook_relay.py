@@ -5,13 +5,17 @@ webhook events to the local SentinelOps Flask receiver (http://127.0.0.1:5000/ap
 Requires zero external CLI tools or accounts.
 """
 
-import os
 import json
-import time
+import logging
+import os
 import threading
-import urllib.request
+import time
 import urllib.error
-from typing import Optional, Dict, Any
+import urllib.request
+from typing import Any
+
+logger = logging.getLogger("sentinelops.webhook_relay")
+
 
 
 class WebhookRelayService:
@@ -22,23 +26,23 @@ class WebhookRelayService:
 
     def __init__(
         self,
-        channel_id: Optional[str] = None,
+        channel_id: str | None = None,
         target_url: str = "http://127.0.0.1:5000/api/webhooks/github",
     ):
         self.channel_id = channel_id or os.environ.get("SMEE_CHANNEL_ID") or "sentinelops-dev-channel"
         self.target_url = target_url
         self.running = False
-        self.thread: Optional[threading.Thread] = None
+        self.thread: threading.Thread | None = None
         self.events_forwarded = 0
-        self.last_event_time: Optional[str] = None
-        self.last_error: Optional[str] = None
+        self.last_event_time: str | None = None
+        self.last_error: str | None = None
         self.connected = False
 
     @property
     def smee_url(self) -> str:
         return f"https://smee.io/{self.channel_id}"
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Returns the current state and telemetry of the webhook relay."""
         return {
             "running": self.running,
@@ -74,8 +78,8 @@ class WebhookRelayService:
                 level="INFO",
                 message=f"Starting Smee.io Webhook Relay connecting to {self.smee_url}",
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to write startup log to store: %s", e)
 
         while self.running:
             try:
@@ -131,9 +135,9 @@ class WebhookRelayService:
 
             self.forward_payload(body, headers)
         except Exception as ex:
-            self.last_error = f"Parse error: {str(ex)}"
+            self.last_error = f"Parse error: {ex!s}"
 
-    def forward_payload(self, body: Any, headers: Dict[str, str]) -> bool:
+    def forward_payload(self, body: Any, headers: dict[str, str]) -> bool:
         """Sends the webhook payload to the local Flask endpoint."""
         body_bytes = json.dumps(body).encode("utf-8") if not isinstance(body, (bytes, str)) else (
             body.encode("utf-8") if isinstance(body, str) else body
@@ -166,12 +170,12 @@ class WebhookRelayService:
                         level="INFO",
                         message=f"Forwarded '{event_name}' event from {self.smee_url} -> {self.target_url} (HTTP {resp.status})",
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("Failed to write forward log to store: %s", e)
 
                 return True
         except Exception as e:
-            self.last_error = f"Forward error: {str(e)}"
+            self.last_error = f"Forward error: {e!s}"
             return False
 
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { api, type SettingsData, type HealthResponse, type GitHubStatusResponse } from '../services/api';
-import { useBackend } from '../context/BackendContext';
+import { api, type SettingsData, type HealthResponse, type GitHubStatusResponse, type DatabaseStatusResponse } from '../services/api';
+import { useBackend } from '../context/useBackend';
 
 interface EndpointStatus {
   path: string;
@@ -11,7 +11,7 @@ interface EndpointStatus {
 }
 
 export default function SettingsPage() {
-  const { isConnected, latency: currentLatency, health, recheck } = useBackend();
+  const { isConnected, latency: currentLatency, health, mongoConnected, mongoLatency, mongoDb, recheck, isMockMode, setMockMode } = useBackend();
 
   const [confidenceThreshold, setConfidenceThreshold] = useState(95);
   const [autoMergeActive, setAutoMergeActive] = useState(true);
@@ -33,13 +33,19 @@ export default function SettingsPage() {
   const [isTogglingNgrok, setIsTogglingNgrok] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
 
-
+  // MongoDB Atlas Cloud Database State
+  const [dbStatus, setDbStatus] = useState<DatabaseStatusResponse | null>(null);
+  const [isPingingDb, setIsPingingDb] = useState(false);
+  const [isSyncingDb, setIsSyncingDb] = useState(false);
+  const [dbToast, setDbToast] = useState<{ success: boolean; message: string } | null>(null);
 
   // Diagnostics State
   const [isPinging, setIsPinging] = useState(false);
   const [pingResult, setPingResult] = useState<{ success: boolean; latency: number; data?: HealthResponse } | null>(null);
   const [endpoints, setEndpoints] = useState<EndpointStatus[]>([
     { path: '/health', name: 'Health & System', status: 'idle' },
+    { path: '/database/status', name: 'MongoDB Status', status: 'idle' },
+    { path: '/database/ping', name: 'MongoDB Ping', status: 'idle' },
     { path: '/overview', name: 'Dashboard Overview', status: 'idle' },
     { path: '/pipelines', name: 'DAG Pipelines', status: 'idle' },
     { path: '/incidents', name: 'Incident Stream', status: 'idle' },
@@ -67,13 +73,78 @@ export default function SettingsPage() {
       if (!mounted) return;
       setGitHubStatus(status);
     });
+
+    api.getDatabaseStatus().then((status) => {
+      if (!mounted) return;
+      setDbStatus(status);
+    });
+
     return () => {
       mounted = false;
     };
   }, []);
 
+  const handlePingDatabase = async () => {
+    setIsPingingDb(true);
+    try {
+      const res = await api.pingDatabase();
+      if (res.ok === 1) {
+        setDbToast({
+          success: true,
+          message: `MongoDB Atlas Ping OK: Responded in ${res.latency_ms || 20}ms (Database: ${res.database || 'sentinelops'})`,
+        });
+      } else {
+        setDbToast({
+          success: false,
+          message: `MongoDB Ping Failed: ${res.error || 'Connection error'}`,
+        });
+      }
+      const updated = await api.getDatabaseStatus();
+      setDbStatus(updated);
+    } catch {
+      setDbToast({
+        success: false,
+        message: 'Failed to contact MongoDB ping endpoint',
+      });
+    } finally {
+      setIsPingingDb(false);
+      setTimeout(() => setDbToast(null), 4500);
+    }
+  };
+
+  const handleSyncDatabase = async () => {
+    setIsSyncingDb(true);
+    try {
+      const res = await api.syncDatabase();
+      if (res.success) {
+        setDbToast({
+          success: true,
+          message: res.message || 'Operational state synchronized to MongoDB Atlas',
+        });
+        const updated = await api.getDatabaseStatus();
+        setDbStatus(updated);
+      } else {
+        setDbToast({
+          success: false,
+          message: `State sync error: ${res.error || 'Unknown error'}`,
+        });
+      }
+    } catch {
+      setDbToast({
+        success: false,
+        message: 'Failed to execute database sync',
+      });
+    } finally {
+      setIsSyncingDb(false);
+      setTimeout(() => setDbToast(null), 4500);
+    }
+  };
+
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveError(null);
     try {
       await api.saveSettings({
         confidenceThreshold,
@@ -87,6 +158,8 @@ export default function SettingsPage() {
       setTimeout(() => setSavedNotice(false), 3500);
     } catch (err) {
       console.error('Failed to save settings:', err);
+      setSaveError(err instanceof Error ? err.message : 'Failed to save settings: Backend offline or unreachable.');
+      setTimeout(() => setSaveError(null), 5000);
     } finally {
       setIsSaving(false);
     }
@@ -185,16 +258,23 @@ export default function SettingsPage() {
 
   const handleToggleRelay = async () => {
     setIsTogglingRelay(true);
+    setSimulationResult(null);
     try {
       if (gitHubStatus?.relay?.running) {
         await api.stopRelay();
+        setSimulationResult({ success: true, message: 'Smee webhook relay stopped.' });
       } else {
-        await api.startRelay(gitHubStatus?.relay?.channelId);
+        const res = await api.startRelay(gitHubStatus?.relay?.channelId);
+        setSimulationResult({ success: true, message: res.message || 'Smee webhook relay started.' });
       }
       const updated = await api.getGitHubStatus();
       setGitHubStatus(updated);
     } catch (err) {
       console.error('Failed to toggle relay:', err);
+      setSimulationResult({
+        success: false,
+        message: `Failed to toggle Smee relay: ${err instanceof Error ? err.message : 'Backend offline or unreachable.'}`,
+      });
     } finally {
       setIsTogglingRelay(false);
     }
@@ -211,16 +291,23 @@ export default function SettingsPage() {
 
   const handleToggleNgrok = async () => {
     setIsTogglingNgrok(true);
+    setSimulationResult(null);
     try {
       if (gitHubStatus?.ngrok?.running) {
         await api.stopNgrok();
+        setSimulationResult({ success: true, message: 'ngrok public webhook tunnel stopped.' });
       } else {
-        await api.startNgrok(5000);
+        const res = await api.startNgrok(5000);
+        setSimulationResult({ success: true, message: res.message || 'ngrok public webhook tunnel started.' });
       }
       const updated = await api.getGitHubStatus();
       setGitHubStatus(updated);
     } catch (err) {
       console.error('Failed to toggle ngrok:', err);
+      setSimulationResult({
+        success: false,
+        message: `Failed to toggle ngrok tunnel: ${err instanceof Error ? err.message : 'Backend offline or unreachable.'}`,
+      });
     } finally {
       setIsTogglingNgrok(false);
     }
@@ -292,6 +379,133 @@ export default function SettingsPage() {
           Policy configuration updated across all clusters and persisted to Python backend.
         </div>
       )}
+
+      {saveError && (
+        <div className="p-3 rounded-lg bg-[#FDF0F0] border border-[#C34A4A]/40 text-[#C34A4A] text-xs font-semibold flex items-center gap-2">
+          <span className="material-symbols-outlined text-base">error</span>
+          {saveError}
+        </div>
+      )}
+
+      {/* ── System Operation Mode (Production vs Demo Sandbox) ───────────── */}
+      <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5DED6] pb-3">
+          <div className="flex items-center gap-2">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              isMockMode
+                ? 'bg-[#F2EDFB] border border-[#7C65C1]/40 text-[#7C65C1]'
+                : 'bg-[#EDF4EA] border border-[#5B7C4B]/40 text-[#5B7C4B]'
+            }`}>
+              <span className="material-symbols-outlined text-lg">
+                {isMockMode ? 'science' : 'verified_user'}
+              </span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-headline-sm text-base font-bold text-[#2D2926]">
+                  System Operation Mode
+                </h2>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono border ${
+                    isMockMode
+                      ? 'bg-[#F2EDFB] border-[#7C65C1]/30 text-[#7C65C1]'
+                      : 'bg-[#EDF4EA] border-[#5B7C4B]/30 text-[#5B7C4B]'
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      isMockMode ? 'bg-[#7C65C1]' : 'bg-[#5B7C4B]'
+                    }`}
+                  />
+                  {isMockMode ? 'DEMO SANDBOX MODE' : 'LIVE PRODUCTION MODE'}
+                </span>
+              </div>
+              <p className="text-xs text-[#6B625B]">
+                Configure how the SentinelOps web client executes mutations, verifications, and external workflows
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 bg-[#F6F2EC] p-1 rounded-xl border border-[#E5DED6]">
+            <button
+              type="button"
+              onClick={() => setMockMode(false)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                !isMockMode
+                  ? 'bg-white text-[#2D2926] shadow-sm border border-[#E5DED6]'
+                  : 'text-[#6B625B] hover:text-[#2D2926]'
+              }`}
+            >
+              <span className={`material-symbols-outlined text-sm ${!isMockMode ? 'text-[#5B7C4B]' : ''}`}>
+                bolt
+              </span>
+              <span>Live Production</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMockMode(true)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
+                isMockMode
+                  ? 'bg-[#7C65C1] text-white shadow-sm'
+                  : 'text-[#6B625B] hover:text-[#2D2926]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">science</span>
+              <span>Demo Sandbox</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div
+            onClick={() => setMockMode(false)}
+            className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+              !isMockMode
+                ? 'bg-[#FAF8F5] border-[#5B7C4B] ring-1 ring-[#5B7C4B]/30'
+                : 'bg-white border-[#E5DED6] hover:border-[#D5CDC5]'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-base text-[#5B7C4B]">security</span>
+                <span className="font-bold text-[#2D2926]">Live Production Mode (Default)</span>
+              </div>
+              {!isMockMode && (
+                <span className="text-[10px] uppercase font-bold text-[#5B7C4B] bg-[#EDF4EA] px-2 py-0.5 rounded-full border border-[#5B7C4B]/20">
+                  Active
+                </span>
+              )}
+            </div>
+            <p className="text-[#6B625B] font-body-sm leading-relaxed">
+              Every operation contacts Flask (<code className="font-mono text-[#2D2926]">:5000</code>). Failures fast on unreachable backends; never fakes repository verifications, webhooks, PR merges, or workflow dispatches.
+            </p>
+          </div>
+
+          <div
+            onClick={() => setMockMode(true)}
+            className={`p-3.5 rounded-xl border transition-all cursor-pointer ${
+              isMockMode
+                ? 'bg-[#FDFCFA] border-[#7C65C1] ring-1 ring-[#7C65C1]/30'
+                : 'bg-white border-[#E5DED6] hover:border-[#D5CDC5]'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-base text-[#7C65C1]">science</span>
+                <span className="font-bold text-[#2D2926]">Demo / Sandbox Mode</span>
+              </div>
+              {isMockMode && (
+                <span className="text-[10px] uppercase font-bold text-[#7C65C1] bg-[#F2EDFB] px-2 py-0.5 rounded-full border border-[#7C65C1]/20">
+                  Active
+                </span>
+              )}
+            </div>
+            <p className="text-[#6B625B] font-body-sm leading-relaxed">
+              Safe simulated responses for UI evaluation, offline walkthroughs, and automated interface previews. Responses are tagged <code className="font-mono text-[#7C65C1]">[Demo Mode]</code>.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* ── Python Backend Diagnostics Hub ────────────────────────────────── */}
       <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card space-y-space-md">
@@ -447,6 +661,254 @@ export default function SettingsPage() {
                     </span>
                   )}
                 </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── MongoDB Atlas Cloud Persistence Hub ─────────────────────────────── */}
+      <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card space-y-space-md">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5DED6] pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#EBF3E8] border border-[#5B7C4B]/40 flex items-center justify-center text-[#5B7C4B]">
+              <span className="material-symbols-outlined text-lg">database</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-headline-sm text-base font-bold text-[#2D2926]">
+                  MongoDB Atlas Cloud Persistence Hub
+                </h2>
+                <span
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono border ${
+                    dbStatus?.connected || mongoConnected
+                      ? 'bg-[#EBF3E8] border-[#5B7C4B]/30 text-[#5B7C4B]'
+                      : 'bg-[#FAF7F3] border-[#E5DED6] text-[#6B625B]'
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      dbStatus?.connected || mongoConnected
+                        ? 'bg-[#5B7C4B] animate-pulse'
+                        : 'bg-[#A89F99]'
+                    }`}
+                  />
+                  {dbStatus?.connected || mongoConnected
+                    ? 'ATLAS CLUSTER ONLINE'
+                    : 'SQLITE LOCAL FALLBACK'}
+                </span>
+              </div>
+              <p className="text-xs text-[#6B625B]">
+                High-availability document persistence for incidents, reasoning traces, workflows &amp; audit trails
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePingDatabase}
+              disabled={isPingingDb}
+              className="px-3.5 py-1.5 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
+            >
+              <span
+                className={`material-symbols-outlined text-xs text-[#5B7C4B] ${
+                  isPingingDb ? 'animate-spin' : ''
+                }`}
+              >
+                network_ping
+              </span>
+              <span>{isPingingDb ? 'Pinging Atlas...' : 'Ping MongoDB Atlas'}</span>
+            </button>
+            <button
+              onClick={handleSyncDatabase}
+              disabled={isSyncingDb}
+              className="px-3.5 py-1.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
+            >
+              <span
+                className={`material-symbols-outlined text-xs text-[#D97757] ${
+                  isSyncingDb ? 'animate-spin' : ''
+                }`}
+              >
+                cloud_sync
+              </span>
+              <span>{isSyncingDb ? 'Syncing...' : 'Sync Local State to Cloud'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Toast Notification */}
+        {dbToast && (
+          <div
+            className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between shadow-xs transition-all ${
+              dbToast.success
+                ? 'bg-[#EBF3E8] border-[#5B7C4B]/40 text-[#3F5A31]'
+                : 'bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A]'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-base">
+                {dbToast.success ? 'check_circle' : 'error'}
+              </span>
+              <span>{dbToast.message}</span>
+            </div>
+            <button
+              onClick={() => setDbToast(null)}
+              className="hover:opacity-75 transition-opacity cursor-pointer font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Diagnostic Metrics Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="bg-[#FAF7F3] border border-[#E5DED6] rounded-xl p-3.5 space-y-1">
+            <div className="flex items-center justify-between text-xs text-[#6B625B]">
+              <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-[#5B7C4B]">storage</span>
+                Active Database
+              </span>
+              <span className="font-mono text-[11px] text-[#5B7C4B] font-semibold">Primary</span>
+            </div>
+            <div className="text-base font-bold text-[#2D2926] tracking-tight truncate">
+              {dbStatus?.database || mongoDb || 'sentinelops'}
+            </div>
+            <div className="text-[11px] text-[#6B625B] truncate">
+              Provider: {dbStatus?.provider || 'MongoDB Atlas'}
+            </div>
+          </div>
+
+          <div className="bg-[#FAF7F3] border border-[#E5DED6] rounded-xl p-3.5 space-y-1">
+            <div className="flex items-center justify-between text-xs text-[#6B625B]">
+              <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-[#D97757]">speed</span>
+                Roundtrip Latency
+              </span>
+              <span className="font-mono text-[11px] text-[#5B7C4B] font-semibold">Live Probe</span>
+            </div>
+            <div className="text-base font-bold text-[#2D2926] tracking-tight">
+              {dbStatus?.latency_ms !== undefined
+                ? `${dbStatus.latency_ms} ms`
+                : mongoLatency !== null
+                ? `${mongoLatency} ms`
+                : '< 30 ms'}
+            </div>
+            <div className="text-[11px] text-[#6B625B]">Admin ping command roundtrip</div>
+          </div>
+
+          <div className="bg-[#FAF7F3] border border-[#E5DED6] rounded-xl p-3.5 space-y-1">
+            <div className="flex items-center justify-between text-xs text-[#6B625B]">
+              <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-[#B87A36]">shield</span>
+                Resilience Engine
+              </span>
+              <span className="font-mono text-[11px] text-[#B87A36] font-semibold">Failover</span>
+            </div>
+            <div className="text-base font-bold text-[#2D2926] tracking-tight">
+              Dual-Layer Fallback
+            </div>
+            <div className="text-[11px] text-[#6B625B]">Seamless SQLite local caching</div>
+          </div>
+
+          <div className="bg-[#FAF7F3] border border-[#E5DED6] rounded-xl p-3.5 space-y-1">
+            <div className="flex items-center justify-between text-xs text-[#6B625B]">
+              <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-sm text-[#5B7C4B]">folder_open</span>
+                Active Collections
+              </span>
+              <span className="font-mono text-[11px] text-[#5B7C4B] font-semibold">Indexed</span>
+            </div>
+            <div className="text-base font-bold text-[#2D2926] tracking-tight">
+              {Object.keys(dbStatus?.collections || {}).length || 8} Managed
+            </div>
+            <div className="text-[11px] text-[#6B625B]">BSON Document collections</div>
+          </div>
+        </div>
+
+        {/* Collections Breakdown Grid */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-[#2D2926] tracking-wide uppercase">
+              Cloud Document Collections
+            </span>
+            <span className="text-[11px] text-[#6B625B]">
+              Real-time document counts in Atlas
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+            {[
+              {
+                name: 'incidents',
+                label: 'Incidents',
+                icon: 'warning',
+                count: dbStatus?.collections?.incidents ?? 0,
+                color: 'text-[#D97757]',
+              },
+              {
+                name: 'workflows',
+                label: 'Workflows',
+                icon: 'account_tree',
+                count: dbStatus?.collections?.workflows ?? 0,
+                color: 'text-[#5B7C4B]',
+              },
+              {
+                name: 'agent_reasoning',
+                label: 'Reasoning',
+                icon: 'psychology',
+                count: dbStatus?.collections?.agent_reasoning ?? 0,
+                color: 'text-[#7B61FF]',
+              },
+              {
+                name: 'audit_logs',
+                label: 'Audit Trail',
+                icon: 'receipt_long',
+                count: dbStatus?.collections?.audit_logs ?? 0,
+                color: 'text-[#B87A36]',
+              },
+              {
+                name: 'logs',
+                label: 'Telemetry',
+                icon: 'terminal',
+                count: dbStatus?.collections?.logs ?? 0,
+                color: 'text-[#2D2926]',
+              },
+              {
+                name: 'settings',
+                label: 'Settings',
+                icon: 'tune',
+                count: dbStatus?.collections?.settings ?? 1,
+                color: 'text-[#5B7C4B]',
+              },
+              {
+                name: 'deployments',
+                label: 'Deploys',
+                icon: 'rocket_launch',
+                count: dbStatus?.collections?.deployments ?? 0,
+                color: 'text-[#0284C7]',
+              },
+              {
+                name: 'rollbacks',
+                label: 'Rollbacks',
+                icon: 'history',
+                count: dbStatus?.collections?.rollbacks ?? 0,
+                color: 'text-[#C34A4A]',
+              },
+            ].map((col) => (
+              <div
+                key={col.name}
+                className="bg-[#FAF7F3] border border-[#E5DED6] rounded-lg p-2.5 flex flex-col items-center justify-center text-center space-y-1 hover:border-[#5B7C4B]/40 transition-colors"
+              >
+                <span className={`material-symbols-outlined text-base ${col.color}`}>
+                  {col.icon}
+                </span>
+                <span className="text-[10px] text-[#6B625B] font-medium leading-tight">
+                  {col.label}
+                </span>
+                <span className="text-xs font-bold text-[#2D2926] font-mono">
+                  {col.count}
+                </span>
               </div>
             ))}
           </div>

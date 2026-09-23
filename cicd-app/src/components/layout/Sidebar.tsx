@@ -40,7 +40,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     if (onClose) {
       onClose();
     }
-  }, [pathname]);
+  }, [pathname, onClose]);
 
   return (
     <>

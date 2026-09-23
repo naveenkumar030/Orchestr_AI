@@ -13,11 +13,10 @@ const defaultMicroservices: MicroserviceTelemetry[] = [
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [analyticsData, setAnalyticsData] = useState<AnalyticsResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    setIsLoading(true);
     api.getAnalytics(timeRange)
       .then((data) => {
         if (!mounted) return;
@@ -72,7 +71,12 @@ export default function AnalyticsPage() {
             {(['7d', '30d', '90d'] as const).map((r) => (
               <button
                 key={r}
-                onClick={() => setTimeRange(r)}
+                onClick={() => {
+                  if (r !== timeRange) {
+                    setTimeRange(r);
+                    setIsLoading(true);
+                  }
+                }}
                 className={`px-3 py-1 text-xs font-semibold rounded uppercase transition-all cursor-pointer ${
                   timeRange === r
                     ? 'bg-white text-[#2D2926] shadow-sm'

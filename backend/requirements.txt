@@ -1,9 +1,26 @@
+# ---------------------------------------------------------------------------
+# Core framework & infrastructure
+# ---------------------------------------------------------------------------
 Flask>=3.0.0
 flask-cors>=4.0.0
-pytest>=8.0.0
 SQLAlchemy>=2.0.0
-pyngrok>=8.0.0
+psycopg2-binary>=2.9.9
 requests>=2.30.0
-selenium>=4.0.0
+pymongo>=4.6.0
+dnspython>=2.6.0
+pyngrok>=8.0.0
 gunicorn>=21.2.0; sys_platform != 'win32'
+
+# ---------------------------------------------------------------------------
+# LLM provider SDKs
+# Groq is the primary provider; Gemini and OpenAI are called via plain
+# HTTP (requests), so they do not need a separate SDK here.
+# If you add a new SDK-based provider, declare it in this section.
+# ---------------------------------------------------------------------------
+groq>=0.9.0
+
+# ---------------------------------------------------------------------------
+# Testing
+# ---------------------------------------------------------------------------
+pytest>=8.0.0
 

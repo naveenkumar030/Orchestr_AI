@@ -4,7 +4,8 @@ Decides whether an autonomous Pull Request can be merged without human intervent
 Enforces a strict 7-point safety policy.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any
+
 import config
 
 
@@ -26,8 +27,8 @@ class MergeGuard:
         attempt_number: int = 1,
         restricted_paths: bool = False,
         secret_scan: str = "PASS",
-        confidence_threshold: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        confidence_threshold: int | None = None,
+    ) -> dict[str, Any]:
         """
         Evaluates 7 safety conditions to authorize or deny auto-merge:
           1. Confidence score >= threshold (default 90%)
@@ -45,7 +46,7 @@ class MergeGuard:
             except Exception:
                 confidence_threshold = 90
 
-        failed_conditions: List[str] = []
+        failed_conditions: list[str] = []
 
         # Condition 1: Confidence
         if confidence < confidence_threshold:

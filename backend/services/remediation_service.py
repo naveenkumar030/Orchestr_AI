@@ -9,16 +9,14 @@ Implements the core self-healing loop:
   6. Update SentinelOps data store, incidents, and streaming logs.
 """
 
+import json
 import os
 import re
-import json
 import time
-import urllib.request
 import urllib.error
-from datetime import datetime
-from typing import Dict, Any, Optional, Tuple
+import urllib.request
+from typing import Any
 
-import config
 from services.github_service import github_service
 from services.sentinel_guard import sentinel_guard
 from services.slack_service import slack_service
@@ -38,9 +36,9 @@ class RemediationService:
 
     def remediate_workflow_failure(
         self,
-        run_data: Dict[str, Any],
+        run_data: dict[str, Any],
         trigger_source: str = "webhook",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Executes the end-to-end self-healing CI/CD pipeline for a failed workflow run.
         """
@@ -361,7 +359,7 @@ class RemediationService:
             "risk_level": risk_level,
         }
 
-    def diagnose_incident(self, incident: Dict[str, Any]) -> Dict[str, Any]:
+    def diagnose_incident(self, incident: dict[str, Any]) -> dict[str, Any]:
         """
         Deep diagnostic analysis of an incident using multi-tier AI LLMs / AST heuristics
         and SentinelGuard policy validation. Non-destructive: does not create branches or PRs.
@@ -483,18 +481,18 @@ class RemediationService:
     # ── AI Analysis & Patch Synthesis Engine ──────────────────────────────────
 
     @property
-    def openai_api_key(self) -> Optional[str]:
+    def openai_api_key(self) -> str | None:
         return os.environ.get("OPENAI_API_KEY")
 
     @property
-    def groq_api_key(self) -> Optional[str]:
+    def groq_api_key(self) -> str | None:
         return os.environ.get("GROQ_API_KEY")
 
     @property
-    def api_key(self) -> Optional[str]:
+    def api_key(self) -> str | None:
         return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or self.gemini_api_key
 
-    def _call_groq_analysis(self, logs: str, repo: str, wf_name: str, key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def _call_groq_analysis(self, logs: str, repo: str, wf_name: str, key: str | None = None) -> dict[str, Any] | None:
         """Calls Groq Cloud API (Ultra-Fast LPU Inference) to analyze failure logs and synthesize patch."""
         api_key = key or self.groq_api_key
         if not api_key:
@@ -547,7 +545,7 @@ class RemediationService:
 
         return None
 
-    def _call_openai_analysis(self, logs: str, repo: str, wf_name: str, key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def _call_openai_analysis(self, logs: str, repo: str, wf_name: str, key: str | None = None) -> dict[str, Any] | None:
         """Calls OpenAI API (GPT-4o) to analyze failure logs and synthesize patch."""
         api_key = key or self.openai_api_key
         if not api_key:
@@ -606,7 +604,7 @@ class RemediationService:
 
     def _analyze_failure_and_synthesize_fix(
         self, repo: str, wf_name: str, logs: str, branch: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Uses Groq LPU, OpenAI, or Gemini LLM if API keys are provided; otherwise uses semantic AST
         heuristic engine with deterministic code generation.
@@ -686,7 +684,7 @@ class RemediationService:
         # 3. Deterministic Semantic AST heuristic
         return self._semantic_heuristic_analysis(logs, repo, wf_name)
 
-    def _call_gemini_analysis(self, logs: str, repo: str, wf_name: str, key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def _call_gemini_analysis(self, logs: str, repo: str, wf_name: str, key: str | None = None) -> dict[str, Any] | None:
         """Calls Google Gemini REST API to analyze failure logs and synthesize patch."""
         api_key = key or self.api_key
         if not api_key:
@@ -737,7 +735,7 @@ class RemediationService:
 
         return None
 
-    def _semantic_heuristic_analysis(self, logs: str, repo: str, wf_name: str) -> Dict[str, Any]:
+    def _semantic_heuristic_analysis(self, logs: str, repo: str, wf_name: str) -> dict[str, Any]:
         """
         Deterministic, robust semantic heuristic engine analyzing common CI/CD errors:
         - Pytest / unit test assertion failures
@@ -861,7 +859,7 @@ class RemediationService:
         target_file: str,
         explanation: str,
         diff: str,
-        guard_result: Dict[str, Any] = None,
+        guard_result: dict[str, Any] = None,
     ) -> str:
         guard_status = guard_result.get("guard_status", "UNKNOWN") if guard_result else "UNKNOWN"
         risk_level = guard_result.get("risk_level", "UNKNOWN") if guard_result else "UNKNOWN"

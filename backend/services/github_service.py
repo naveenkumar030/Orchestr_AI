@@ -4,13 +4,13 @@ Handles interactions with GitHub REST APIs, webhook payload parsing,
 and structured incident event generation for failed workflow runs.
 """
 
+import json
 import os
 import time
-import json
-import urllib.request
 import urllib.error
+import urllib.request
 from datetime import datetime
-from typing import Optional, Dict, Any, Tuple
+from typing import Any
 
 
 class GitHubService:
@@ -19,11 +19,11 @@ class GitHubService:
     Ensures thin Flask routes and structured ingestion.
     """
 
-    def __init__(self, token: Optional[str] = None, base_url: str = "https://api.github.com"):
+    def __init__(self, token: str | None = None, base_url: str = "https://api.github.com"):
         self.token = token or os.environ.get("GITHUB_TOKEN")
         self.base_url = base_url.rstrip("/")
 
-    def _get_headers(self) -> Dict[str, str]:
+    def _get_headers(self) -> dict[str, str]:
         headers = {
             "Accept": "application/vnd.github+json",
             "User-Agent": "SentinelOps-CI-CD-Agent",
@@ -32,7 +32,7 @@ class GitHubService:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
 
-    def _api_request(self, endpoint: str, method: str = "GET", data: Optional[Dict[str, Any]] = None) -> Tuple[bool, Any]:
+    def _api_request(self, endpoint: str, method: str = "GET", data: dict[str, Any] | None = None) -> tuple[bool, Any]:
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         headers = self._get_headers()
         body = None
@@ -55,7 +55,7 @@ class GitHubService:
 
     # ── Payload Parsing & Webhook Event Handling ──────────────────────────────
 
-    def parse_workflow_run(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def parse_workflow_run(self, payload: dict[str, Any]) -> dict[str, Any]:
         """
         Extracts structured metadata from a GitHub Actions workflow_run webhook event.
         Extracts repository, workflow name, run ID, branch, commit SHA, status, and conclusion.
@@ -95,7 +95,7 @@ class GitHubService:
             "html_url": html_url,
         }
 
-    def is_failed_workflow(self, run_data: Dict[str, Any]) -> bool:
+    def is_failed_workflow(self, run_data: dict[str, Any]) -> bool:
         """
         Determines whether a workflow run represents a completed failure.
         """
@@ -104,7 +104,7 @@ class GitHubService:
         # GitHub sets action="completed" when a run finishes, with conclusion="failure", "timed_out", etc.
         return action == "completed" and conclusion in ["failure", "timed_out", "startup_failure"]
 
-    def create_incident_from_workflow_run(self, run_data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_incident_from_workflow_run(self, run_data: dict[str, Any]) -> dict[str, Any]:
         """
         Produces a structured incident event from a completed failed workflow run.
         """
@@ -136,19 +136,19 @@ class GitHubService:
 
     # ── GitHub REST API Methods ───────────────────────────────────────────────
 
-    def get_repository(self, repo: str) -> Tuple[bool, Dict[str, Any]]:
+    def get_repository(self, repo: str) -> tuple[bool, dict[str, Any]]:
         """Fetches repository metadata from GitHub API."""
         if not self.token:
             return True, {"name": repo, "simulated": True, "full_name": repo, "default_branch": "main"}
         return self._api_request(f"repos/{repo}")
 
-    def get_workflow_run(self, repo: str, run_id: int) -> Tuple[bool, Dict[str, Any]]:
+    def get_workflow_run(self, repo: str, run_id: int) -> tuple[bool, dict[str, Any]]:
         """Fetches workflow run details by run ID."""
         if not self.token:
             return True, {"id": run_id, "simulated": True, "status": "completed", "conclusion": "failure"}
         return self._api_request(f"repos/{repo}/actions/runs/{run_id}")
 
-    def get_workflow_jobs(self, repo: str, run_id: int) -> Tuple[bool, Dict[str, Any]]:
+    def get_workflow_jobs(self, repo: str, run_id: int) -> tuple[bool, dict[str, Any]]:
         """Fetches list of jobs for a workflow run to pinpoint failed steps."""
         if not self.token:
             return True, {
@@ -172,7 +172,7 @@ class GitHubService:
             }
         return self._api_request(f"repos/{repo}/actions/runs/{run_id}/jobs")
 
-    def get_job_logs(self, repo: str, job_id: int) -> Tuple[bool, str]:
+    def get_job_logs(self, repo: str, job_id: int) -> tuple[bool, str]:
         """Fetches raw logs for a specific job."""
         if not self.token:
             sample_logs = (
@@ -203,9 +203,9 @@ class GitHubService:
             with urllib.request.urlopen(req, timeout=15) as response:
                 return True, response.read().decode("utf-8", errors="replace")
         except Exception as ex:
-            return False, f"Error fetching job logs: {str(ex)}"
+            return False, f"Error fetching job logs: {ex!s}"
 
-    def get_workflow_logs(self, repo: str, run_id: int) -> Tuple[bool, str]:
+    def get_workflow_logs(self, repo: str, run_id: int) -> tuple[bool, str]:
         """
         Fetches workflow execution logs.
         Attempts to fetch via workflow jobs or fallback to simulated/mock logs.
@@ -226,7 +226,7 @@ class GitHubService:
             return True, str(res)
         return self.get_job_logs(repo, 892401)
 
-    def get_file_content(self, repo: str, path: str, ref: Optional[str] = None) -> Tuple[bool, Dict[str, Any]]:
+    def get_file_content(self, repo: str, path: str, ref: str | None = None) -> tuple[bool, dict[str, Any]]:
         """Fetches a repository file's content and SHA."""
         if not self.token:
             import base64
@@ -268,8 +268,8 @@ class GitHubService:
         content: str,
         message: str,
         branch: str,
-        sha: Optional[str] = None,
-    ) -> Tuple[bool, Dict[str, Any]]:
+        sha: str | None = None,
+    ) -> tuple[bool, dict[str, Any]]:
         """Creates or updates a file in a branch via GitHub Contents API."""
         import base64
         b64_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
@@ -281,7 +281,7 @@ class GitHubService:
                 "simulated": True,
             }
 
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "message": message,
             "content": b64_content,
             "branch": branch,
@@ -295,19 +295,19 @@ class GitHubService:
             data=payload,
         )
 
-    def get_commit(self, repo: str, sha: str) -> Tuple[bool, Dict[str, Any]]:
+    def get_commit(self, repo: str, sha: str) -> tuple[bool, dict[str, Any]]:
         """Fetches commit details by SHA."""
         if not self.token:
             return True, {"sha": sha, "simulated": True, "message": "Simulated commit"}
         return self._api_request(f"repos/{repo}/commits/{sha}")
 
-    def get_pull_request(self, repo: str, pr_number: int) -> Tuple[bool, Dict[str, Any]]:
+    def get_pull_request(self, repo: str, pr_number: int) -> tuple[bool, dict[str, Any]]:
         """Fetches pull request details by number."""
         if not self.token:
             return True, {"number": pr_number, "simulated": True, "state": "open"}
         return self._api_request(f"repos/{repo}/pulls/{pr_number}")
 
-    def create_branch(self, repo: str, branch_name: str, sha: str) -> Tuple[bool, Dict[str, Any]]:
+    def create_branch(self, repo: str, branch_name: str, sha: str) -> tuple[bool, dict[str, Any]]:
         """Creates a git reference/branch from a base commit SHA."""
         if not self.token:
             return True, {
@@ -325,7 +325,7 @@ class GitHubService:
 
     def create_pull_request(
         self, repo: str, title: str, head: str, base: str, body: str, draft: bool = False
-    ) -> Tuple[bool, Dict[str, Any]]:
+    ) -> tuple[bool, dict[str, Any]]:
         """Creates a GitHub pull request."""
         if not self.token:
             pr_num = int(time.time()) % 1000 + 100
@@ -349,7 +349,7 @@ class GitHubService:
             data=payload,
         )
 
-    def create_comment(self, repo: str, pr_or_issue_number: int, body: str) -> Tuple[bool, Dict[str, Any]]:
+    def create_comment(self, repo: str, pr_or_issue_number: int, body: str) -> tuple[bool, dict[str, Any]]:
         """Creates a comment on an issue or pull request."""
         if not self.token:
             return True, {"id": 1, "body": body, "simulated": True}
@@ -359,21 +359,21 @@ class GitHubService:
             data={"body": body},
         )
 
-    def list_workflow_runs(self, repo: str, per_page: int = 20) -> Tuple[bool, Dict[str, Any]]:
+    def list_workflow_runs(self, repo: str, per_page: int = 20) -> tuple[bool, dict[str, Any]]:
         """Fetches list of workflow runs for a repository."""
         return self._api_request(f"repos/{repo}/actions/runs?per_page={per_page}")
 
-    def list_pull_requests(self, repo: str, state: str = "all") -> Tuple[bool, Any]:
+    def list_pull_requests(self, repo: str, state: str = "all") -> tuple[bool, Any]:
         """Fetches list of pull requests for a repository."""
         return self._api_request(f"repos/{repo}/pulls?state={state}")
 
-    def list_workflows(self, repo: str) -> Tuple[bool, Dict[str, Any]]:
+    def list_workflows(self, repo: str) -> tuple[bool, dict[str, Any]]:
         """Fetches list of workflows configured in repository."""
         return self._api_request(f"repos/{repo}/actions/workflows")
 
     def list_workflow_runs_for_branch(
-        self, repo: str, branch: str, event: Optional[str] = None
-    ) -> Tuple[bool, Dict[str, Any]]:
+        self, repo: str, branch: str, event: str | None = None
+    ) -> tuple[bool, dict[str, Any]]:
         """Fetches workflow runs filtered by branch and optional event."""
         endpoint = f"repos/{repo}/actions/runs?branch={branch}"
         if event:
@@ -384,10 +384,10 @@ class GitHubService:
         self,
         repo: str,
         pull_number: int,
-        commit_title: Optional[str] = None,
-        commit_message: Optional[str] = None,
+        commit_title: str | None = None,
+        commit_message: str | None = None,
         merge_method: str = "squash",
-    ) -> Tuple[bool, Dict[str, Any]]:
+    ) -> tuple[bool, dict[str, Any]]:
         """
         Merges a pull request using GitHub REST API.
         Enforces real GitHub responses (handles branch protection, approval requirements, merge conflicts).
@@ -400,7 +400,7 @@ class GitHubService:
                 "simulated": True,
             }
 
-        payload: Dict[str, Any] = {"merge_method": merge_method}
+        payload: dict[str, Any] = {"merge_method": merge_method}
         if commit_title:
             payload["commit_title"] = commit_title
         if commit_message:

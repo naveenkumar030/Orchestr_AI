@@ -13,29 +13,32 @@ Contains 38 deterministic unit, integration, and stress tests covering:
 import os
 import sys
 import time
-import json
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 # Ensure backend directory is in sys.path
 CURRENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
-from services.resilience.error_signature import error_signature_generator, ErrorSignatureGenerator
-from services.resilience.diagnosis_cache import diagnosis_cache, DiagnosisCache, DiagnosisCacheEntry
-from services.resilience.circuit_breaker import circuit_breaker_registry, CircuitBreakerRegistry, CircuitState, ProviderCircuit
-from services.resilience.reliability_telemetry import reliability_telemetry, ReliabilityTelemetry
-from services.resilience.event_deduplication import event_deduplicator, EventDeduplicator
-from services.resilience.llm_resilience_manager import llm_resilience_manager, LLMResilienceManager
-from services.agents.diagnoser_agent import diagnoser_agent, DiagnoserAgent
-from services.agents.fix_suggester_agent import fix_suggester_agent, FixSuggesterAgent
-from services.agents.critic_agent import critic_agent, CriticAgent
-from services.agents.multi_agent_orchestrator import multi_agent_orchestrator, MultiAgentOrchestrator
-from services.confidence_gate import confidence_gate
-from services.sentinel_guard import sentinel_guard
-from services.risk_assessor import risk_assessor
 from app import app
+from services.agents.critic_agent import critic_agent
+from services.agents.diagnoser_agent import DiagnoserAgent, diagnoser_agent
+from services.agents.fix_suggester_agent import fix_suggester_agent
+from services.agents.multi_agent_orchestrator import MultiAgentOrchestrator
+from services.confidence_gate import confidence_gate
+from services.resilience.circuit_breaker import (
+    CircuitState,
+    ProviderCircuit,
+    circuit_breaker_registry,
+)
+from services.resilience.diagnosis_cache import DiagnosisCache, diagnosis_cache
+from services.resilience.error_signature import error_signature_generator
+from services.resilience.event_deduplication import event_deduplicator
+from services.resilience.llm_resilience_manager import LLMResilienceManager
+from services.resilience.reliability_telemetry import reliability_telemetry
+from services.risk_assessor import risk_assessor
 
 
 @pytest.fixture(autouse=True)

@@ -4,20 +4,20 @@ Responsible for analyzing CI failure logs and repository context to determine
 failure category, root cause, evidence, affected files, confidence, and suggested fix direction.
 """
 
+import hashlib
+import json
 import os
 import re
-import json
-import hashlib
-import urllib.request
 import urllib.error
-from typing import Dict, Any, List, Optional, Tuple
+import urllib.request
+from typing import Any
 
 import config
-from services.secret_sanitizer import secret_sanitizer
-from services.resilience.error_signature import error_signature_generator
+
 from services.resilience.diagnosis_cache import diagnosis_cache
+from services.resilience.error_signature import error_signature_generator
 from services.resilience.reliability_telemetry import reliability_telemetry
-from services.resilience.llm_resilience_manager import llm_resilience_manager
+from services.secret_sanitizer import secret_sanitizer
 
 VALID_CATEGORIES = {
     "dependency_error",
@@ -31,7 +31,7 @@ VALID_CATEGORIES = {
 }
 
 
-def validate_diagnoser_output(data: Dict[str, Any], raw_logs: str = "") -> Dict[str, Any]:
+def validate_diagnoser_output(data: dict[str, Any], raw_logs: str = "") -> dict[str, Any]:
     """
     Validates and normalizes the Diagnoser structured output according to the Phase 3 schema.
     Ensures confidence is float 0.0 - 1.0, category is valid enum, and evidence is not invented.
@@ -114,15 +114,15 @@ class DiagnoserAgent:
         pass
 
     @property
-    def openai_api_key(self) -> Optional[str]:
+    def openai_api_key(self) -> str | None:
         return os.environ.get("OPENAI_API_KEY") or config.OPENAI_API_KEY
 
     @property
-    def groq_api_key(self) -> Optional[str]:
+    def groq_api_key(self) -> str | None:
         return os.environ.get("GROQ_API_KEY") or config.GROQ_API_KEY
 
     @property
-    def gemini_api_key(self) -> Optional[str]:
+    def gemini_api_key(self) -> str | None:
         return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or config.GEMINI_API_KEY
 
     def diagnose(
@@ -130,11 +130,11 @@ class DiagnoserAgent:
         logs: str,
         repository: str = "SentinelOps",
         workflow_name: str = "CI/CD Workflow",
-        job_name: Optional[str] = None,
-        failed_step: Optional[str] = None,
+        job_name: str | None = None,
+        failed_step: str | None = None,
         commit_sha: str = "HEAD",
-        repo_context: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+        repo_context: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """
         Executes diagnosis on sanitized CI failure logs and returns structured schema.
         Integrates deterministic error signature and TTL diagnosis caching (Phase 6).
@@ -206,10 +206,10 @@ class DiagnoserAgent:
         logs: str,
         repo: str,
         workflow_name: str,
-        job_name: Optional[str],
-        failed_step: Optional[str],
+        job_name: str | None,
+        failed_step: str | None,
         commit_sha: str,
-        repo_context: Dict[str, str],
+        repo_context: dict[str, str],
     ) -> str:
         context_str = "\n".join([f"--- File: {path} ---\n{content[:1500]}" for path, content in repo_context.items()]) if repo_context else "None"
         return (
@@ -230,7 +230,7 @@ class DiagnoserAgent:
             f"- If evidence is insufficient, use category 'unknown' with confidence <= 0.4.\n"
         )
 
-    def _call_groq(self, logs: str, repo: str, wf: str, job: Optional[str], step: Optional[str], sha: str, ctx: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    def _call_groq(self, logs: str, repo: str, wf: str, job: str | None, step: str | None, sha: str, ctx: dict[str, str]) -> dict[str, Any] | None:
         try:
             from groq import Groq
             client = Groq(api_key=self.groq_api_key, timeout=3.0)
@@ -252,7 +252,7 @@ class DiagnoserAgent:
             pass
         return None
 
-    def _call_openai(self, logs: str, repo: str, wf: str, job: Optional[str], step: Optional[str], sha: str, ctx: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    def _call_openai(self, logs: str, repo: str, wf: str, job: str | None, step: str | None, sha: str, ctx: dict[str, str]) -> dict[str, Any] | None:
         try:
             import requests
             prompt = self._build_prompt(logs, repo, wf, job, step, sha, ctx)
@@ -275,7 +275,7 @@ class DiagnoserAgent:
             pass
         return None
 
-    def _call_gemini(self, logs: str, repo: str, wf: str, job: Optional[str], step: Optional[str], sha: str, ctx: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    def _call_gemini(self, logs: str, repo: str, wf: str, job: str | None, step: str | None, sha: str, ctx: dict[str, str]) -> dict[str, Any] | None:
         try:
             prompt = self._build_prompt(logs, repo, wf, job, step, sha, ctx)
             body = json.dumps({
@@ -304,9 +304,9 @@ class DiagnoserAgent:
         logs: str,
         repo: str,
         wf_name: str,
-        failed_step: Optional[str],
-        repo_context: Dict[str, str],
-    ) -> Dict[str, Any]:
+        failed_step: str | None,
+        repo_context: dict[str, str],
+    ) -> dict[str, Any]:
         """
         Deterministic, robust semantic heuristic engine for CI failures across all 8 categories.
         """

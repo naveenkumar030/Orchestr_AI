@@ -5,8 +5,9 @@ Supports PostgreSQL (production) with automatic local SQLite fallback.
 
 import os
 from contextlib import contextmanager
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker, scoped_session
+from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_SQLITE_PATH = os.path.join(CURRENT_DIR, "sentinelops.db")
@@ -22,10 +23,15 @@ if raw_db_url:
 else:
     DATABASE_URL = f"sqlite:///{DEFAULT_SQLITE_PATH}"
 
-# Connection arguments for SQLite
+# Connection arguments for SQLite and Cloud PostgreSQL (Render/Neon/Supabase)
 engine_kwargs = {"echo": False}
 if DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs["pool_pre_ping"] = True
+    engine_kwargs["pool_recycle"] = 300
+    engine_kwargs["pool_size"] = 10
+    engine_kwargs["max_overflow"] = 20
 
 engine = create_engine(DATABASE_URL, **engine_kwargs)
 
@@ -53,12 +59,14 @@ def init_db():
                     "remediationBranch": "VARCHAR(256)",
                     "diff": "TEXT",
                     "agent_reasoning": "TEXT",
+                    "source": "VARCHAR(32) DEFAULT 'webhook'",
                 }
                 for col_name, col_type in cols_to_add.items():
                     if col_name not in existing_cols:
                         conn.exec_driver_sql(f"ALTER TABLE incidents ADD COLUMN {col_name} {col_type}")
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error("Failed to migrate SQLite schema: %s", e, exc_info=True)
 
 
 @contextmanager

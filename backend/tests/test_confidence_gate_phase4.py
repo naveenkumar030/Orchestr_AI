@@ -5,22 +5,20 @@ Confidence Gate, Risk Assessment, and Human Approval for SentinelOps.
 
 import os
 import sys
-import pytest
-from typing import Dict, Any
+from typing import Any
 
 CURRENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
-from services.risk_assessor import RiskAssessor, risk_assessor
-from services.confidence_gate import ConfidenceGate, confidence_gate, CONFIDENCE_GATE_CONFIG
-from services.human_approval_service import HumanApprovalService, human_approval_service
+from services.confidence_gate import ConfidenceGate, confidence_gate
+from services.human_approval_service import HumanApprovalService
+from services.risk_assessor import risk_assessor
 from services.sentinel_guard import sentinel_guard
-from services.agents.multi_agent_orchestrator import multi_agent_orchestrator
 
 
 # Fixture helpers to generate standard test artifacts
-def sample_diagnosis(confidence: float = 0.94, category: str = "dependency_error") -> Dict[str, Any]:
+def sample_diagnosis(confidence: float = 0.94, category: str = "dependency_error") -> dict[str, Any]:
     return {
         "category": category,
         "root_cause": "Dependency version mismatch",
@@ -32,7 +30,7 @@ def sample_diagnosis(confidence: float = 0.94, category: str = "dependency_error
     }
 
 
-def sample_fix(confidence: float = 0.90, fix_type: str = "dependency", affected_files=None, patch=None) -> Dict[str, Any]:
+def sample_fix(confidence: float = 0.90, fix_type: str = "dependency", affected_files=None, patch=None) -> dict[str, Any]:
     files = affected_files or ["package.json"]
     diff_patch = patch or (
         "--- a/package.json\n+++ b/package.json\n@@ -28,3 +28,3 @@\n-    \"@stripe/stripe-node\": \"^12.1.0\",\n+    \"@stripe/stripe-node\": \"^14.1.0\",\n"
@@ -47,7 +45,7 @@ def sample_fix(confidence: float = 0.90, fix_type: str = "dependency", affected_
     }
 
 
-def sample_critic(score: float = 0.89, approved: bool = True, security_concerns=None, issues=None) -> Dict[str, Any]:
+def sample_critic(score: float = 0.89, approved: bool = True, security_concerns=None, issues=None) -> dict[str, Any]:
     return {
         "approved": approved,
         "score": score,

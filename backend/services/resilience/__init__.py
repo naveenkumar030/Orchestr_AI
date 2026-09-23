@@ -4,24 +4,20 @@ Provides deterministic error signatures, diagnosis caching, circuit breaking,
 LLM resilience orchestration, event deduplication, and reliability telemetry.
 """
 
-from services.resilience.error_signature import (
-    ErrorSignatureGenerator,
-    error_signature_generator,
+from services.resilience.circuit_breaker import (
+    CircuitBreakerRegistry,
+    CircuitState,
+    ProviderCircuit,
+    circuit_breaker_registry,
 )
 from services.resilience.diagnosis_cache import (
     DiagnosisCache,
     DiagnosisCacheEntry,
     diagnosis_cache,
 )
-from services.resilience.circuit_breaker import (
-    CircuitState,
-    ProviderCircuit,
-    CircuitBreakerRegistry,
-    circuit_breaker_registry,
-)
-from services.resilience.reliability_telemetry import (
-    ReliabilityTelemetry,
-    reliability_telemetry,
+from services.resilience.error_signature import (
+    ErrorSignatureGenerator,
+    error_signature_generator,
 )
 from services.resilience.event_deduplication import (
     EventDeduplicator,
@@ -31,21 +27,25 @@ from services.resilience.llm_resilience_manager import (
     LLMResilienceManager,
     llm_resilience_manager,
 )
+from services.resilience.reliability_telemetry import (
+    ReliabilityTelemetry,
+    reliability_telemetry,
+)
 
 __all__ = [
-    "ErrorSignatureGenerator",
-    "error_signature_generator",
+    "CircuitBreakerRegistry",
+    "CircuitState",
     "DiagnosisCache",
     "DiagnosisCacheEntry",
-    "diagnosis_cache",
-    "CircuitState",
-    "ProviderCircuit",
-    "CircuitBreakerRegistry",
-    "circuit_breaker_registry",
-    "ReliabilityTelemetry",
-    "reliability_telemetry",
+    "ErrorSignatureGenerator",
     "EventDeduplicator",
-    "event_deduplicator",
     "LLMResilienceManager",
+    "ProviderCircuit",
+    "ReliabilityTelemetry",
+    "circuit_breaker_registry",
+    "diagnosis_cache",
+    "error_signature_generator",
+    "event_deduplicator",
     "llm_resilience_manager",
+    "reliability_telemetry",
 ]

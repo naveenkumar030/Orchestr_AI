@@ -4,20 +4,20 @@ Coordinates the complete autonomous self-healing CI/CD loop:
 Detect -> Diagnose -> Fix -> SentinelGuard -> PR -> CI Validation -> ValidatorAgent -> MergeGuard -> Auto-Merge -> Resolve / Retry / Escalate.
 """
 
-import os
-import re
 import json
+import re
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 
 import config
+
 from services.github_service import github_service
+from services.merge_guard import merge_guard
 from services.sentinel_guard import sentinel_guard
 from services.slack_service import slack_service
 from services.validation_service import validation_service
 from services.validator_agent import validator_agent
-from services.merge_guard import merge_guard
 
 
 class RemediationOrchestrator:
@@ -32,23 +32,24 @@ class RemediationOrchestrator:
 
     def handle_remediation(
         self,
-        run_data: Dict[str, Any],
+        run_data: dict[str, Any],
         trigger_source: str = "webhook",
-        override_ci_status: Optional[str] = None,
-        override_ci_logs: Optional[str] = None,
-        override_confidence: Optional[int] = None,
-        override_risk: Optional[str] = None,
-        override_merge_success: Optional[bool] = None,
-        override_deployment_status: Optional[str] = None,
-        override_health_status: Optional[str] = None,
-        override_rollback_success: Optional[bool] = None,
-        override_rollback_health_status: Optional[str] = None,
+        override_ci_status: str | None = None,
+        override_ci_logs: str | None = None,
+        override_confidence: int | None = None,
+        override_risk: str | None = None,
+        override_merge_success: bool | None = None,
+        override_deployment_status: str | None = None,
+        override_health_status: str | None = None,
+        override_rollback_success: bool | None = None,
+        override_rollback_health_status: str | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Executes the autonomous closed-loop self-healing process for a failed CI/CD workflow run.
         """
         from data_store import store
+
         from services.remediation_service import remediation_service
 
         repo = run_data.get("repository", "SentinelOps")
@@ -86,18 +87,18 @@ class RemediationOrchestrator:
 
         # Initialize MTTR timestamps
         t_detected = datetime.now(timezone.utc).isoformat()
-        t_diag_start: Optional[str] = None
-        t_patch_gen: Optional[str] = None
-        t_pr_created: Optional[str] = None
-        t_ci_start: Optional[str] = None
-        t_ci_complete: Optional[str] = None
-        t_merged: Optional[str] = None
-        t_resolved: Optional[str] = None
+        t_diag_start: str | None = None
+        t_patch_gen: str | None = None
+        t_pr_created: str | None = None
+        t_ci_start: str | None = None
+        t_ci_complete: str | None = None
+        t_merged: str | None = None
+        t_resolved: str | None = None
 
-        timeline: List[Dict[str, Any]] = []
-        attempts: List[Dict[str, Any]] = []
-        pr_number: Optional[int] = None
-        pr_url: Optional[str] = None
+        timeline: list[dict[str, Any]] = []
+        attempts: list[dict[str, Any]] = []
+        pr_number: int | None = None
+        pr_url: str | None = None
 
         def add_timeline_event(title: str, description: str, icon: str, status: str = "done"):
             timeline.append({
@@ -364,7 +365,7 @@ class RemediationOrchestrator:
 
             # ── 4. CI Validation ──────────────────────────────────────────────
             t_ci_start = datetime.now(timezone.utc).isoformat()
-            add_timeline_event(f"CI Validation Started", f"Validating attempt #{attempt_number}", "⚙️")
+            add_timeline_event("CI Validation Started", f"Validating attempt #{attempt_number}", "⚙️")
             try:
                 slack_service.send_validation_started(incident_id, repo, remediation_branch, pr_number)
             except Exception:
@@ -471,7 +472,7 @@ class RemediationOrchestrator:
                     add_timeline_event("MergeGuard PASS", "Autonomous merge authorized", "🛡️")
                     # Auto-merge PR via GitHub REST API
                     merge_ok = True
-                    merge_res: Dict[str, Any] = {}
+                    merge_res: dict[str, Any] = {}
                     if override_merge_success is not None:
                         merge_ok = override_merge_success
                         merge_res = {"merged": merge_ok, "message": "Simulated merge result" if merge_ok else "Branch protection required"}
@@ -756,7 +757,7 @@ class RemediationOrchestrator:
                                 pass
 
                             t_rb_start = datetime.now(timezone.utc).isoformat()
-                            add_timeline_event("Automated Rollback", f"Rollback Initiated: Reverting to previous stable commit", "↩️")
+                            add_timeline_event("Automated Rollback", "Rollback Initiated: Reverting to previous stable commit", "↩️")
 
                             from services.rollback_service import rollback_service
                             rb_res = rollback_service.rollback(
@@ -1069,8 +1070,8 @@ class RemediationOrchestrator:
         new_ci_logs: str,
         previous_diff: str,
         previous_target_file: str,
-        attempts_history: List[Dict[str, Any]],
-    ) -> Dict[str, Any]:
+        attempts_history: list[dict[str, Any]],
+    ) -> dict[str, Any]:
         """
         Synthesizes a revised patch incorporating historical attempt feedback.
         Explicitly asks the AI not to repeat previous mistakes.
@@ -1155,20 +1156,20 @@ class RemediationOrchestrator:
     # ── MTTR Metrics Calculator ───────────────────────────────────────────────
     def _calculate_mttr(
         self,
-        t_detected: Optional[str] = None,
-        t_diag: Optional[str] = None,
-        t_patch: Optional[str] = None,
-        t_ci_start: Optional[str] = None,
-        t_ci_complete: Optional[str] = None,
-        t_merged: Optional[str] = None,
-        t_dep_start: Optional[str] = None,
-        t_dep_complete: Optional[str] = None,
-        t_health_start: Optional[str] = None,
-        t_health_complete: Optional[str] = None,
-        t_rollback_start: Optional[str] = None,
-        t_rollback_complete: Optional[str] = None,
-        t_resolved: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        t_detected: str | None = None,
+        t_diag: str | None = None,
+        t_patch: str | None = None,
+        t_ci_start: str | None = None,
+        t_ci_complete: str | None = None,
+        t_merged: str | None = None,
+        t_dep_start: str | None = None,
+        t_dep_complete: str | None = None,
+        t_health_start: str | None = None,
+        t_health_complete: str | None = None,
+        t_rollback_start: str | None = None,
+        t_rollback_complete: str | None = None,
+        t_resolved: str | None = None,
+    ) -> dict[str, Any]:
         """Calculates granular stage-by-stage timings for real MTTR observability across the full lifecycle."""
         def parse_iso(ts):
             if not ts:
@@ -1245,18 +1246,18 @@ class RemediationOrchestrator:
         target_file: str,
         diff: str,
         explanation: str,
-        guard_result: Dict[str, Any],
-        pr_number: Optional[int],
-        pr_url: Optional[str],
+        guard_result: dict[str, Any],
+        pr_number: int | None,
+        pr_url: str | None,
         remediation_branch: str,
-        attempts: List[Dict[str, Any]],
-        timeline: List[Dict[str, Any]],
+        attempts: list[dict[str, Any]],
+        timeline: list[dict[str, Any]],
         risk_level: str = "LOW",
-        mttr_metrics: Optional[Dict[str, Any]] = None,
-        deployment_record: Optional[Dict[str, Any]] = None,
-        health_record: Optional[Dict[str, Any]] = None,
-        rollback_record: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        mttr_metrics: dict[str, Any] | None = None,
+        deployment_record: dict[str, Any] | None = None,
+        health_record: dict[str, Any] | None = None,
+        rollback_record: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         diff_stats = guard_result.get("diff_stats", {})
         action_label = f"View PR #{pr_number}" if pr_number else "Investigate"
         if status in ["Resolved", "Remediated"]:
@@ -1270,7 +1271,7 @@ class RemediationOrchestrator:
             "id": incident_id,
             "repo": repo.split("/")[-1],
             "pipeline": wf_name,
-            "failure": f"Workflow Run Failure",
+            "failure": "Workflow Run Failure",
             "rootCause": root_cause,
             "confidence": confidence,
             "confidenceColor": "secondary" if confidence >= 90 else "primary",
@@ -1302,11 +1303,11 @@ class RemediationOrchestrator:
             "rollback": rollback_record,
         }
 
-    def _save_incident(self, inc_record: Dict[str, Any]):
+    def _save_incident(self, inc_record: dict[str, Any]):
         from data_store import store
         inc_id = inc_record.get("id")
         if inc_id:
-            store._incident_metadata[inc_id] = {
+            metadata_payload = {
                 "attempts": list(inc_record.get("attempts", [])),
                 "attemptCount": inc_record.get("attemptCount", len(inc_record.get("attempts", []))),
                 "timeline": list(inc_record.get("timeline", [])),
@@ -1315,6 +1316,10 @@ class RemediationOrchestrator:
                 "health": inc_record.get("health"),
                 "rollback": inc_record.get("rollback"),
             }
+            if hasattr(store, "set_incident_metadata"):
+                store.set_incident_metadata(inc_id, metadata_payload)
+            else:
+                store._incident_metadata[inc_id] = metadata_payload
 
         existing_idx = next((i for i, inc in enumerate(store.incidents) if inc.get("id") == inc_id), None)
         if existing_idx is not None:
@@ -1383,7 +1388,7 @@ class RemediationOrchestrator:
                 "isDraft": create_draft,
             })
 
-    def _update_store_pr_status(self, pr_number: Optional[int], new_status: str):
+    def _update_store_pr_status(self, pr_number: int | None, new_status: str):
         if not pr_number:
             return
         from data_store import store

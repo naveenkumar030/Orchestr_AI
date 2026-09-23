@@ -18,21 +18,21 @@ Tests cover:
 
 import os
 import sys
-import json
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 CURRENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
-from services.github_service import github_service
+from services.merge_guard import merge_guard
+from services.remediation_orchestrator import (
+    RemediationOrchestrator,
+    remediation_orchestrator,
+)
 from services.sentinel_guard import sentinel_guard
 from services.slack_service import slack_service
-from services.validation_service import validation_service, ValidationService
-from services.validator_agent import validator_agent, ValidatorAgent
-from services.merge_guard import merge_guard, MergeGuard
-from services.remediation_orchestrator import remediation_orchestrator, RemediationOrchestrator
+from services.validation_service import ValidationService, validation_service
+from services.validator_agent import ValidatorAgent
 
 
 # ── Test 1: CI Success + MergeGuard Pass -> Auto-Merge -> RESOLVED ────────────

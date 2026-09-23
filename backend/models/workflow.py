@@ -3,9 +3,11 @@ Workflow, Repository, and PipelineJob models for SentinelOps.
 """
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, BigInteger, String, Text, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+
 from database import Base
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+
 from models.base import SerializerMixin
 
 

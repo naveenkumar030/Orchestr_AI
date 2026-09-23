@@ -3,9 +3,11 @@ Incident model for SentinelOps pipeline failures and anomalies.
 """
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, BigInteger, String, Text, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+
 from database import Base
+from sqlalchemy import BigInteger, Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
+
 from models.base import SerializerMixin
 
 
@@ -32,6 +34,7 @@ class Incident(Base, SerializerMixin):
     remediationBranch = Column(String(256), nullable=True)
     diff = Column(Text, nullable=True)
     agent_reasoning = Column(Text, nullable=True)
+    source = Column(String(32), default="webhook")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -45,6 +48,7 @@ class Incident(Base, SerializerMixin):
             try:
                 import json
                 d["agent_reasoning"] = json.loads(d["agent_reasoning"])
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning("Failed to deserialize agent_reasoning for incident %s: %s", self.id, e)
         return d

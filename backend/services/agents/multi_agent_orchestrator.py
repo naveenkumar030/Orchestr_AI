@@ -4,17 +4,16 @@ Coordinates the 3-agent cooperative reasoning chain:
 Log Fetcher -> Diagnoser -> FixSuggester -> Critic / Verifier (Refinement Loop up to 3 attempts) -> Final Decision.
 """
 
-import os
 import time
-import json
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 import config
+
+from services.agents.critic_agent import CriticAgent, critic_agent
+from services.agents.diagnoser_agent import DiagnoserAgent, diagnoser_agent
+from services.agents.fix_suggester_agent import FixSuggesterAgent, fix_suggester_agent
 from services.secret_sanitizer import secret_sanitizer
-from services.agents.diagnoser_agent import diagnoser_agent, DiagnoserAgent
-from services.agents.fix_suggester_agent import fix_suggester_agent, FixSuggesterAgent
-from services.agents.critic_agent import critic_agent, CriticAgent
 
 
 class MultiAgentOrchestrator:
@@ -27,9 +26,9 @@ class MultiAgentOrchestrator:
 
     def __init__(
         self,
-        diagnoser: Optional[DiagnoserAgent] = None,
-        fix_suggester: Optional[FixSuggesterAgent] = None,
-        critic: Optional[CriticAgent] = None,
+        diagnoser: DiagnoserAgent | None = None,
+        fix_suggester: FixSuggesterAgent | None = None,
+        critic: CriticAgent | None = None,
     ):
         self.diagnoser = diagnoser or diagnoser_agent
         self.fix_suggester = fix_suggester or fix_suggester_agent
@@ -40,13 +39,13 @@ class MultiAgentOrchestrator:
         logs: str,
         repository: str = "SentinelOps",
         workflow_name: str = "CI/CD Workflow",
-        job_name: Optional[str] = None,
-        failed_step: Optional[str] = None,
+        job_name: str | None = None,
+        failed_step: str | None = None,
         commit_sha: str = "HEAD",
-        repo_context: Optional[Dict[str, str]] = None,
-        incident_id: Optional[str] = None,
-        max_attempts: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        repo_context: dict[str, str] | None = None,
+        incident_id: str | None = None,
+        max_attempts: int | None = None,
+    ) -> dict[str, Any]:
         """
         Executes the end-to-end multi-agent reasoning workflow.
         Returns the final structured agent result with full telemetry.
@@ -58,8 +57,8 @@ class MultiAgentOrchestrator:
         effective_max_attempts = max_attempts or self.MAX_ATTEMPTS
         pipeline_timeout_seconds = float(getattr(config, "SENTINEL_AGENT_TIMEOUT_SECONDS", 60.0))
 
-        agent_timeline: List[Dict[str, Any]] = []
-        refinement_history: List[Dict[str, Any]] = []
+        agent_timeline: list[dict[str, Any]] = []
+        refinement_history: list[dict[str, Any]] = []
 
         # ── Step 1: Log Fetcher & Sanitizer ──────────────────────────────────
         t0 = time.perf_counter()
@@ -94,7 +93,7 @@ class MultiAgentOrchestrator:
         except Exception as ex:
             diagnosis = {
                 "category": "unknown",
-                "root_cause": f"Diagnosis failed with error: {str(ex)}",
+                "root_cause": f"Diagnosis failed with error: {ex!s}",
                 "confidence": 0.20,
                 "evidence": [str(ex)],
                 "affected_files": [],
@@ -117,9 +116,9 @@ class MultiAgentOrchestrator:
         })
 
         # ── Step 3 & 4: FixSuggester <-> Critic Refinement Loop ───────────────
-        final_fix: Dict[str, Any] = {}
-        final_critic: Dict[str, Any] = {}
-        critic_feedback: Optional[Dict[str, Any]] = None
+        final_fix: dict[str, Any] = {}
+        final_critic: dict[str, Any] = {}
+        critic_feedback: dict[str, Any] | None = None
         final_status = "human_review_required"
         completed_attempts = 0
 
@@ -155,7 +154,7 @@ class MultiAgentOrchestrator:
             except Exception as ex:
                 fix = {
                     "fix_type": "unknown",
-                    "description": f"Fix synthesis failed: {str(ex)}",
+                    "description": f"Fix synthesis failed: {ex!s}",
                     "affected_files": diagnosis.get("affected_files", ["src/app.py"]),
                     "patch": "",
                     "reason": str(ex),
@@ -193,7 +192,7 @@ class MultiAgentOrchestrator:
                 critic_res = {
                     "approved": False,
                     "score": 0.25,
-                    "issues": [f"Critic evaluation error: {str(ex)}"],
+                    "issues": [f"Critic evaluation error: {ex!s}"],
                     "reason": "Evaluation raised an unhandled exception",
                     "recommended_changes": ["Verify fix syntax manually"],
                     "security_concerns": [],
@@ -235,9 +234,9 @@ class MultiAgentOrchestrator:
                 critic_feedback = critic_res
 
         # ── Step 4: Deterministic Risk Assessment ─────────────────────────────
-        from services.risk_assessor import risk_assessor
         from services.confidence_gate import confidence_gate
         from services.human_approval_service import human_approval_service
+        from services.risk_assessor import risk_assessor
 
         remediation_branch = f"sentinelops/fix-{clean_commit}"
         t_risk_start = time.perf_counter()
@@ -368,7 +367,7 @@ class MultiAgentOrchestrator:
 
         return result
 
-    def _persist_reasoning_record(self, incident_id: str, record: Dict[str, Any]) -> None:
+    def _persist_reasoning_record(self, incident_id: str, record: dict[str, Any]) -> None:
         """
         Stores the multi-agent reasoning result in the operational data store and database.
         """

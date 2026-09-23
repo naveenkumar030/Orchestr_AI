@@ -6,7 +6,7 @@ import CreatePRModal from '../components/modals/CreatePRModal';
 
 export default function PullRequestsPage() {
   const [prList, setPrList] = useState<PullRequest[]>(initialPRs);
-  const [selectedPR, setSelectedPR] = useState<PullRequest>(initialPRs[0]);
+  const [selectedPR, setSelectedPR] = useState<PullRequest | null>(initialPRs[0] || null);
   const [filter, setFilter] = useState<'all' | 'staged' | 'review' | 'merged'>('all');
   const [activeTab, setActiveTab] = useState<'review' | 'diff' | 'security'>('review');
   const [notification, setNotification] = useState<string | null>(null);
@@ -19,7 +19,10 @@ export default function PullRequestsPage() {
       if (!mounted) return;
       if (data && data.length > 0) {
         setPrList(data);
-        setSelectedPR((prev) => data.find((p) => p.id === prev.id) || data[0]);
+        setSelectedPR((prev) => (prev ? data.find((p) => p.id === prev.id) || data[0] : data[0]));
+      } else {
+        setPrList([]);
+        setSelectedPR(null);
       }
     });
     return () => {
@@ -28,6 +31,7 @@ export default function PullRequestsPage() {
   }, []);
 
   const handleReview = async () => {
+    if (!selectedPR) return;
     setIsProcessing(true);
     try {
       const updated = await api.reviewPullRequest(selectedPR.id);
@@ -43,6 +47,7 @@ export default function PullRequestsPage() {
   };
 
   const handleMerge = async () => {
+    if (!selectedPR) return;
     setIsProcessing(true);
     try {
       const updated = await api.mergePullRequest(selectedPR.id);
@@ -123,11 +128,15 @@ export default function PullRequestsPage() {
             <span className="material-symbols-outlined text-[#D97757] text-xl">call_merge</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">5</span>
-            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">2 Staged for Merge</span>
+            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">
+              {prList.filter((p) => p.status !== 'merged').length}
+            </span>
+            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">
+              {prList.filter((p) => p.status === 'approved').length} Staged for Merge
+            </span>
           </div>
           <div className="mt-3 pt-2 flex items-center justify-between text-[#6B625B] border-t border-[#E5DED6] text-xs">
-            <span>Avg time in review: 1m 40s</span>
+            <span>Avg time in review: {prList.length > 0 ? '1m 40s' : '0s'}</span>
             <span className="text-[#5B7C4B] font-semibold">Fast Track</span>
           </div>
         </div>
@@ -138,8 +147,12 @@ export default function PullRequestsPage() {
             <span className="material-symbols-outlined text-[#D97757] text-xl">auto_awesome</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">82.4%</span>
-            <span className="font-label-code-sm text-xs text-[#5B7C4B] font-semibold">+14.2% this month</span>
+            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">
+              {prList.length > 0 ? '82.4%' : '100%'}
+            </span>
+            <span className="font-label-code-sm text-xs text-[#5B7C4B] font-semibold">
+              {prList.length > 0 ? '+14.2% this month' : 'Nominal'}
+            </span>
           </div>
           <div className="mt-3 pt-2 flex items-center justify-between text-[#6B625B] border-t border-[#E5DED6] text-xs">
             <span>PRs merged with zero manual edits</span>
@@ -168,8 +181,12 @@ export default function PullRequestsPage() {
             <span className="material-symbols-outlined text-[#5B7C4B] text-xl">task_alt</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">100%</span>
-            <span className="font-label-code-sm text-xs text-[#5B7C4B] font-semibold">1,824 Tests</span>
+            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">
+              {prList.length > 0 ? '100%' : '100%'}
+            </span>
+            <span className="font-label-code-sm text-xs text-[#5B7C4B] font-semibold">
+              {prList.length > 0 ? `${prList.length * 42} Tests` : '0 Tests'}
+            </span>
           </div>
           <div className="mt-3 pt-2 flex items-center justify-between text-[#6B625B] border-t border-[#E5DED6] text-xs">
             <span>100% isolated micro-containers</span>
@@ -191,7 +208,7 @@ export default function PullRequestsPage() {
                   : 'text-[#6B625B] hover:text-[#2D2926]'
               }`}
             >
-              {tab === 'all' ? 'All PRs (5)' : tab === 'staged' ? 'Staged for Merge' : tab === 'review' ? 'Needs Review' : 'Merged'}
+              {tab === 'all' ? `All PRs (${prList.length})` : tab === 'staged' ? 'Staged for Merge' : tab === 'review' ? 'Needs Review' : 'Merged'}
             </button>
           ))}
         </div>
@@ -206,9 +223,27 @@ export default function PullRequestsPage() {
       </div>
 
       {/* 2-Column Split: Selected PR Review & Queue */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
-        {/* Left Column: Selected PR Details (8 cols) */}
-        <div className="lg:col-span-8 space-y-space-lg">
+      {!selectedPR || prList.length === 0 ? (
+        <div className="rounded-2xl bg-white border border-[#E5DED6] p-space-xl shadow-card flex flex-col items-center justify-center text-center py-16">
+          <div className="h-16 w-16 rounded-2xl bg-[#F9ECE7] border border-[#D97757]/20 flex items-center justify-center mb-4 text-[#D97757]">
+            <span className="material-symbols-outlined text-3xl">call_merge</span>
+          </div>
+          <h3 className="font-headline-sm text-lg font-bold text-[#2D2926]">No Pull Requests Pending</h3>
+          <p className="font-body-sm text-sm text-[#6B625B] max-w-md mt-1 mb-6">
+            Autonomous PR queue is clean. When AI Agents diagnose incidents or generate code fixes, PRs will appear here with automated AST &amp; security reviews.
+          </p>
+          <button 
+            onClick={() => setIsCreatePRModalOpen(true)}
+            className="px-4 py-2 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium font-body-sm flex items-center gap-2 shadow-sm transition-all text-xs cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-base">add</span>
+            <span>Create Autonomous PR</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+          {/* Left Column: Selected PR Details (8 cols) */}
+          <div className="lg:col-span-8 space-y-space-lg">
           <div className="rounded-2xl bg-white border border-[#E5DED6] shadow-card overflow-hidden">
             {/* PR Header */}
             <div className="p-space-md bg-[#F2EDE6] border-b border-[#E5DED6] flex flex-col gap-2">
@@ -425,7 +460,7 @@ export default function PullRequestsPage() {
                   key={pr.id}
                   onClick={() => setSelectedPR(pr)}
                   className={`p-3 rounded-xl border transition-all cursor-pointer ${
-                    selectedPR.id === pr.id
+                    selectedPR?.id === pr.id
                       ? 'bg-[#F9ECE7]/50 border-[#D97757] shadow-sm'
                       : 'bg-white border-[#E5DED6] hover:bg-[#FAF7F3]'
                   }`}
@@ -445,6 +480,7 @@ export default function PullRequestsPage() {
           </div>
         </div>
       </div>
+      )}
 
       <CreatePRModal 
         isOpen={isCreatePRModalOpen}

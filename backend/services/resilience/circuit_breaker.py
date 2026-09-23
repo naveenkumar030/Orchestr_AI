@@ -4,11 +4,12 @@ Provides CLOSED, OPEN, and HALF_OPEN state machine to prevent cascading failures
 and enable fast failover across LLM providers.
 """
 
-import time
 import logging
 import threading
+import time
 from enum import Enum
-from typing import Dict, Any, Optional
+from typing import Any
+
 from config import Config
 
 logger = logging.getLogger("sentinel.resilience.circuit_breaker")
@@ -35,7 +36,7 @@ class ProviderCircuit:
         self.state = CircuitState.CLOSED
         self.consecutive_failures = 0
         self.consecutive_successes = 0
-        self.last_failure_time: Optional[float] = None
+        self.last_failure_time: float | None = None
         self.last_state_change_time: float = time.time()
         self.total_requests = 0
         self.total_failures = 0
@@ -79,7 +80,7 @@ class ProviderCircuit:
             self.state = CircuitState.CLOSED
             self.last_state_change_time = time.time()
 
-    def record_failure(self, error: Optional[Exception] = None) -> None:
+    def record_failure(self, error: Exception | None = None) -> None:
         """Records a failed request."""
         self.total_failures += 1
         self.consecutive_failures += 1
@@ -109,7 +110,7 @@ class ProviderCircuit:
         self.last_failure_time = None
         self.last_state_change_time = time.time()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         now = time.time()
         remaining_cooldown = 0
         if self.state == CircuitState.OPEN and self.last_failure_time:
@@ -136,7 +137,7 @@ class CircuitBreakerRegistry:
 
     def __init__(self):
         self._lock = threading.Lock()
-        self._circuits: Dict[str, ProviderCircuit] = {}
+        self._circuits: dict[str, ProviderCircuit] = {}
         self.default_threshold = getattr(Config, "SENTINEL_PROVIDER_FAILURE_THRESHOLD", 3)
         self.default_cooldown = getattr(Config, "SENTINEL_PROVIDER_COOLDOWN", 60)
 
@@ -160,7 +161,7 @@ class CircuitBreakerRegistry:
             circuit = self._get_or_create(provider_name)
             circuit.record_success()
 
-    def record_failure(self, provider_name: str, error: Optional[Exception] = None) -> None:
+    def record_failure(self, provider_name: str, error: Exception | None = None) -> None:
         with self._lock:
             circuit = self._get_or_create(provider_name)
             circuit.record_failure(error)
@@ -174,12 +175,12 @@ class CircuitBreakerRegistry:
         with self._lock:
             self._circuits.clear()
 
-    def get_provider_status(self, provider_name: str) -> Dict[str, Any]:
+    def get_provider_status(self, provider_name: str) -> dict[str, Any]:
         with self._lock:
             circuit = self._get_or_create(provider_name)
             return circuit.to_dict()
 
-    def get_all_statuses(self) -> Dict[str, Any]:
+    def get_all_statuses(self) -> dict[str, Any]:
         with self._lock:
             # Pre-populate defaults if not present
             for p in ["groq", "gemini", "ollama", "github", "slack"]:

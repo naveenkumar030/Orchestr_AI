@@ -1,6 +1,7 @@
-import pytest
 import os
 import sys
+
+import pytest
 
 # Ensure backend directory is in python search path
 CURRENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -11,6 +12,7 @@ if CURRENT_DIR not in sys.path:
 # We'll patch config variables in the tests.
 
 import config
+
 config.PROTECTED_BRANCHES = "main,master,production,prod"
 config.ALLOWED_PATHS = "src/*,app/*,tests/*,migrations/*,db/*,*.py,*.js,*.ts,*.json,*.txt,*.md,*.html,*.css,*.sql,*.yml,*.yaml,*.sh"
 config.BLOCKED_PATHS = ".env*,.github/workflows/*,.github/actions/*,terraform/*,kubernetes/*,secrets/*,credentials/*,*.pem,*.key"
@@ -18,6 +20,7 @@ config.MAX_FILES_CHANGED = 10
 config.MAX_LINES_CHANGED = 500
 
 from services.sentinel_guard import SentinelGuard
+
 
 @pytest.fixture
 def guard():

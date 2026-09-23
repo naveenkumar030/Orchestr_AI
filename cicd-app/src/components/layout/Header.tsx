@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { useBackend } from '../../context/BackendContext';
+import { useBackend } from '../../context/useBackend';
 import { api } from '../../services/api';
 
 interface HeaderProps {
@@ -8,7 +8,7 @@ interface HeaderProps {
 }
 
 export default function Header({ onToggleSidebar }: HeaderProps) {
-  const { isConnected, latency, backendVersion, recheck } = useBackend();
+  const { isConnected, latency, backendVersion, mongoConnected, mongoLatency, mongoDb, recheck } = useBackend();
   const [isChaosRunning, setIsChaosRunning] = useState(false);
   const [chaosToast, setChaosToast] = useState<string | null>(null);
 
@@ -56,6 +56,40 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
 
       {/* Right side */}
       <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+        {/* MongoDB Atlas Status Badge */}
+        <button
+          onClick={() => recheck()}
+          title={
+            mongoConnected
+              ? `Connected to MongoDB Atlas database '${mongoDb || 'sentinelops'}' (Latency: ${mongoLatency !== null ? `${mongoLatency}ms` : '<50ms'}). Click to recheck.`
+              : 'MongoDB Atlas is offline. Operating with SQLite fallback.'
+          }
+          className={`hidden md:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border shadow-sm transition-all cursor-pointer ${
+            mongoConnected
+              ? 'bg-[#EBF3E8] border-[#5B7C4B]/40 text-[#3F5A31] hover:bg-[#DFEDD9]'
+              : 'bg-[#FAF7F3] border-[#E5DED6] text-[#6B625B] hover:bg-[#F2EDE6]'
+          }`}
+        >
+          <span className="relative flex h-2 w-2 shrink-0">
+            {mongoConnected && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#5B7C4B] opacity-75" />
+            )}
+            <span
+              className={`relative inline-flex rounded-full h-2 w-2 ${
+                mongoConnected ? 'bg-[#5B7C4B]' : 'bg-[#A89F99]'
+              }`}
+            />
+          </span>
+          <span className="font-label-code-sm text-[11px] sm:text-xs font-semibold whitespace-nowrap flex items-center gap-1">
+            <span className="material-symbols-outlined text-[13px] leading-none text-[#5B7C4B]">database</span>
+            <span>
+              {mongoConnected
+                ? `MongoDB Atlas (${mongoLatency !== null ? `${mongoLatency}ms` : 'cloud'})`
+                : 'SQLite Fallback'}
+            </span>
+          </span>
+        </button>
+
         {/* Flask Backend Status Badge */}
         <button
           onClick={() => recheck()}

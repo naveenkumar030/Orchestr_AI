@@ -3,10 +3,11 @@ Routes package for SentinelOps.
 Registers all Blueprint modules into the Flask application.
 """
 
-from routes.health import health_bp
-from routes.webhooks import webhooks_bp
+from routes.database import database_bp
 from routes.github import github_bp
+from routes.health import health_bp
 from routes.reliability import reliability_bp
+from routes.webhooks import webhooks_bp
 
 
 def register_routes(app):
@@ -21,4 +22,5 @@ def register_routes(app):
     app.register_blueprint(webhooks_bp)
     app.register_blueprint(github_bp)
     app.register_blueprint(reliability_bp)
+    app.register_blueprint(database_bp)
 

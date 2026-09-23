@@ -4,10 +4,16 @@ Handles database storage, retrieval, and updates for incidents and workflow runs
 """
 
 import json
-from typing import Optional, List, Dict, Any
+import logging
+from typing import Any
+
 from database import get_db
-from models.workflow import Repository, WorkflowRun
 from models.incident import Incident
+from models.workflow import Repository, WorkflowRun
+
+from services.mongo_service import mongo_service
+
+logger = logging.getLogger("sentinelops.incident_service")
 
 
 class IncidentService:
@@ -15,13 +21,20 @@ class IncidentService:
     Manages persistent storage and querying for SentinelOps incidents and workflow runs.
     """
 
-    def persist_workflow_run(self, run_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def persist_workflow_run(self, run_data: dict[str, Any]) -> dict[str, Any] | None:
         """
-        Stores or updates a workflow run and its repository in the database.
+        Stores or updates a workflow run and its repository in the database (MongoDB + SQLite).
         """
         run_id = run_data.get("run_id")
         if not run_id:
             return None
+
+        # Persist to MongoDB Atlas if connected
+        try:
+            if mongo_service.is_connected():
+                mongo_service.upsert_workflow(run_data)
+        except Exception as e:
+            logger.warning("Failed to upsert workflow run %s to MongoDB: %s", run_id, e)
 
         repo_name = run_data.get("repository", "SentinelOps")
         short_repo = repo_name.split("/")[-1]
@@ -64,13 +77,22 @@ class IncidentService:
             db.flush()
             return wf.to_dict()
 
-    def persist_incident(self, incident_data: Dict[str, Any]) -> Dict[str, Any]:
+    def persist_incident(self, incident_data: dict[str, Any]) -> dict[str, Any]:
         """
-        Stores or updates an incident record in the database.
+        Stores or updates an incident record in the database (MongoDB Atlas + SQLite).
         """
         inc_id = incident_data.get("id")
         if not inc_id:
             return incident_data
+
+        # Persist to MongoDB Atlas first if connected
+        try:
+            if mongo_service.is_connected():
+                mongo_service.upsert_incident(incident_data)
+        except Exception as e:
+            logger.warning("Failed to upsert incident %s to MongoDB: %s", inc_id, e)
+
+        source_val = incident_data.get("source", "webhook")
 
         with get_db() as db:
             inc = db.query(Incident).filter_by(id=inc_id).first()
@@ -95,12 +117,15 @@ class IncidentService:
                     remediationBranch=incident_data.get("remediationBranch"),
                     diff=incident_data.get("diff"),
                     agent_reasoning=json.dumps(incident_data["agent_reasoning"]) if isinstance(incident_data.get("agent_reasoning"), (dict, list)) else incident_data.get("agent_reasoning"),
+                    source=source_val,
                 )
                 db.add(inc)
             else:
                 inc.status = incident_data.get("status", inc.status)
                 inc.rootCause = incident_data.get("rootCause", inc.rootCause)
                 inc.confidence = incident_data.get("confidence", inc.confidence)
+                if incident_data.get("source") is not None:
+                    inc.source = incident_data.get("source")
                 if incident_data.get("prNumber") is not None:
                     inc.prNumber = incident_data.get("prNumber")
                 if incident_data.get("prUrl") is not None:
@@ -116,18 +141,50 @@ class IncidentService:
             db.flush()
             return inc.to_dict()
 
-    def get_incident_by_id(self, incident_id: str) -> Optional[Dict[str, Any]]:
+    def get_incident_by_id(self, incident_id: str) -> dict[str, Any] | None:
         """
-        Retrieves a single incident by ID (case-insensitive) from the database.
+        Retrieves a single incident by ID or runId (case-insensitive) from MongoDB Atlas or SQLite.
         """
+        clean_id = str(incident_id).strip()
+        raw_num = clean_id.upper().replace("INC-", "").strip()
+
+        # Try MongoDB Atlas first
+        try:
+            if mongo_service.is_connected():
+                doc = mongo_service.get_incident(clean_id)
+                if not doc and raw_num.isdigit():
+                    # Check by runId in mongo
+                    clean_doc = mongo_service._clean_doc(
+                        mongo_service._db.incidents.find_one({"runId": int(raw_num)})
+                    ) if mongo_service._db is not None else None
+                    if clean_doc:
+                        return clean_doc
+                if doc:
+                    return doc
+        except Exception as e:
+            logger.warning("Failed to fetch incident %s from MongoDB: %s", clean_id, e)
+
+        # Fallback to SQLite
         with get_db() as db:
-            inc = db.query(Incident).filter(Incident.id.ilike(incident_id)).first()
+            inc = db.query(Incident).filter(Incident.id.ilike(clean_id)).first()
+            if not inc and raw_num.isdigit():
+                inc = db.query(Incident).filter(Incident.runId == int(raw_num)).first()
             return inc.to_dict() if inc else None
 
-    def get_all_incidents(self, status: Optional[str] = None, search: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_all_incidents(self, status: str | None = None, search: str | None = None) -> list[dict[str, Any]]:
         """
         Fetches incidents from database with optional status and text filters.
         """
+        # Try MongoDB Atlas if connected
+        try:
+            if mongo_service.is_connected():
+                docs = mongo_service.get_all_incidents(status=status, search=search)
+                if docs and len(docs) > 0:
+                    return docs
+        except Exception as e:
+            logger.warning("Failed to fetch all incidents from MongoDB: %s", e)
+
+        # Fallback to SQLite
         with get_db() as db:
             query = db.query(Incident).order_by(Incident.created_at.desc())
             if status and status.lower() != "all":
@@ -146,10 +203,18 @@ class IncidentService:
                 ]
             return results
 
-    def update_incident_status(self, incident_id: str, new_status: str) -> Optional[Dict[str, Any]]:
+    def update_incident_status(self, incident_id: str, new_status: str) -> dict[str, Any] | None:
         """
-        Updates the status of an existing incident in the database (case-insensitive).
+        Updates the status of an existing incident in MongoDB Atlas and SQLite.
         """
+        # Update MongoDB Atlas
+        try:
+            if mongo_service.is_connected():
+                mongo_service.update_incident_status(incident_id, new_status)
+        except Exception as e:
+            logger.warning("Failed to update incident %s status in MongoDB: %s", incident_id, e)
+
+        # Update SQLite
         with get_db() as db:
             inc = db.query(Incident).filter(Incident.id.ilike(incident_id)).first()
             if not inc:
@@ -160,8 +225,16 @@ class IncidentService:
 
     def delete_incident(self, incident_id: str) -> bool:
         """
-        Deletes an incident by ID (case-insensitive) from the database.
+        Deletes an incident by ID from MongoDB Atlas and SQLite.
         """
+        # Delete from MongoDB Atlas
+        try:
+            if mongo_service.is_connected():
+                mongo_service.delete_incident(incident_id)
+        except Exception as e:
+            logger.warning("Failed to delete incident %s from MongoDB: %s", incident_id, e)
+
+        # Delete from SQLite
         with get_db() as db:
             inc = db.query(Incident).filter(Incident.id.ilike(incident_id)).first()
             if inc:

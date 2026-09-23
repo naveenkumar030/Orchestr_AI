@@ -4,10 +4,10 @@ Tracks provider calls, retries, fallbacks, circuit trips, diagnosis cache effici
 deduplications, and cost/token savings.
 """
 
-import time
 import logging
 import threading
-from typing import Dict, Any, List, Optional
+import time
+from typing import Any
 
 logger = logging.getLogger("sentinel.resilience.telemetry")
 
@@ -135,7 +135,7 @@ class ReliabilityTelemetry:
         if len(self.metrics["recent_events"]) > 50:
             self.metrics["recent_events"].pop()
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         with self._lock:
             total_cache_ops = self.metrics["cache_hits"] + self.metrics["cache_misses"]
             cache_hit_rate = (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface CreatePRModalProps {
   isOpen: boolean;
@@ -6,21 +6,11 @@ interface CreatePRModalProps {
   onSuccess?: (title: string, branch: string) => void;
 }
 
-export default function CreatePRModal({ isOpen, onClose, onSuccess }: CreatePRModalProps) {
+function CreatePRModalContent({ onClose, onSuccess }: Omit<CreatePRModalProps, 'isOpen'>) {
   const [title, setTitle] = useState('');
   const [branch, setBranch] = useState('feature/autonomous-fix');
   const [repo, setRepo] = useState('naveenkumar030/SentinelOps');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setTitle('');
-      setBranch('feature/autonomous-fix');
-      setRepo('naveenkumar030/SentinelOps');
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const handleSubmit = () => {
     if (!title.trim() || !branch.trim()) return;
@@ -36,7 +26,6 @@ export default function CreatePRModal({ isOpen, onClose, onSuccess }: CreatePRMo
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
       <div className="bg-white border border-[#E5DED6] rounded-2xl p-6 sm:p-7 max-w-md w-full shadow-2xl relative overflow-hidden">
-        
         {/* Glow accent */}
         <div className="absolute -right-20 -top-20 w-64 h-64 bg-[#D97757]/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -130,4 +119,9 @@ export default function CreatePRModal({ isOpen, onClose, onSuccess }: CreatePRMo
       </div>
     </div>
   );
+}
+
+export default function CreatePRModal({ isOpen, onClose, onSuccess }: CreatePRModalProps) {
+  if (!isOpen) return null;
+  return <CreatePRModalContent onClose={onClose} onSuccess={onSuccess} />;
 }

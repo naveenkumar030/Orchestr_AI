@@ -4,18 +4,19 @@ Rigorously evaluates and challenges proposed fixes across 10 safety and quality 
 Can approve or reject proposals and provides structured feedback for refinement.
 """
 
+import json
 import os
 import re
-import json
-import urllib.request
 import urllib.error
-from typing import Dict, Any, List, Optional, Tuple
+import urllib.request
+from typing import Any
 
 import config
+
 from services.secret_sanitizer import secret_sanitizer
 
 
-def validate_critic_output(data: Dict[str, Any]) -> Dict[str, Any]:
+def validate_critic_output(data: dict[str, Any]) -> dict[str, Any]:
     """
     Validates and normalizes Critic structured output against Phase 3 schema.
     """
@@ -91,24 +92,24 @@ class CriticAgent:
         pass
 
     @property
-    def openai_api_key(self) -> Optional[str]:
+    def openai_api_key(self) -> str | None:
         return os.environ.get("OPENAI_API_KEY") or config.OPENAI_API_KEY
 
     @property
-    def groq_api_key(self) -> Optional[str]:
+    def groq_api_key(self) -> str | None:
         return os.environ.get("GROQ_API_KEY") or config.GROQ_API_KEY
 
     @property
-    def gemini_api_key(self) -> Optional[str]:
+    def gemini_api_key(self) -> str | None:
         return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or config.GEMINI_API_KEY
 
     def evaluate_fix(
         self,
         failure_log: str,
-        diagnosis: Dict[str, Any],
-        proposed_fix: Dict[str, Any],
-        repo_context: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+        diagnosis: dict[str, Any],
+        proposed_fix: dict[str, Any],
+        repo_context: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """
         Evaluates the proposed fix against the diagnosis and failure logs across 10 checklist dimensions (A-J).
         """
@@ -148,12 +149,12 @@ class CriticAgent:
         heuristic_res = self._heuristic_evaluate(clean_logs, diagnosis, proposed_fix, safe_context)
         return validate_critic_output(heuristic_res)
 
-    def _detect_hard_violations(self, proposed_fix: Dict[str, Any]) -> Tuple[List[str], List[str]]:
+    def _detect_hard_violations(self, proposed_fix: dict[str, Any]) -> tuple[list[str], list[str]]:
         """
         Detects destructive patterns, leaked secrets, or blocked paths in the patch.
         """
-        issues: List[str] = []
-        security_concerns: List[str] = []
+        issues: list[str] = []
+        security_concerns: list[str] = []
 
         patch = proposed_fix.get("patch", "")
         affected_files = proposed_fix.get("affected_files", [])
@@ -189,9 +190,9 @@ class CriticAgent:
     def _build_prompt(
         self,
         logs: str,
-        diag: Dict[str, Any],
-        fix: Dict[str, Any],
-        ctx: Dict[str, str],
+        diag: dict[str, Any],
+        fix: dict[str, Any],
+        ctx: dict[str, str],
     ) -> str:
         ctx_str = "\n".join([f"--- {p} ---\n{c[:1000]}" for p, c in ctx.items()]) if ctx else "None"
         return (
@@ -222,7 +223,7 @@ class CriticAgent:
             f"- requires_human_review: Boolean (true if high risk, breaking change, or manual oversight is advised)\n"
         )
 
-    def _call_groq(self, logs: str, diag: Dict[str, Any], fix: Dict[str, Any], ctx: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    def _call_groq(self, logs: str, diag: dict[str, Any], fix: dict[str, Any], ctx: dict[str, str]) -> dict[str, Any] | None:
         try:
             from groq import Groq
             client = Groq(api_key=self.groq_api_key, timeout=3.0)
@@ -244,7 +245,7 @@ class CriticAgent:
             pass
         return None
 
-    def _call_openai(self, logs: str, diag: Dict[str, Any], fix: Dict[str, Any], ctx: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    def _call_openai(self, logs: str, diag: dict[str, Any], fix: dict[str, Any], ctx: dict[str, str]) -> dict[str, Any] | None:
         try:
             import requests
             prompt = self._build_prompt(logs, diag, fix, ctx)
@@ -266,7 +267,7 @@ class CriticAgent:
             pass
         return None
 
-    def _call_gemini(self, logs: str, diag: Dict[str, Any], fix: Dict[str, Any], ctx: Dict[str, str]) -> Optional[Dict[str, Any]]:
+    def _call_gemini(self, logs: str, diag: dict[str, Any], fix: dict[str, Any], ctx: dict[str, str]) -> dict[str, Any] | None:
         try:
             prompt = self._build_prompt(logs, diag, fix, ctx)
             body = json.dumps({
@@ -293,10 +294,10 @@ class CriticAgent:
     def _heuristic_evaluate(
         self,
         logs: str,
-        diagnosis: Dict[str, Any],
-        proposed_fix: Dict[str, Any],
-        context: Dict[str, str],
-    ) -> Dict[str, Any]:
+        diagnosis: dict[str, Any],
+        proposed_fix: dict[str, Any],
+        context: dict[str, str],
+    ) -> dict[str, Any]:
         """
         Deterministic 10-Point Checklist Verification Engine (Checks A through J).
         """
@@ -306,9 +307,9 @@ class CriticAgent:
         diag_files = diagnosis.get("affected_files", [])
         category = diagnosis.get("category", "unknown")
 
-        issues: List[str] = []
-        recommended_changes: List[str] = []
-        security_concerns: List[str] = []
+        issues: list[str] = []
+        recommended_changes: list[str] = []
+        security_concerns: list[str] = []
 
         # Check A & B: Root cause and evidence validity
         if category == "unknown" or diagnosis.get("confidence", 0) < 0.4:

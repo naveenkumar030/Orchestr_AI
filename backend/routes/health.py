@@ -3,8 +3,8 @@ Health & Overview Blueprint for SentinelOps.
 Handles /api/health and /api/overview routes.
 """
 
-from flask import Blueprint, jsonify
 from data_store import store
+from flask import Blueprint, jsonify
 
 health_bp = Blueprint("health", __name__)
 

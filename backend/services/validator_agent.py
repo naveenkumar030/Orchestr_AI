@@ -4,11 +4,15 @@ Responsible for evaluating whether a generated remediation patch successfully re
 the root-cause failure or introduced new regressions.
 """
 
-import os
-import re
 import json
-from typing import Dict, Any, List, Optional
+import logging
+import os
+from typing import Any
+
 import config
+
+logger = logging.getLogger("sentinelops.validator_agent")
+
 
 
 class ValidatorAgent:
@@ -24,27 +28,27 @@ class ValidatorAgent:
         pass
 
     @property
-    def openai_api_key(self) -> Optional[str]:
+    def openai_api_key(self) -> str | None:
         return os.environ.get("OPENAI_API_KEY") or config.OPENAI_API_KEY
 
     @property
-    def groq_api_key(self) -> Optional[str]:
+    def groq_api_key(self) -> str | None:
         return os.environ.get("GROQ_API_KEY") or config.GROQ_API_KEY
 
     @property
-    def gemini_api_key(self) -> Optional[str]:
+    def gemini_api_key(self) -> str | None:
         return os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY") or config.GEMINI_API_KEY
 
     def evaluate_fix(
         self,
-        incident: Dict[str, Any],
+        incident: dict[str, Any],
         original_failure_logs: str,
         patch_summary: str,
-        changed_files: List[str],
+        changed_files: list[str],
         commit_sha: str,
-        ci_result: Dict[str, Any],
-        new_ci_logs: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        ci_result: dict[str, Any],
+        new_ci_logs: str | None = None,
+    ) -> dict[str, Any]:
         """
         Evaluates the remediation result.
         Returns structured validation decision.
@@ -82,13 +86,13 @@ class ValidatorAgent:
 
     def _heuristic_evaluation(
         self,
-        incident: Dict[str, Any],
+        incident: dict[str, Any],
         orig_logs: str,
         patch_summary: str,
-        changed_files: List[str],
+        changed_files: list[str],
         new_logs: str,
         ci_status: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Deterministic heuristic evaluation comparing old vs new failures.
         """
@@ -135,13 +139,13 @@ class ValidatorAgent:
 
     def _evaluate_with_groq(
         self,
-        incident: Dict[str, Any],
+        incident: dict[str, Any],
         orig_logs: str,
         patch_summary: str,
-        changed_files: List[str],
+        changed_files: list[str],
         new_logs: str,
         ci_status: str,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         try:
             from groq import Groq
             client = Groq(api_key=self.groq_api_key)
@@ -176,19 +180,19 @@ class ValidatorAgent:
                     "new_failure": bool(parsed.get("new_failure", False)),
                     "reason": str(parsed.get("reason", "CI validation failed")),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Groq evaluation failed in validator_agent: %s", e)
         return None
 
     def _evaluate_with_openai(
         self,
-        incident: Dict[str, Any],
+        incident: dict[str, Any],
         orig_logs: str,
         patch_summary: str,
-        changed_files: List[str],
+        changed_files: list[str],
         new_logs: str,
         ci_status: str,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         try:
             import urllib.request
             headers = {
@@ -228,8 +232,8 @@ class ValidatorAgent:
                     "new_failure": bool(parsed.get("new_failure", False)),
                     "reason": str(parsed.get("reason", "CI validation failed")),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("OpenAI evaluation failed in validator_agent: %s", e)
         return None
 
 

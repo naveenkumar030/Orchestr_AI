@@ -155,7 +155,7 @@ export interface Incident {
   runId?: number;
   branch?: string;
   commit?: string;
-  prNumber?: number;
+  prNumber?: number | string;
   prUrl?: string;
   remediationBranch?: string;
   targetFile?: string;
@@ -620,5 +620,76 @@ export interface ReliabilityStatusResponse {
   };
 }
 
+export interface RemediationResult {
+  success: boolean;
+  status: string;
+  incidentId: string;
+  prNumber?: number | string;
+  remediationBranch?: string;
+  patchApplied?: boolean;
+  message?: string;
+  checks?: Record<string, unknown>;
+  data?: any;
+}
 
+export interface IncidentAttempt {
+  attempt_number: number;
+  strategy: string;
+  status: 'PENDING' | 'PASSED' | 'FAILED' | 'REVERTED' | string;
+  created_at: string;
+  branch?: string;
+  pr_number?: number;
+  test_passed?: boolean;
+  error?: string;
+  notes?: string;
+}
 
+export interface IncidentTimelineItem {
+  id: string;
+  timestamp: string;
+  actor: string;
+  event: string;
+  category: 'DETECTION' | 'TRIAGE' | 'FIX' | 'DEPLOY' | 'SAFETY_GATE' | 'VERIFICATION' | string;
+  status: 'SUCCESS' | 'FAILED' | 'IN_PROGRESS' | 'NEUTRAL' | string;
+  details?: string;
+}
+
+export interface ValidationResult {
+  success: boolean;
+  status: 'PASSED' | 'FAILED' | 'RUNNING' | string;
+  testSuite?: string;
+  totalTests?: number;
+  passedTests?: number;
+  failedTests?: number;
+  durationMs?: number;
+  duration_seconds?: number;
+  logs?: string[];
+  reportUrl?: string;
+}
+
+export interface MergeGuardResult {
+  allowed: boolean;
+  checks: Record<string, boolean>;
+  failingChecks?: string[];
+  blockReasons?: string[];
+  incidentId: string;
+  timestamp?: string;
+}
+
+export interface DeploymentGuardResult {
+  allowed: boolean;
+  canDeploy: boolean;
+  healthThresholdMet: boolean;
+  riskScore: number;
+  checks: Record<string, boolean>;
+  blockReasons?: string[];
+  message?: string;
+}
+
+export interface DatabaseSyncResult {
+  success: boolean;
+  message: string;
+  synced?: Record<string, unknown>;
+  stats?: Record<string, unknown>;
+  error?: string;
+}

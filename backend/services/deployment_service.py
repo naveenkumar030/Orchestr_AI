@@ -5,13 +5,13 @@ Handles deployment triggering, tracking, polling, and status inspection across
 GitHub Actions, Render, Docker, or Kubernetes deployment pipelines.
 """
 
-import os
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Any
 
 import config
+
 from services.github_service import github_service
 
 
@@ -24,9 +24,9 @@ class DeploymentService:
 
     def __init__(
         self,
-        provider: Optional[str] = None,
-        timeout_seconds: Optional[int] = None,
-        poll_interval_seconds: Optional[int] = None,
+        provider: str | None = None,
+        timeout_seconds: int | None = None,
+        poll_interval_seconds: int | None = None,
     ):
         self.provider = provider or config.DEPLOYMENT_PROVIDER
         self.timeout_seconds = timeout_seconds or config.DEPLOYMENT_TIMEOUT_SECONDS
@@ -37,11 +37,11 @@ class DeploymentService:
         repo: str,
         commit_sha: str,
         environment: str = "production",
-        pr_number: Optional[int] = None,
-        incident_id: Optional[str] = None,
-        override_status: Optional[str] = None,
-        override_url: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        pr_number: int | None = None,
+        incident_id: str | None = None,
+        override_status: str | None = None,
+        override_url: str | None = None,
+    ) -> dict[str, Any]:
         """
         Triggers or registers a deployment for the specified commit and environment.
         """
@@ -95,7 +95,7 @@ class DeploymentService:
         store.save_deployment(deployment_record)
         return deployment_record
 
-    def get_deployment_status(self, deployment_id: str, repo: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def get_deployment_status(self, deployment_id: str, repo: str | None = None) -> dict[str, Any] | None:
         """
         Retrieves the current status of a deployment from the data store and live provider.
         """
@@ -132,9 +132,9 @@ class DeploymentService:
         deployment_id: str,
         repo: str,
         commit_sha: str,
-        timeout_seconds: Optional[int] = None,
-        override_status: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        timeout_seconds: int | None = None,
+        override_status: str | None = None,
+    ) -> dict[str, Any]:
         """
         Polls deployment until it reaches a terminal status or times out.
         """
@@ -198,7 +198,7 @@ class DeploymentService:
         store.save_deployment(rec)
         return rec
 
-    def cancel_deployment(self, deployment_id: str, repo: Optional[str] = None) -> bool:
+    def cancel_deployment(self, deployment_id: str, repo: str | None = None) -> bool:
         """
         Cancels an in-progress deployment.
         """
@@ -213,7 +213,7 @@ class DeploymentService:
         return True
 
     # ── Helpers ───────────────────────────────────────────────────────────────
-    def _find_github_deployment_runs(self, repo: str, commit_sha: str) -> List[Dict[str, Any]]:
+    def _find_github_deployment_runs(self, repo: str, commit_sha: str) -> list[dict[str, Any]]:
         """Finds deployment workflow runs associated with a commit."""
         ok, res = github_service.list_workflow_runs(repo)
         if not ok or not res:
@@ -230,7 +230,7 @@ class DeploymentService:
 
         return deploy_runs
 
-    def _map_github_status(self, gh_status: Optional[str], gh_conclusion: Optional[str]) -> str:
+    def _map_github_status(self, gh_status: str | None, gh_conclusion: str | None) -> str:
         """Maps GitHub Actions status/conclusion to deployment status."""
         if gh_status in ["queued", "waiting", "requested"]:
             return "QUEUED"

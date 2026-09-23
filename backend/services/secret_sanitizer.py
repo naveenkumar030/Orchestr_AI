@@ -5,7 +5,6 @@ files are leaked to LLMs or stored insecurely.
 """
 
 import re
-from typing import Dict, Any, List, Optional
 
 # Regex patterns for high-entropy secrets and known provider keys
 SECRET_PATTERNS = [
@@ -73,7 +72,7 @@ class SecretSanitizer:
     """
 
     @staticmethod
-    def sanitize_text(text: Optional[str]) -> str:
+    def sanitize_text(text: str | None) -> str:
         """
         Replaces all detected secrets in the input text with descriptive redaction tags.
         """
@@ -101,11 +100,11 @@ class SecretSanitizer:
         return False
 
     @classmethod
-    def sanitize_repo_context(cls, files_map: Dict[str, str]) -> Dict[str, str]:
+    def sanitize_repo_context(cls, files_map: dict[str, str]) -> dict[str, str]:
         """
         Filters out sensitive files and redacts secrets inside allowable files.
         """
-        safe_context: Dict[str, str] = {}
+        safe_context: dict[str, str] = {}
         for path, content in files_map.items():
             if cls.is_sensitive_file(path):
                 continue

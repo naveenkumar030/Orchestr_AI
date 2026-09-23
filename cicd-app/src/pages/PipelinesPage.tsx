@@ -5,7 +5,7 @@ import type { Pipeline } from '../types';
 
 export default function PipelinesPage() {
   const [pipelineList, setPipelineList] = useState<Pipeline[]>(initialPipelines);
-  const [selectedPipeline, setSelectedPipeline] = useState<Pipeline>(initialPipelines[0]);
+  const [selectedPipeline, setSelectedPipeline] = useState<Pipeline | null>(initialPipelines[0] || null);
   const [filter, setFilter] = useState<'all' | 'running' | 'success' | 'failed'>('all');
   const [isTriggering, setIsTriggering] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
@@ -19,9 +19,13 @@ export default function PipelinesPage() {
     const fetchLatest = () => {
       api.getPipelines().then((data) => {
         if (!mounted) return;
-        if (data && data.length > 0) {
+        if (data) {
           setPipelineList(data);
-          setSelectedPipeline((prev) => data.find((p) => p.id === prev.id) || data[0]);
+          if (data.length > 0) {
+            setSelectedPipeline((prev) => (prev ? (data.find((p) => p.id === prev.id) || data[0]) : data[0]));
+          } else {
+            setSelectedPipeline(null);
+          }
         }
       });
     };
@@ -96,7 +100,7 @@ export default function PipelinesPage() {
       setPipelineList((prev) =>
         prev.map((p) => (p.id === retried.id ? retried : p))
       );
-      if (selectedPipeline.id === retried.id) {
+      if (selectedPipeline && selectedPipeline.id === retried.id) {
         setSelectedPipeline(retried);
       }
       setNotification(`Pipeline ${pipelineId} retry requested successfully.`);
@@ -162,12 +166,14 @@ export default function PipelinesPage() {
             <span className="material-symbols-outlined text-[#D97757] text-lg">account_tree</span>
           </div>
           <div className="mt-space-md flex items-baseline gap-space-xs">
-            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">148</span>
-            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">+12.4% vs peak</span>
+            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">{pipelineList.length}</span>
+            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">
+              {pipelineList.length > 0 ? '+100% live' : 'No runs'}
+            </span>
           </div>
           <div className="mt-space-sm flex items-center justify-between font-label-code-sm text-xs text-[#6B625B]">
-            <span>141 Nominal</span>
-            <span className="text-[#D97757] font-semibold">7 Interventions</span>
+            <span>{pipelineList.filter(p => p.status === 'success').length} Passed</span>
+            <span className="text-[#D97757] font-semibold">{pipelineList.filter(p => p.status === 'failed').length} Failed</span>
           </div>
         </div>
 
@@ -180,11 +186,16 @@ export default function PipelinesPage() {
             <span className="material-symbols-outlined text-[#D97757] text-lg">developer_board</span>
           </div>
           <div className="mt-space-md flex items-baseline gap-space-xs">
-            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">64 <span className="text-[#6B625B] text-lg font-normal">/ 96</span></span>
-            <span className="font-label-code-sm text-xs text-[#6B625B]">Allocated</span>
+            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">
+              {pipelineList.filter(p => p.status === 'running').length} <span className="text-[#6B625B] text-lg font-normal">/ 16</span>
+            </span>
+            <span className="font-label-code-sm text-xs text-[#6B625B]">Active Runners</span>
           </div>
           <div className="mt-space-sm w-full bg-[#F2EDE6] rounded-full h-1.5 overflow-hidden">
-            <div className="bg-[#D97757] h-full rounded-full" style={{ width: '66.6%' }}></div>
+            <div
+              className="bg-[#D97757] h-full rounded-full"
+              style={{ width: `${Math.min(100, (pipelineList.filter(p => p.status === 'running').length / 16) * 100)}%` }}
+            ></div>
           </div>
         </div>
 
@@ -200,12 +211,14 @@ export default function PipelinesPage() {
             </span>
           </div>
           <div className="mt-space-md flex items-baseline gap-space-xs">
-            <span className="font-headline-xl text-3xl font-bold text-[#D97757]">32</span>
-            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">97.0% Success</span>
+            <span className="font-headline-xl text-3xl font-bold text-[#D97757]">
+              {pipelineList.filter(p => p.aiFixed).length}
+            </span>
+            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">Autonomous Fixes</span>
           </div>
           <div className="mt-space-sm flex items-center justify-between font-label-code-sm text-xs text-[#6B625B]">
-            <span>31 Auto-remediated</span>
-            <span className="text-[#C34A4A] font-medium">1 Escalated</span>
+            <span>{pipelineList.filter(p => p.aiFixed).length} Auto-remediated</span>
+            <span className="text-[#5B7C4B] font-medium">Ready</span>
           </div>
         </div>
 
@@ -218,19 +231,52 @@ export default function PipelinesPage() {
             <span className="material-symbols-outlined text-[#D97757] text-lg">timer</span>
           </div>
           <div className="mt-space-md flex items-baseline gap-space-xs">
-            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">2m 14s</span>
-            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">-38s faster</span>
+            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">
+              {pipelineList.length > 0 ? (selectedPipeline?.duration || '42s') : '0s'}
+            </span>
+            <span className="font-label-code-sm text-xs text-[#99462A] font-semibold">
+              {pipelineList.length > 0 ? 'Optimal' : 'Idle'}
+            </span>
           </div>
           <div className="mt-space-sm flex items-center justify-between font-label-code-sm text-xs text-[#6B625B]">
-            <span>Cache Hit 94.2%</span>
+            <span>Cache Nominal</span>
             <span>Target: &lt;3m</span>
           </div>
         </div>
       </div>
 
       {/* Interactive DAG Canvas */}
-      <div className="relative rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card overflow-hidden flex flex-col gap-space-md">
-        <div className="flex flex-col md:flex-row md:items-center justify-between pb-space-sm gap-space-sm border-b border-[#E5DED6]">
+      {!selectedPipeline || pipelineList.length === 0 ? (
+        <div className="relative rounded-2xl bg-white border border-[#E5DED6] p-space-xl shadow-card flex flex-col items-center justify-center text-center py-16">
+          <div className="h-16 w-16 rounded-2xl bg-[#F9ECE7] border border-[#D97757]/20 flex items-center justify-center mb-4 text-[#D97757]">
+            <span className="material-symbols-outlined text-3xl">account_tree</span>
+          </div>
+          <h3 className="font-headline-sm text-lg font-bold text-[#2D2926]">No Active CI/CD Pipelines</h3>
+          <p className="font-body-sm text-sm text-[#6B625B] max-w-md mt-1 mb-6">
+            The execution DAG canvas is idle. Trigger a new build workflow, dispatch a GitHub Action, or simulate an incident to observe autonomous pipeline execution.
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleTrigger('api-gateway', 'main')}
+              disabled={isTriggering}
+              className="btn btn-primary text-xs px-4 py-2 font-semibold shadow-sm flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-sm">play_arrow</span>
+              {isTriggering ? 'Triggering...' : 'Trigger Pipeline (main)'}
+            </button>
+            <button
+              onClick={handleDispatchGitHub}
+              disabled={isTriggering}
+              className="btn btn-secondary text-xs px-4 py-2 font-semibold flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-sm">bolt</span>
+              {isTriggering ? 'Dispatching...' : 'Dispatch GitHub Action'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="relative rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card overflow-hidden flex flex-col gap-space-md">
+          <div className="flex flex-col md:flex-row md:items-center justify-between pb-space-sm gap-space-sm border-b border-[#E5DED6]">
           <div className="flex items-center gap-space-md flex-wrap">
             <div className="flex items-center gap-space-xs">
               <span className="material-symbols-outlined text-[#D97757] text-lg">terminal</span>
@@ -402,6 +448,7 @@ export default function PipelinesPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Pipelines List Section */}
       <div className="rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card space-y-space-md">
@@ -444,16 +491,27 @@ export default function PipelinesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E5DED6]">
-              {filteredPipelines.map((pipeline) => {
-                const isSelected = selectedPipeline.id === pipeline.id;
-                return (
-                  <tr
-                    key={pipeline.id}
-                    onClick={() => setSelectedPipeline(pipeline)}
-                    className={`cursor-pointer transition-colors ${
-                      isSelected ? 'bg-[#F9ECE7]/50' : 'hover:bg-[#FAF7F3]'
-                    }`}
-                  >
+              {filteredPipelines.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-[#6B625B]">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-3xl text-[#A89F99]">folder_open</span>
+                      <p className="font-semibold text-sm text-[#2D2926]">No CI/CD pipelines recorded</p>
+                      <p className="text-xs text-[#6B625B]">Trigger a new pipeline run above or simulate workflow events to populate telemetry.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredPipelines.map((pipeline) => {
+                  const isSelected = selectedPipeline?.id === pipeline.id;
+                  return (
+                    <tr
+                      key={pipeline.id}
+                      onClick={() => setSelectedPipeline(pipeline)}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected ? 'bg-[#F9ECE7]/50' : 'hover:bg-[#FAF7F3]'
+                      }`}
+                    >
                     <td className="py-4 font-medium text-[#2D2926]">
                       <div className="flex items-center gap-2">
                         <span className="material-symbols-outlined text-lg text-[#D97757]">
@@ -535,8 +593,9 @@ export default function PipelinesPage() {
                       </div>
                     </td>
                   </tr>
-                );
-              })}
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

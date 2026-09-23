@@ -6,13 +6,20 @@ _backend_dir = os.path.dirname(os.path.abspath(__file__))
 if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
-import time
 import json
 import mimetypes
-from flask import Flask, jsonify, request, send_from_directory, Response, stream_with_context
-from flask_cors import CORS
-import config
+import time
+
 from data_store import store
+from flask import (
+    Flask,
+    Response,
+    jsonify,
+    request,
+    send_from_directory,
+    stream_with_context,
+)
+from flask_cors import CORS
 from routes import register_routes
 
 # Ensure proper MIME types on Windows platforms
@@ -27,8 +34,16 @@ FRONTEND_DIST_DIR = os.path.abspath(
 )
 
 app = Flask(__name__)
-# Enable CORS for frontend Vite development server and all origins
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+# Enable CORS for frontend Vite development server and configured deploy origins
+from config import Config as cfg
+
+app.config["SECRET_KEY"] = cfg.SECRET_KEY
+app.config["MAX_CONTENT_LENGTH"] = cfg.MAX_CONTENT_LENGTH
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "False").lower() == "true"
+
+CORS(app, resources={r"/api/*": {"origins": cfg.ALLOWED_ORIGINS, "supports_credentials": True}})
 
 # Register Blueprint route modules
 # routes/health.py    → GET  /api/health, GET  /api/overview
@@ -599,8 +614,9 @@ def create_incident_draft_pr(incident_id):
                 suggested_fix=f"Draft PR #{res.get('pr_number')} created: {fix.get('description')}",
                 run_id=run_id,
             )
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error("Failed to send Slack notification: %s", e, exc_info=True)
 
     return jsonify(res), (200 if res.get("status") == "success" else 400)
 
@@ -611,8 +627,8 @@ def get_incident_actions(incident_id):
     Retrieves full Phase 5 action state: Slack notifications, Draft PR records, and audit history.
     """
     from services.github_action_service import github_action_service
-    from services.slack_notification_service import slack_notification_service
     from services.human_approval_service import human_approval_service
+    from services.slack_notification_service import slack_notification_service
 
     inc = store.get_incident(incident_id) or {}
     pr_action = github_action_service.get_action_record(incident_id)
@@ -706,13 +722,16 @@ def stream_logs():
                         yield f"event: log\ndata: {json.dumps(entry)}\n\n"
             time.sleep(1.0)
 
+    req_origin = request.headers.get("Origin")
+    allow_origin = req_origin if req_origin in cfg.ALLOWED_ORIGINS else (cfg.ALLOWED_ORIGINS[0] if cfg.ALLOWED_ORIGINS else "http://localhost:5173")
     return Response(
         stream_with_context(generate()),
         mimetype="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no",
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": allow_origin,
+            "Access-Control-Allow-Credentials": "true",
         },
     )
 
@@ -772,4 +791,5 @@ if __name__ == "__main__":
     print(f"  Web UI: http://127.0.0.1:{port}")
     print(f"  API:    http://127.0.0.1:{port}/api/health")
     print("=" * 68)
-    app.run(host=host, port=port, debug=True)
+    debug_mode = os.environ.get("FLASK_DEBUG", "False").lower() == "true"
+    app.run(host=host, port=port, debug=debug_mode)

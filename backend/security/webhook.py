@@ -3,9 +3,11 @@ Webhook security and signature verification for SentinelOps.
 Validates HMAC SHA-256 signatures for incoming GitHub webhooks.
 """
 
-import os
-import hmac
 import hashlib
+import hmac
+import os
+
+from config import Config
 
 
 def verify_github_signature(payload_bytes: bytes, signature_header: str, secret: str = None) -> tuple[bool, str]:
@@ -20,9 +22,12 @@ def verify_github_signature(payload_bytes: bytes, signature_header: str, secret:
     if secret is None:
         secret = os.environ.get("GITHUB_WEBHOOK_SECRET")
 
-    # In local development mode without a secret configured, allow permissive processing
+    # In local development mode without a secret configured, allow permissive processing only if explicitly enabled
     if not secret:
-        return True, "No secret configured (local dev mode)"
+        if getattr(Config, "WEBHOOK_PERMISSIVE_DEV", False):
+            return True, "No secret configured (permissive dev mode)"
+        else:
+            return False, "Missing GITHUB_WEBHOOK_SECRET in configuration"
 
     if not signature_header:
         return False, "Missing X-Hub-Signature-256 header"

@@ -22,19 +22,32 @@ Plus:
 
 import os
 import sys
+
 import pytest
-from unittest.mock import MagicMock, patch
 
 # Ensure backend root is in sys.path
 CURRENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
+from services.agents.critic_agent import (
+    CriticAgent,
+    critic_agent,
+    validate_critic_output,
+)
+from services.agents.diagnoser_agent import (
+    diagnoser_agent,
+    validate_diagnoser_output,
+)
+from services.agents.fix_suggester_agent import (
+    fix_suggester_agent,
+    validate_fix_suggester_output,
+)
+from services.agents.multi_agent_orchestrator import (
+    MultiAgentOrchestrator,
+    multi_agent_orchestrator,
+)
 from services.secret_sanitizer import secret_sanitizer
-from services.agents.diagnoser_agent import diagnoser_agent, DiagnoserAgent, validate_diagnoser_output
-from services.agents.fix_suggester_agent import fix_suggester_agent, FixSuggesterAgent, validate_fix_suggester_output
-from services.agents.critic_agent import critic_agent, CriticAgent, validate_critic_output
-from services.agents.multi_agent_orchestrator import multi_agent_orchestrator, MultiAgentOrchestrator
 
 
 @pytest.fixture(autouse=True)

@@ -8,9 +8,10 @@ Pipeline:
 """
 
 import os
+
+from data_store import store
 from flask import Blueprint, jsonify, request
 from security.webhook import verify_github_signature
-from data_store import store
 from services.resilience.event_deduplication import event_deduplicator
 
 webhooks_bp = Blueprint("webhooks", __name__)

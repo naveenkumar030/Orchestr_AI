@@ -8,7 +8,7 @@ export const ReliabilitySummaryCard: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
-  const fetchStatus = async () => {
+  const fetchStatus = React.useCallback(async () => {
     try {
       const res = await api.getReliabilityStatus();
       setData(res);
@@ -17,13 +17,24 @@ export const ReliabilitySummaryCard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 15000);
-    return () => clearInterval(interval);
-  }, []);
+    let isMounted = true;
+    const run = async () => {
+      if (isMounted) {
+        await fetchStatus();
+      }
+    };
+    void run();
+    const interval = setInterval(() => {
+      void run();
+    }, 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [fetchStatus]);
 
   const showToast = (msg: string) => {
     setNotification(msg);

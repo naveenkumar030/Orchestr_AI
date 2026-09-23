@@ -4,10 +4,10 @@ Prevents duplicate webhook events, redundant multi-agent pipeline executions,
 duplicate Slack messages, and duplicate Draft PR creations.
 """
 
-import time
 import logging
 import threading
-from typing import Dict, Any, Optional, Set
+import time
+
 from services.resilience.reliability_telemetry import reliability_telemetry
 
 logger = logging.getLogger("sentinel.resilience.deduplication")
@@ -20,9 +20,9 @@ class EventDeduplicator:
 
     def __init__(self, default_ttl_seconds: int = 600):
         self._lock = threading.Lock()
-        self._key_locks: Dict[str, threading.Lock] = {}
-        self._processed_events: Dict[str, float] = {}  # key -> expiry_time
-        self._active_runs: Set[str] = set()
+        self._key_locks: dict[str, threading.Lock] = {}
+        self._processed_events: dict[str, float] = {}  # key -> expiry_time
+        self._active_runs: set[str] = set()
         self.default_ttl = default_ttl_seconds
 
     def _cleanup_expired(self, now: float):
@@ -38,7 +38,7 @@ class EventDeduplicator:
         action: str = "completed",
     ) -> str:
         """Constructs canonical idempotency key for webhook events."""
-        return f"webhook:{repository.lower()}:{str(run_id)}:{event_type.lower()}:{action.lower()}"
+        return f"webhook:{repository.lower()}:{run_id!s}:{event_type.lower()}:{action.lower()}"
 
     def build_notification_key(self, incident_id: str, channel: str = "slack", notification_type: str = "alert") -> str:
         """Constructs canonical key for alert notifications."""
@@ -62,7 +62,7 @@ class EventDeduplicator:
                 return True
             return False
 
-    def mark_processed(self, key: str, ttl_seconds: Optional[int] = None) -> None:
+    def mark_processed(self, key: str, ttl_seconds: int | None = None) -> None:
         """Marks a key as processed with an expiration TTL."""
         if not key:
             return

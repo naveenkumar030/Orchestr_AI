@@ -4,15 +4,15 @@ Executes safe, automated rollbacks when post-deployment health checks fail.
 Enforces strict single-attempt boundaries to prevent cascading rollback loops.
 """
 
-import os
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any
 
 import config
-from services.github_service import github_service
+
 from services.deployment_service import deployment_service
+from services.github_service import github_service
 from services.health_check_service import health_check_service
 
 
@@ -24,7 +24,7 @@ class RollbackService:
 
     SERVICE_NAME = "RollbackService"
 
-    def __init__(self, max_attempts: Optional[int] = None):
+    def __init__(self, max_attempts: int | None = None):
         self.max_attempts = max_attempts or config.MAX_ROLLBACK_ATTEMPTS
 
     def rollback(
@@ -32,12 +32,12 @@ class RollbackService:
         incident_id: str,
         repo: str,
         current_commit: str,
-        previous_known_good_commit: Optional[str] = None,
+        previous_known_good_commit: str | None = None,
         reason: str = "Post-deployment health check failed",
         environment: str = "production",
-        override_success: Optional[bool] = None,
-        override_health_status: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        override_success: bool | None = None,
+        override_health_status: str | None = None,
+    ) -> dict[str, Any]:
         """
         Executes an automated rollback to the previous known-good commit/deployment.
         """

@@ -4,11 +4,12 @@ Determines whether a remediation branch actually passes CI by inspecting
 and polling real GitHub Actions workflow runs via the GitHub REST API.
 """
 
-import os
 import time
 from datetime import datetime
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
+
 import config
+
 from services.github_service import github_service
 
 
@@ -20,8 +21,8 @@ class ValidationService:
 
     def __init__(
         self,
-        timeout_seconds: Optional[int] = None,
-        poll_interval_seconds: Optional[int] = None,
+        timeout_seconds: int | None = None,
+        poll_interval_seconds: int | None = None,
     ):
         self.default_timeout = timeout_seconds or config.CI_VALIDATION_TIMEOUT_SECONDS
         self.default_poll_interval = poll_interval_seconds or config.CI_POLL_INTERVAL_SECONDS
@@ -30,10 +31,10 @@ class ValidationService:
         self,
         repo: str,
         branch: str,
-        commit_sha: Optional[str] = None,
-        timeout_seconds: Optional[int] = None,
-        poll_interval_seconds: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        commit_sha: str | None = None,
+        timeout_seconds: int | None = None,
+        poll_interval_seconds: int | None = None,
+    ) -> dict[str, Any]:
         """
         Polls GitHub Actions workflow runs for the specified branch until completion or timeout.
         Retrieves job-level breakdown and logs on failure.
@@ -57,7 +58,7 @@ class ValidationService:
                 "simulated": True,
             }
 
-        run_id: Optional[int] = None
+        run_id: int | None = None
         workflow_name = "CI/CD Workflow"
         current_commit = commit_sha
 
@@ -109,7 +110,7 @@ class ValidationService:
             "simulated": False,
         }
 
-    def validate_workflow_run(self, repo: str, run_id: int) -> Dict[str, Any]:
+    def validate_workflow_run(self, repo: str, run_id: int) -> dict[str, Any]:
         """
         Inspects a specific workflow run by ID and produces a structured validation result.
         """
@@ -160,18 +161,18 @@ class ValidationService:
         branch: str,
         run_id: int,
         workflow_name: str,
-        commit_sha: Optional[str],
-        conclusion: Optional[str],
-        start_time: Optional[float] = None,
-        explicit_duration: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        commit_sha: str | None,
+        conclusion: str | None,
+        start_time: float | None = None,
+        explicit_duration: int | None = None,
+    ) -> dict[str, Any]:
         """Constructs normalized validation dictionary."""
         duration = explicit_duration if explicit_duration is not None else (
             int(time.time() - start_time) if start_time else 30
         )
 
-        failed_jobs: List[str] = []
-        logs: Optional[str] = None
+        failed_jobs: list[str] = []
+        logs: str | None = None
 
         if conclusion == "success":
             status = "SUCCESS"

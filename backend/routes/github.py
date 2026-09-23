@@ -8,8 +8,9 @@ Routes:
 """
 
 import os
-from flask import Blueprint, jsonify, request
+
 from data_store import store
+from flask import Blueprint, jsonify, request
 
 github_bp = Blueprint("github", __name__)
 
@@ -17,8 +18,8 @@ github_bp = Blueprint("github", __name__)
 @github_bp.route("/api/github/status", methods=["GET"])
 def github_status():
     """Returns current status of GitHub integration, secret config, relay status, ngrok status, and event history."""
-    from services.webhook_relay import webhook_relay_service
     from services.ngrok_service import ngrok_service
+    from services.webhook_relay import webhook_relay_service
     has_secret = bool(os.environ.get("GITHUB_WEBHOOK_SECRET"))
     has_token = bool(os.environ.get("GITHUB_TOKEN"))
     repo = os.environ.get("GITHUB_REPO", "naveenkumar030/SentinelOps")
@@ -359,8 +360,8 @@ def github_connect():
 @github_bp.route("/api/github/verify", methods=["POST"])
 def github_verify():
     """Verifies access and existence of a repository via GitHub REST API."""
-    import urllib.request
     import json
+    import urllib.request
     data = request.get_json(force=True, silent=True) or {}
     repo = data.get("repository") or data.get("repo") or store.repo
     token = data.get("token") or os.environ.get("GITHUB_TOKEN")
@@ -393,7 +394,7 @@ def github_verify():
                 "description": body.get("description") or "GitHub repository linked to SentinelOps",
                 "message": f"Repository '{repo_clean}' verified live on GitHub.",
             }), 200
-    except Exception as e:
+    except Exception:
         return jsonify({
             "success": True,
             "reachable": False,

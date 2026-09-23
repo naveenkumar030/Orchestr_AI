@@ -180,9 +180,9 @@ export default function OverviewPage() {
   const fetchOverviewData = useCallback(async () => {
     try {
       const overview = await api.getOverview();
-      if (overview.kpiMetrics?.length) setKpiMetricsList(overview.kpiMetrics);
-      if (overview.incidents?.length) setIncidentList(overview.incidents);
-      if (overview.remediationSteps?.length) setTimelineSteps(overview.remediationSteps);
+      if (overview.kpiMetrics) setKpiMetricsList(overview.kpiMetrics);
+      if (overview.incidents !== undefined) setIncidentList(overview.incidents);
+      if (overview.remediationSteps !== undefined) setTimelineSteps(overview.remediationSteps);
       if (overview.stats) {
         setBackendStats(overview.stats);
       }
@@ -193,11 +193,20 @@ export default function OverviewPage() {
 
   // Poll overview data every 4 seconds for live telemetry
   useEffect(() => {
-    fetchOverviewData();
+    let isMounted = true;
+    const run = async () => {
+      if (isMounted) {
+        await fetchOverviewData();
+      }
+    };
+    void run();
     const pollInterval = setInterval(() => {
-      fetchOverviewData();
+      void run();
     }, 4000);
-    return () => clearInterval(pollInterval);
+    return () => {
+      isMounted = false;
+      clearInterval(pollInterval);
+    };
   }, [fetchOverviewData]);
 
   // Live rotating agent thought trace
@@ -314,7 +323,7 @@ export default function OverviewPage() {
 
     try {
       const res = await api.remediateIncident(inc.id);
-      const prNum = res.prNumber || 181;
+      const prNum = typeof res.prNumber === 'number' ? res.prNumber : 181;
       setIncidentList((prev) =>
         prev.map((i) =>
           i.id === inc.id

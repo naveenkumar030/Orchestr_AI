@@ -5,33 +5,24 @@ Notification and Safe Action Layer for SentinelOps.
 
 import os
 import sys
-import pytest
+from typing import Any
 from unittest.mock import MagicMock, patch
-from typing import Dict, Any
 
 CURRENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
-from services.slack_notification_service import (
-    SlackNotificationService,
-    NotificationStatus,
-    slack_notification_service,
-)
 from services.github_action_service import (
     GitHubActionService,
-    ActionStatus,
-    SafeActionRecord,
-    github_action_service,
 )
-from services.confidence_gate import ConfidenceGate, confidence_gate
-from services.human_approval_service import HumanApprovalService, human_approval_service
-from services.risk_assessor import RiskAssessor, risk_assessor
-from services.sentinel_guard import sentinel_guard
+from services.slack_notification_service import (
+    NotificationStatus,
+    SlackNotificationService,
+)
 
 
 # Helpers to generate realistic reasoning artifacts for Phase 5 tests
-def sample_diagnosis(confidence: float = 0.95, category: str = "dependency_error") -> Dict[str, Any]:
+def sample_diagnosis(confidence: float = 0.95, category: str = "dependency_error") -> dict[str, Any]:
     return {
         "category": category,
         "root_cause": "Conflicting npm peer dependency tree for @stripe/stripe-node",
@@ -43,7 +34,7 @@ def sample_diagnosis(confidence: float = 0.95, category: str = "dependency_error
     }
 
 
-def sample_fix(confidence: float = 0.94, patch: str = None, affected_files=None) -> Dict[str, Any]:
+def sample_fix(confidence: float = 0.94, patch: str = None, affected_files=None) -> dict[str, Any]:
     files = affected_files or ["package.json"]
     diff = patch or (
         "--- a/package.json\n"
@@ -62,7 +53,7 @@ def sample_fix(confidence: float = 0.94, patch: str = None, affected_files=None)
     }
 
 
-def sample_critic(score: float = 0.93, approved: bool = True, security_concerns=None) -> Dict[str, Any]:
+def sample_critic(score: float = 0.93, approved: bool = True, security_concerns=None) -> dict[str, Any]:
     return {
         "approved": approved,
         "score": score,
@@ -74,7 +65,7 @@ def sample_critic(score: float = 0.93, approved: bool = True, security_concerns=
     }
 
 
-def sample_reasoning_result(status: str = "approved", approval_status: str = "auto_approved", risk: str = "low") -> Dict[str, Any]:
+def sample_reasoning_result(status: str = "approved", approval_status: str = "auto_approved", risk: str = "low") -> dict[str, Any]:
     diag = sample_diagnosis()
     fix = sample_fix()
     critic = sample_critic()

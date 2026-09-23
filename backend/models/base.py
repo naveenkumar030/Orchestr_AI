@@ -3,12 +3,10 @@ Base model utilities, mixins, and serialization helpers for SentinelOps models.
 """
 
 from datetime import datetime
-from database import Base
 
 
 class TimestampMixin:
     """Provides created_at and updated_at timestamps."""
-    pass
 
 
 class SerializerMixin:

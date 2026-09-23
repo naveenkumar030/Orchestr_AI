@@ -18,8 +18,9 @@ if os.path.exists(_env_path):
                     _val = _v.strip().strip("'\"")
                     if _val:
                         os.environ[_k.strip()] = _val
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Failed to load .env file: %s", e)
 
 # ── GitHub Integration ────────────────────────────────────────────────────────
 GITHUB_WEBHOOK_SECRET: str | None = os.environ.get("GITHUB_WEBHOOK_SECRET")
@@ -37,14 +38,27 @@ SLACK_WEBHOOK_URL: str | None = os.environ.get("SLACK_WEBHOOK_URL")
 
 # ── Database ──────────────────────────────────────────────────────────────────
 DATABASE_URL: str | None = os.environ.get("DATABASE_URL")
+MONGODB_URI: str | None = os.environ.get("MONGODB_URI") or os.environ.get("MONGO_URI")
+MONGODB_DB: str = os.environ.get("MONGODB_DB", "sentinelops")
 
-# ── Server ────────────────────────────────────────────────────────────────────
-HOST: str = os.environ.get("HOST", "0.0.0.0")
+# ── Server & Security ─────────────────────────────────────────────────────────
+HOST: str = os.environ.get("HOST", "127.0.0.1")
 PORT: int = int(os.environ.get("PORT", 5000))
+SECRET_KEY: str = os.environ.get("FLASK_SECRET_KEY") or os.environ.get("SECRET_KEY", "sentinelops-dev-secret-key-change-in-production-9f2a")
+MAX_CONTENT_LENGTH: int = int(os.environ.get("MAX_CONTENT_LENGTH", 16 * 1024 * 1024))  # 16 MB request limit
+
+# ── CORS Allowed Origins ──────────────────────────────────────────────────────
+# Comma-separated list of allowed frontend origins.
+# Defaults to localhost dev URLs only. Set ALLOWED_ORIGINS in .env for production.
+_DEFAULT_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5000,http://127.0.0.1:5000"
+ALLOWED_ORIGINS: list[str] = [
+    o.strip() for o in os.environ.get("ALLOWED_ORIGINS", _DEFAULT_ORIGINS).split(",")
+    if o.strip() and o.strip() != "*"
+]
 
 # ── Feature Flags ─────────────────────────────────────────────────────────────
 # Set to "true" to allow webhook processing without a configured secret (dev only)
-WEBHOOK_PERMISSIVE_DEV: bool = not bool(GITHUB_WEBHOOK_SECRET)
+WEBHOOK_PERMISSIVE_DEV: bool = os.environ.get("WEBHOOK_PERMISSIVE_DEV", "False").lower() == "true"
 
 # ── SentinelGuard Policies ────────────────────────────────────────────────────
 PROTECTED_BRANCHES: str = os.environ.get("PROTECTED_BRANCHES", "main,master,production,prod")
@@ -95,7 +109,6 @@ SENTINEL_AGENT_TIMEOUT_SECONDS: int = int(os.environ.get("SENTINEL_AGENT_TIMEOUT
 # Config class alias for class-based attribute access
 class Config:
     """Config container providing class-level attribute access."""
-    pass
 
 for _attr, _val in list(globals().items()):
     if not _attr.startswith("_") and _attr != "Config":

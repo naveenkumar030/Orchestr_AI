@@ -4,7 +4,7 @@ Evaluates whether a pipeline incident is genuinely and safely resolved.
 Enforces a strict 5-condition policy preventing premature resolution.
 """
 
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 
 
 class DeploymentGuard:
@@ -22,8 +22,8 @@ class DeploymentGuard:
         pr_merged: Any,
         deployment_status: str,
         health_check_status: str,
-        rollback_status: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        rollback_status: str | None = None,
+    ) -> dict[str, Any]:
         """
         Evaluates the 5-point deployment verification policy:
         1. CI_SUCCESS
@@ -49,7 +49,7 @@ class DeploymentGuard:
             "HEALTH_CHECK_HEALTHY": health_ok,
         }
 
-        reasons: List[str] = []
+        reasons: list[str] = []
         if not ci_ok:
             reasons.append(f"CI validation is not green (Status: {ci_status})")
         if not mg_ok:
@@ -106,8 +106,8 @@ class DeploymentGuard:
         pr_status: Any,
         deployment_status: str,
         health_status: str,
-        rollback_status: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        rollback_status: str | None = None,
+    ) -> dict[str, Any]:
         """
         Backwards-compatible wrapper calling can_declare_resolved.
         """
