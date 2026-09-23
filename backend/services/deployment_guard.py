@@ -37,7 +37,10 @@ class DeploymentGuard:
             merge_guard_status is True
             or str(merge_guard_status).upper() in ["APPROVED", "ALLOW", "AUTO_MERGE", "TRUE", "PASSED"]
         )
-        pr_ok = pr_merged is True or str(pr_merged).lower() in ["true", "merged", "closed"]
+        if isinstance(pr_merged, dict):
+            pr_ok = pr_merged.get("merged") is True or str(pr_merged.get("state", "")).lower() == "merged"
+        else:
+            pr_ok = pr_merged is True or str(pr_merged).strip().lower() in ["true", "merged"]
         dep_ok = str(deployment_status).upper() in ["SUCCESS", "DEPLOYED"]
         health_ok = str(health_check_status).upper() in ["HEALTHY", "PASS"]
 
@@ -111,7 +114,10 @@ class DeploymentGuard:
         """
         Backwards-compatible wrapper calling can_declare_resolved.
         """
-        pr_merged = pr_status is True or str(pr_status).lower() in ["merged", "closed", "true"]
+        if isinstance(pr_status, dict):
+            pr_merged = pr_status.get("merged") is True or str(pr_status.get("state", "")).lower() == "merged"
+        else:
+            pr_merged = pr_status is True or str(pr_status).strip().lower() in ["merged", "true"]
         return self.can_declare_resolved(
             ci_status=ci_status,
             merge_guard_status=merge_guard_allowed,

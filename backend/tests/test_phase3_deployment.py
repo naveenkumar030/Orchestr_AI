@@ -327,6 +327,25 @@ def test_phase3_deployment_guard_all_5_policies():
     assert res_pr_fail["allowed"] is False
     assert res_pr_fail["policy_checks"]["PR_MERGED"] is False
 
+    # PR closed without being merged must NOT be accepted
+    res_pr_closed = dg.can_declare_resolved(ci_status="SUCCESS", merge_guard_status="APPROVED", pr_merged="closed", deployment_status="SUCCESS", health_check_status="HEALTHY")
+    assert res_pr_closed["allowed"] is False
+    assert res_pr_closed["policy_checks"]["PR_MERGED"] is False
+    assert "Pull request has not been merged" in res_pr_closed["reasons"]
+
+    res_pr_dict_unmerged = dg.can_declare_resolved(ci_status="SUCCESS", merge_guard_status="APPROVED", pr_merged={"merged": False, "state": "closed"}, deployment_status="SUCCESS", health_check_status="HEALTHY")
+    assert res_pr_dict_unmerged["allowed"] is False
+    assert res_pr_dict_unmerged["policy_checks"]["PR_MERGED"] is False
+
+    # Explicit merged state (string or dict with merged=True) must be accepted
+    res_pr_merged_str = dg.can_declare_resolved(ci_status="SUCCESS", merge_guard_status="APPROVED", pr_merged="merged", deployment_status="SUCCESS", health_check_status="HEALTHY")
+    assert res_pr_merged_str["allowed"] is True
+    assert res_pr_merged_str["policy_checks"]["PR_MERGED"] is True
+
+    res_pr_dict_merged = dg.can_declare_resolved(ci_status="SUCCESS", merge_guard_status="APPROVED", pr_merged={"merged": True, "state": "closed"}, deployment_status="SUCCESS", health_check_status="HEALTHY")
+    assert res_pr_dict_merged["allowed"] is True
+    assert res_pr_dict_merged["policy_checks"]["PR_MERGED"] is True
+
     res_dep_fail = dg.can_declare_resolved(ci_status="SUCCESS", merge_guard_status="APPROVED", pr_merged=True, deployment_status="FAILED", health_check_status="HEALTHY")
     assert res_dep_fail["allowed"] is False
     assert res_dep_fail["policy_checks"]["DEPLOYMENT_SUCCESS"] is False
