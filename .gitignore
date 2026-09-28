@@ -62,3 +62,5 @@ wheels/
 .pytest_cache/
 .coverage
 htmlcov/
+archive/
+*.db

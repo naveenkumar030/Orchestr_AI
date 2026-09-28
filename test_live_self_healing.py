@@ -22,6 +22,8 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 from app import app
+from config import Config
+Config.WEBHOOK_PERMISSIVE_DEV = True
 from data_store import store
 from services.remediation_service import remediation_service
 from services.incident_service import incident_service

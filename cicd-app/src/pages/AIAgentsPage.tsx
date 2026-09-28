@@ -6,9 +6,6 @@ import type { AIAgent, AgentStatus } from '../types';
 export default function AIAgentsPage() {
   const [agentList, setAgentList] = useState<AIAgent[]>(initialMockAgents);
   const [selectedAgentName, setSelectedAgentName] = useState<string>(initialMockAgents[0]?.name || 'Sentinel-α');
-  const [temperature, setTemperature] = useState(0.10);
-  const [reasoningBudget, setReasoningBudget] = useState(4096);
-  const [astCaching, setAstCaching] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
 
   // Deploy Pod Modal
@@ -134,8 +131,8 @@ export default function AIAgentsPage() {
         </div>
       </div>
 
-      {/* Top 4 KPI Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-space-base">
+      {/* Top 3 KPI Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-space-base">
         {/* Metric 1 */}
         <div className="relative overflow-hidden p-space-base rounded-xl bg-white border border-[#E5DED6] shadow-card flex flex-col justify-between hover:shadow-md transition-all">
           <div className="flex items-center justify-between text-[#6B625B] mb-2">
@@ -189,21 +186,6 @@ export default function AIAgentsPage() {
           </div>
         </div>
 
-        {/* Metric 4 */}
-        <div className="relative overflow-hidden p-space-base rounded-xl bg-white border border-[#E5DED6] shadow-card flex flex-col justify-between hover:shadow-md transition-all">
-          <div className="flex items-center justify-between text-[#6B625B] mb-2">
-            <span className="font-label-caps text-xs uppercase tracking-wider font-semibold">Inference Cost</span>
-            <span className="material-symbols-outlined text-[#D97757] text-xl">payments</span>
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="font-headline-xl text-3xl font-bold text-[#2D2926]">$14.80<span className="text-[#6B625B] text-sm font-normal">/day</span></span>
-            <span className="font-label-code-sm text-xs text-[#5B7C4B] font-semibold">94.2% Cache Hit</span>
-          </div>
-          <div className="mt-3 pt-2 flex items-center justify-between text-[#6B625B] border-t border-[#E5DED6] text-xs">
-            <span>vs $4,200 on-call equiv</span>
-            <span className="font-semibold text-[#5B7C4B]">Savings: 99.6%</span>
-          </div>
-        </div>
       </div>
 
       {/* Main Grid: Left Fleet List + Right Live Trace */}
@@ -321,103 +303,7 @@ export default function AIAgentsPage() {
             </div>
           </div>
 
-          {/* Model Inference Engine Matrix */}
-          <div className="rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card space-y-space-md">
-            <div className="flex items-center justify-between border-b border-[#E5DED6] pb-3">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#D97757] text-xl">tune</span>
-                <h2 className="font-headline-md text-lg font-bold text-[#2D2926]">Inference Engine Matrix</h2>
-              </div>
-              <span className="font-mono text-xs text-[#6B625B]">Kernel Dispatcher v2.4</span>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-space-sm">
-              <div className="p-3 rounded-lg bg-[#FAF7F3] border-2 border-[#D97757] shadow-sm space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-[#2D2926]">Claude 3.7 Sonnet</span>
-                  <span className="px-1.5 py-0.5 rounded bg-[#D97757] text-white text-[10px] font-bold">DEFAULT</span>
-                </div>
-                <p className="text-xs text-[#6B625B]">Hybrid Reasoning CoT engine for semantic code patches.</p>
-                <div className="border-t border-[#E5DED6] pt-1.5 text-xs text-[#6B625B] flex justify-between">
-                  <span>Cost: <strong className="text-[#2D2926]">$3.00/1M</strong></span>
-                  <span>Accuracy: <strong className="text-[#5B7C4B]">99.4%</strong></span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-[#2D2926]">DevOps-LLM v2.4</span>
-                  <span className="px-1.5 py-0.5 rounded bg-white border border-[#E5DED6] text-[10px] font-bold text-[#6B625B]">LOCAL H100</span>
-                </div>
-                <p className="text-xs text-[#6B625B]">Fine-tuned 70B parameter model hosted on local GPU cluster.</p>
-                <div className="border-t border-[#E5DED6] pt-1.5 text-xs text-[#6B625B] flex justify-between">
-                  <span>Cost: <strong className="text-[#2D2926]">$0.18/1M</strong></span>
-                  <span>Accuracy: <strong className="text-[#5B7C4B]">97.1%</strong></span>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-[#2D2926]">Gemini 1.5 Pro</span>
-                  <span className="px-1.5 py-0.5 rounded bg-white border border-[#E5DED6] text-[10px] font-bold text-[#6B625B]">STANDBY</span>
-                </div>
-                <p className="text-xs text-[#6B625B]">Ultra-context fallback for mega-repository trace dumps (&gt;100k lines).</p>
-                <div className="border-t border-[#E5DED6] pt-1.5 text-xs text-[#6B625B] flex justify-between">
-                  <span>Context: <strong className="text-[#2D2926]">2M tokens</strong></span>
-                  <span>Accuracy: <strong className="text-[#5B7C4B]">98.2%</strong></span>
-                </div>
-              </div>
-            </div>
-
-            {/* Hyperparameter sliders */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-space-md pt-2 border-t border-[#E5DED6]">
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-[#6B625B] font-medium">Temperature (Deterministic)</span>
-                  <span className="font-mono text-[#D97757] font-bold">{temperature.toFixed(2)}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={temperature * 100}
-                  onChange={(e) => setTemperature(Number(e.target.value) / 100)}
-                  className="w-full accent-[#D97757] h-1.5 bg-[#E5DED6] rounded cursor-pointer"
-                />
-                <span className="text-[10px] text-[#8F857D]">Lower = reproducible compilation</span>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="text-[#6B625B] font-medium">CoT Reasoning Budget</span>
-                  <span className="font-mono text-[#D97757] font-bold">{reasoningBudget} tok</span>
-                </div>
-                <input
-                  type="range"
-                  min="1024"
-                  max="8192"
-                  step="512"
-                  value={reasoningBudget}
-                  onChange={(e) => setReasoningBudget(Number(e.target.value))}
-                  className="w-full accent-[#D97757] h-1.5 bg-[#E5DED6] rounded cursor-pointer"
-                />
-                <span className="text-[10px] text-[#8F857D]">Expanded AST search space</span>
-              </div>
-
-              <div className="flex items-center justify-between p-2 rounded-lg bg-[#FAF7F3] border border-[#E5DED6]">
-                <div>
-                  <div className="text-xs font-semibold text-[#2D2926]">Prompt AST Caching</div>
-                  <div className="text-[10px] text-[#5B7C4B] font-semibold">94.2% Hit Rate</div>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={astCaching}
-                  onChange={(e) => setAstCaching(e.target.checked)}
-                  className="h-4 w-4 accent-[#D97757] cursor-pointer"
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right Column: Live Sandboxed Trace (4 cols) */}

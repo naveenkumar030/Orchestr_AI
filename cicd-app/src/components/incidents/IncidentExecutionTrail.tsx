@@ -1,11 +1,44 @@
 import React from 'react';
-import type { Incident } from '../../types';
+import type { Incident, IncidentTimelineEvent } from '../../types';
 
 interface IncidentExecutionTrailProps {
   selectedIncident: Incident;
 }
 
-export const IncidentExecutionTrail: React.FC<IncidentExecutionTrailProps> = () => {
+function getStepIcon(event: IncidentTimelineEvent) {
+  const s = (event.status || '').toLowerCase();
+  const title = (event.title || '').toLowerCase();
+  if (s === 'error' || s === 'failed') return { icon: 'close', bg: 'bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A]' };
+  if (s === 'running') return { icon: 'progress_activity', bg: 'bg-[#EEF2FF] border-[#4F46E5]/40 text-[#4F46E5] animate-spin' };
+  if (title.includes('escalat')) return { icon: 'warning', bg: 'bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A]' };
+  if (title.includes('resolved') || title.includes('remediated')) return { icon: 'done_all', bg: 'bg-[#5B7C4B] text-white' };
+  return { icon: 'check', bg: 'bg-[#D97757] text-white' };
+}
+
+function getIconLabel(icon: string): string {
+  // Map emoji icons to material symbols
+  const map: Record<string, string> = {
+    '🔴': 'close',
+    '🟠': 'warning',
+    '🧠': 'psychology',
+    '❌': 'close',
+    '🔍': 'search',
+    '🛠️': 'build',
+    '🛡️': 'shield',
+    '🚀': 'rocket_launch',
+    '⚙️': 'settings',
+    '✅': 'check_circle',
+    '🔁': 'sync',
+    '📢': 'campaign',
+    '🚨': 'error',
+    '✔️': 'check',
+  };
+  return map[icon] || 'circle';
+}
+
+export const IncidentExecutionTrail: React.FC<IncidentExecutionTrailProps> = ({ selectedIncident }) => {
+  const timeline: IncidentTimelineEvent[] = selectedIncident.timeline || [];
+
   return (
     <div className="lg:col-span-4 space-y-space-lg">
       <section className="rounded-xl bg-white border border-[#E5DED6] shadow-card overflow-hidden flex flex-col">
@@ -15,110 +48,108 @@ export const IncidentExecutionTrail: React.FC<IncidentExecutionTrailProps> = () 
             <span className="font-headline-sm font-semibold text-[#2D2926]">Execution Trail</span>
           </div>
           <span className="font-label-code-sm text-xs text-[#99462A] bg-[#F9ECE7] border border-[#D97757]/30 px-2 py-0.5 rounded font-semibold">
-            Live Loop
+            {timeline.length > 0 ? `${timeline.length} events` : 'Live Loop'}
           </span>
         </div>
 
-        <div className="p-space-md">
-          <div className="relative pl-6 space-y-5">
-            {/* Vertical connecting line */}
-            <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-[#E5DED6]"></div>
-
-            {/* Trail Steps */}
-            <div className="relative flex items-start gap-3">
-              <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#FDF0F0] border border-[#C34A4A]/40 text-[#C34A4A] flex items-center justify-center">
-                <span className="material-symbols-outlined text-xs">close</span>
-              </div>
-              <div className="text-xs">
-                <div className="flex items-center gap-1 text-[#6B625B]">
-                  <span className="font-mono">14:22:05</span> · <span className="font-semibold text-[#2D2926]">Failure detected</span>
-                </div>
-                <p className="text-[#6B625B] mt-0.5">GitHub Actions CI pipeline failed with exit code 1</p>
-              </div>
+        <div className="p-space-md overflow-y-auto max-h-[500px]">
+          {timeline.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center gap-3">
+              <span className="material-symbols-outlined text-3xl text-[#D97757] opacity-50">timeline</span>
+              <p className="text-xs text-[#6B625B]">
+                No execution events yet. Trigger remediation to begin the autonomous loop.
+              </p>
             </div>
+          ) : (
+            <div className="relative pl-6 space-y-5">
+              {/* Vertical connecting line */}
+              <div className="absolute left-2.5 top-2 bottom-2 w-0.5 bg-[#E5DED6]"></div>
 
-            <div className="relative flex items-start gap-3">
-              <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center shadow-xs">
-                <span className="material-symbols-outlined text-xs">check</span>
-              </div>
-              <div className="text-xs">
-                <div className="flex items-center gap-1 text-[#6B625B]">
-                  <span className="font-mono">14:22:08</span> · <span className="font-semibold text-[#2D2926]">AST analysis</span>
-                </div>
-                <p className="text-[#6B625B] mt-0.5">Captured stack trace fingerprint HASH_9a7d</p>
-              </div>
+              {timeline.map((event, idx) => {
+                const stepStyle = getStepIcon(event);
+                const iconName = event.icon ? getIconLabel(event.icon) : stepStyle.icon;
+                const isError = (event.status || '').toLowerCase() === 'error' ||
+                                (event.status || '').toLowerCase() === 'failed';
+                const isLast = idx === timeline.length - 1;
+                return (
+                  <div key={idx} className="relative flex items-start gap-3">
+                    <div
+                      className={`absolute -left-6 top-1 w-5 h-5 rounded-full flex items-center justify-center border ${stepStyle.bg} ${isLast ? 'animate-pulse' : ''}`}
+                    >
+                      <span className="material-symbols-outlined text-xs">{iconName}</span>
+                    </div>
+                    <div className="text-xs">
+                      <div className="flex items-center gap-1 text-[#6B625B]">
+                        {event.time && (
+                          <span className="font-mono">{event.time}</span>
+                        )}
+                        {event.time && <span>·</span>}
+                        <span className={`font-semibold ${isError ? 'text-[#C34A4A]' : 'text-[#2D2926]'}`}>
+                          {event.title}
+                        </span>
+                      </div>
+                      {event.description && (
+                        <p className="text-[#6B625B] mt-0.5 leading-relaxed">{event.description}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
-            <div className="relative flex items-start gap-3">
-              <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center shadow-xs">
-                <span className="material-symbols-outlined text-xs">check</span>
-              </div>
-              <div className="text-xs">
-                <div className="flex items-center gap-1 text-[#6B625B]">
-                  <span className="font-mono">14:22:15</span> · <span className="font-semibold text-[#2D2926]">Conflict isolated</span>
-                </div>
-                <p className="text-[#6B625B] mt-0.5">Identified @stripe/stripe-node peer dependency constraint</p>
-              </div>
-            </div>
-
-            <div className="relative flex items-start gap-3">
-              <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center shadow-xs">
-                <span className="material-symbols-outlined text-xs">check</span>
-              </div>
-              <div className="text-xs">
-                <div className="flex items-center gap-1 text-[#6B625B]">
-                  <span className="font-mono">14:22:28</span> · <span className="font-semibold text-[#2D2926]">Synthesized patch</span>
-                </div>
-                <p className="text-[#6B625B] mt-0.5">Updated package.json and resolved lockfile</p>
-              </div>
-            </div>
-
-            <div className="relative flex items-start gap-3">
-              <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#D97757] text-white flex items-center justify-center shadow-xs">
-                <span className="material-symbols-outlined text-xs">check</span>
-              </div>
-              <div className="text-xs">
-                <div className="flex items-center gap-1 text-[#6B625B]">
-                  <span className="font-mono">14:23:01</span> · <span className="font-semibold text-[#2D2926]">Sandbox verification</span>
-                </div>
-                <p className="text-[#6B625B] mt-0.5">Ephemeral k8s runner passed 440/440 tests</p>
-              </div>
-            </div>
-
-            <div className="relative flex items-start gap-3">
-              <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#5B7C4B] text-white flex items-center justify-center shadow-xs animate-pulse">
-                <span className="material-symbols-outlined text-xs">done_all</span>
-              </div>
-              <div className="text-xs">
-                <div className="flex items-center gap-1 text-[#6B625B]">
-                  <span className="font-mono">14:24:19</span> · <span className="font-semibold text-[#2D2926]">PR #184 Opened</span>
-                </div>
-                <p className="text-[#6B625B] mt-0.5">Assigned reviewers: @platform-lead, auto-merge enabled</p>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </section>
 
-      {/* AI Knowledge Base Context Card */}
+      {/* Incident Metadata Card */}
       <section className="rounded-xl bg-white border border-[#E5DED6] p-space-md shadow-card space-y-2">
         <div className="flex items-center gap-2 text-xs font-semibold text-[#6B625B]">
-          <span className="material-symbols-outlined text-[#D97757] text-base">auto_stories</span>
-          <span>KNOWLEDGE REPOSITORIES ACCESSED</span>
+          <span className="material-symbols-outlined text-[#D97757] text-base">info</span>
+          <span>INCIDENT DETAILS</span>
         </div>
         <div className="space-y-1.5 text-xs">
           <div className="p-2 rounded bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between">
-            <span className="text-[#2D2926] font-mono">npm-resolution-recipes.db</span>
-            <span className="text-[#99462A] font-semibold">99% match</span>
+            <span className="text-[#6B625B]">Repository</span>
+            <span className="text-[#2D2926] font-mono font-semibold">{selectedIncident.repo}</span>
           </div>
           <div className="p-2 rounded bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between">
-            <span className="text-[#2D2926] font-mono">stripe-migration-v14.md</span>
-            <span className="text-[#99462A] font-semibold">Verified</span>
+            <span className="text-[#6B625B]">Pipeline</span>
+            <span className="text-[#2D2926] font-mono font-semibold truncate max-w-[140px]">{selectedIncident.pipeline}</span>
           </div>
-          <div className="p-2 rounded bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between">
-            <span className="text-[#2D2926] font-mono">service-catalog/payment-service</span>
-            <span className="text-[#99462A] font-semibold">Policy checked</span>
-          </div>
+          {selectedIncident.branch && (
+            <div className="p-2 rounded bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between">
+              <span className="text-[#6B625B]">Branch</span>
+              <span className="text-[#2D2926] font-mono font-semibold">{selectedIncident.branch}</span>
+            </div>
+          )}
+          {selectedIncident.commit && (
+            <div className="p-2 rounded bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between">
+              <span className="text-[#6B625B]">Commit</span>
+              <span className="text-[#99462A] font-mono font-semibold">{selectedIncident.commit}</span>
+            </div>
+          )}
+          {selectedIncident.remediationBranch && (
+            <div className="p-2 rounded bg-[#EAF3E7] border border-[#5B7C4B]/30 flex items-center justify-between">
+              <span className="text-[#6B625B]">Fix Branch</span>
+              <span className="text-[#5B7C4B] font-mono font-semibold truncate max-w-[140px]">{selectedIncident.remediationBranch}</span>
+            </div>
+          )}
+          {selectedIncident.prNumber && (
+            <div className="p-2 rounded bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between">
+              <span className="text-[#6B625B]">Pull Request</span>
+              {selectedIncident.prUrl ? (
+                <a
+                  href={selectedIncident.prUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#D97757] font-semibold hover:underline"
+                >
+                  #{selectedIncident.prNumber}
+                </a>
+              ) : (
+                <span className="text-[#D97757] font-semibold">#{selectedIncident.prNumber}</span>
+              )}
+            </div>
+          )}
         </div>
       </section>
     </div>

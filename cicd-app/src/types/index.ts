@@ -294,8 +294,18 @@ export interface MicroserviceTelemetry {
   health: string;
 }
 
+export interface AnalyticsChartPoint {
+  label: string;
+  manualMinutes: number;
+  autonomousMinutes: number;
+}
+
 export interface AnalyticsResponse {
   timeRange?: string;
+  timestamp?: string;
+  storedInMongo?: boolean;
+  mongoDatabase?: string;
+  mongoLatencyMs?: number;
   dora?: {
     deploymentFrequency: string;
     deploymentFrequencyRating: string;
@@ -310,6 +320,8 @@ export interface AnalyticsResponse {
     prsProcessed: number;
     avgMergeTime: string;
     autoFixRate: string;
+    autoMergeRate?: string;
+    retrySuccessRate?: string;
     humanOverrideRate: string;
     hoursSaved: string;
     costSaved: string;
@@ -325,6 +337,8 @@ export interface AnalyticsResponse {
     percentage: number;
   }>;
   microservices?: MicroserviceTelemetry[];
+  chartData?: AnalyticsChartPoint[];
+  phase2Metrics?: Record<string, unknown>;
 }
 
 // ─── Phase 3: Multi-Agent Reasoning Types ────────────────────────────────────

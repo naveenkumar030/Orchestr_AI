@@ -41,10 +41,74 @@ DATABASE_URL: str | None = os.environ.get("DATABASE_URL")
 MONGODB_URI: str | None = os.environ.get("MONGODB_URI") or os.environ.get("MONGO_URI")
 MONGODB_DB: str = os.environ.get("MONGODB_DB", "sentinelops")
 
+# ── Environment & Deployment Mode ─────────────────────────────────────────────
+ENV: str = (
+    os.environ.get("FLASK_ENV")
+    or os.environ.get("ENVIRONMENT")
+    or os.environ.get("APP_ENV")
+    or "development"
+).strip().lower()
+IS_PRODUCTION: bool = ENV in ("production", "prod")
+
 # ── Server & Security ─────────────────────────────────────────────────────────
 HOST: str = os.environ.get("HOST", "127.0.0.1")
 PORT: int = int(os.environ.get("PORT", 5000))
-SECRET_KEY: str = os.environ.get("FLASK_SECRET_KEY") or os.environ.get("SECRET_KEY", "sentinelops-dev-secret-key-change-in-production-9f2a")
+
+_DEV_SECRET_FALLBACK = "sentinelops-dev-secret-key-change-in-production-9f2a"
+_INSECURE_SECRET_KEYS = {
+    _DEV_SECRET_FALLBACK,
+    "change-in-production",
+    "dev",
+    "development",
+    "secret",
+    "changeme",
+    "change_me",
+    "password",
+    "default",
+}
+
+
+def _resolve_secret_key(raw_secret: str | None = None, is_production: bool | None = None) -> str:
+    """Resolve and validate the Flask SECRET_KEY.
+
+    In production environments (FLASK_ENV=production or ENVIRONMENT=production),
+    a non-default, strong environment-provided secret key (minimum 16 characters)
+    is strictly required. Fails startup immediately if missing or insecure.
+    """
+    if is_production is None:
+        env = (
+            os.environ.get("FLASK_ENV")
+            or os.environ.get("ENVIRONMENT")
+            or os.environ.get("APP_ENV")
+            or "development"
+        ).strip().lower()
+        is_production = env in ("production", "prod")
+
+    if raw_secret is None:
+        raw_secret = os.environ.get("FLASK_SECRET_KEY") or os.environ.get("SECRET_KEY")
+
+    if is_production:
+        if not raw_secret or not raw_secret.strip():
+            raise RuntimeError(
+                "CRITICAL SECURITY CONFIGURATION ERROR: FLASK_SECRET_KEY or SECRET_KEY environment variable "
+                "must be configured in production. Application startup aborted to prevent using an insecure secret."
+            )
+        secret = raw_secret.strip()
+        if secret in _INSECURE_SECRET_KEYS or len(secret) < 16:
+            raise RuntimeError(
+                "CRITICAL SECURITY CONFIGURATION ERROR: A weak or default SECRET_KEY was detected in production. "
+                "Production requires a strong secret key (at least 16 characters and not a known default). "
+                "Application startup aborted."
+            )
+        return secret
+
+    if raw_secret and raw_secret.strip():
+        return raw_secret.strip()
+
+    return _DEV_SECRET_FALLBACK
+
+
+SECRET_KEY: str = _resolve_secret_key()
 MAX_CONTENT_LENGTH: int = int(os.environ.get("MAX_CONTENT_LENGTH", 16 * 1024 * 1024))  # 16 MB request limit
 
 # ── CORS Allowed Origins ──────────────────────────────────────────────────────
@@ -72,7 +136,24 @@ REQUIRE_HUMAN_APPROVAL: bool = os.environ.get("REQUIRE_HUMAN_APPROVAL", "True").
 MAX_REMEDIATION_ATTEMPTS: int = int(os.environ.get("MAX_REMEDIATION_ATTEMPTS", 3))
 CI_VALIDATION_TIMEOUT_SECONDS: int = int(os.environ.get("CI_VALIDATION_TIMEOUT_SECONDS", 600))
 CI_POLL_INTERVAL_SECONDS: int = int(os.environ.get("CI_POLL_INTERVAL_SECONDS", 10))
-AUTO_MERGE_ENABLED: bool = os.environ.get("AUTO_MERGE_ENABLED", "True").lower() == "true"
+
+
+def _resolve_auto_merge_enabled(is_production: bool | None = None) -> bool:
+    """Resolve AUTO_MERGE_ENABLED setting.
+
+    In production environments, auto-merge strictly defaults to False to prevent
+    unintended autonomous merges. It must be explicitly configured as True.
+    In development environments, defaults to True for local testing convenience.
+    """
+    if is_production is None:
+        is_production = IS_PRODUCTION
+    raw = os.environ.get("AUTO_MERGE_ENABLED")
+    if raw is not None:
+        return raw.strip().lower() in ("true", "1", "yes")
+    return not is_production
+
+
+AUTO_MERGE_ENABLED: bool = _resolve_auto_merge_enabled(IS_PRODUCTION)
 
 # ── Phase 3 Autonomous Deployment Verification & Rollback Settings ───────────
 HEALTH_CHECK_ENABLED: bool = os.environ.get("HEALTH_CHECK_ENABLED", "True").lower() == "true"

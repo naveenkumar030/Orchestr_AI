@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { incidents as initialIncidents } from '../data/mockData';
 import { api, type IncidentExplanation } from '../services/api';
 import type { Incident, IncidentStatus, MultiAgentReasoningResult } from '../types';
 import { MultiAgentWorkflowCard } from '../components/ui/MultiAgentWorkflowCard';
@@ -14,8 +13,8 @@ import {
 } from '../components/incidents';
 
 export default function IncidentsPage() {
-  const [incidentList, setIncidentList] = useState<Incident[]>(initialIncidents);
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(initialIncidents[0] || null);
+  const [incidentList, setIncidentList] = useState<Incident[]>([]);
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [merged, setMerged] = useState(false);
   const [showExplainModal, setShowExplainModal] = useState(false);
   const [explanationData, setExplanationData] = useState<IncidentExplanation | null>(null);
@@ -228,6 +227,12 @@ export default function IncidentsPage() {
           setSelectedIncident(null);
         }
       }
+    }).catch(err => {
+      console.error('Failed to load incidents:', err);
+      if (mounted) {
+        setIncidentList([]);
+        setSelectedIncident(null);
+      }
     });
     return () => {
       mounted = false;
@@ -308,23 +313,6 @@ export default function IncidentsPage() {
           <p className="text-sm text-[#6B625B] max-w-md mb-6">
             All pipelines and microservices are operating normally. Sentinel-Core has detected zero policy violations or failed workflow runs.
           </p>
-          <button
-            onClick={async () => {
-              try {
-                const sim = await api.simulateAnomaly();
-                const list = await api.getIncidents();
-                setIncidentList(list);
-                setSelectedIncident(sim || list[0]);
-                setNotification('Live incident simulation initiated!');
-              } catch (e) {
-                console.error(e);
-              }
-            }}
-            className="px-4 py-2.5 rounded-lg bg-[#D97757] hover:bg-[#B85D3E] text-white font-medium text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-base">bolt</span>
-            <span>Simulate Anomaly (Self-Healing Test)</span>
-          </button>
         </div>
       ) : (
         <>

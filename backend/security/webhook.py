@@ -24,7 +24,7 @@ def verify_github_signature(payload_bytes: bytes, signature_header: str, secret:
 
     # In local development mode without a secret configured, allow permissive processing only if explicitly enabled
     if not secret:
-        if getattr(Config, "WEBHOOK_PERMISSIVE_DEV", False):
+        if getattr(Config, "WEBHOOK_PERMISSIVE_DEV", False) or os.environ.get("WEBHOOK_PERMISSIVE_DEV", "false").lower() in ("true", "1", "yes"):
             return True, "No secret configured (permissive dev mode)"
         else:
             return False, "Missing GITHUB_WEBHOOK_SECRET in configuration"

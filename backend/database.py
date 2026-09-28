@@ -42,31 +42,70 @@ SessionLocal = scoped_session(
 Base = declarative_base()
 
 
-def init_db():
-    """Initializes all database tables registered with Base metadata."""
-    import models  # noqa: F401 - ensures all models are imported before create_all
-    Base.metadata.create_all(bind=engine)
+def get_alembic_config(db_url: str | None = None):
+    """Builds an Alembic Config object pointing to the backend migrations directory."""
+    from alembic.config import Config
 
-    # SQLite schema auto-migration for newly added columns
-    if str(engine.url).startswith("sqlite"):
-        try:
-            with engine.connect() as conn:
-                res = conn.exec_driver_sql("PRAGMA table_info(incidents)").fetchall()
-                existing_cols = {row[1] for row in res}
-                cols_to_add = {
-                    "prNumber": "INTEGER",
-                    "prUrl": "VARCHAR(512)",
-                    "remediationBranch": "VARCHAR(256)",
-                    "diff": "TEXT",
-                    "agent_reasoning": "TEXT",
-                    "source": "VARCHAR(32) DEFAULT 'webhook'",
-                }
-                for col_name, col_type in cols_to_add.items():
-                    if col_name not in existing_cols:
-                        conn.exec_driver_sql(f"ALTER TABLE incidents ADD COLUMN {col_name} {col_type}")
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error("Failed to migrate SQLite schema: %s", e, exc_info=True)
+    ini_path = os.path.join(CURRENT_DIR, "alembic.ini")
+    cfg = Config(ini_path)
+    cfg.set_main_option("script_location", os.path.join(CURRENT_DIR, "migrations"))
+    target_url = db_url or DATABASE_URL
+    cfg.set_main_option("sqlalchemy.url", target_url)
+    return cfg
+
+
+def run_migrations(db_url: str | None = None, target_revision: str = "head", connection=None):
+    """
+    Applies Alembic database migrations programmatically up to target_revision.
+    Defaults to 'head'.
+    """
+    from alembic import command
+
+    alembic_cfg = get_alembic_config(db_url)
+    if connection is not None:
+        alembic_cfg.attributes["connection"] = connection
+    command.upgrade(alembic_cfg, target_revision)
+
+
+def init_db(db_url: str | None = None, target_revision: str = "head"):
+    """
+    Initializes and versions the database using Alembic migrations.
+    Replaces manual create_all() and ad-hoc ALTER TABLE PRAGMA statements.
+    - If database is unversioned but already contains legacy tables, stamps to target_revision.
+    - If database is fresh or already versioned, applies migrations up to target_revision.
+    """
+    import logging
+    from alembic import command
+    from sqlalchemy import inspect
+
+    logger = logging.getLogger(__name__)
+    active_engine = engine if db_url is None else create_engine(db_url, **engine_kwargs)
+
+    try:
+        alembic_cfg = get_alembic_config(db_url)
+
+        with active_engine.connect() as conn:
+            inspector = inspect(conn)
+            table_names = set(inspector.get_table_names())
+
+            has_alembic_table = "alembic_version" in table_names
+            has_incidents_table = "incidents" in table_names
+
+            if not has_alembic_table and has_incidents_table:
+                # Existing database created before Alembic was introduced
+                logger.info("Legacy unversioned database detected; stamping Alembic schema version to %s", target_revision)
+                alembic_cfg.attributes["connection"] = conn
+                command.stamp(alembic_cfg, target_revision)
+            else:
+                # Fresh database or versioned database: run migration upgrade
+                alembic_cfg.attributes["connection"] = conn
+                command.upgrade(alembic_cfg, target_revision)
+
+    except Exception as e:
+        logger.error("Alembic migration failed during init_db: %s", e, exc_info=True)
+        # Fallback to create_all if migration encounters an unexpected error
+        import models  # noqa: F401
+        Base.metadata.create_all(bind=active_engine)
 
 
 @contextmanager

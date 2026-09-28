@@ -32,12 +32,8 @@ export class ApiError extends Error {
 
 const MOCK_MODE_KEY = 'sentinelops_mock_mode';
 
-let mockModeActive: boolean = (() => {
-  if (typeof window === 'undefined') return false;
-  const stored = localStorage.getItem(MOCK_MODE_KEY);
-  if (stored !== null) return stored === 'true';
-  return import.meta.env.VITE_MOCK_MODE === 'true';
-})();
+let mockModeActive: boolean = false;
+
 
 export type ApiEventType = 'fallback' | 'disconnect' | 'connect';
 export interface ApiEvent {
@@ -137,10 +133,6 @@ export async function request<T>(
   } catch (err) {
     console.warn(`[API] Failure for ${endpoint}:`, err);
     notifyApiEvent({ type: 'disconnect', endpoint, details: err });
-    if (fallbackValue !== undefined) {
-      notifyApiEvent({ type: 'fallback', endpoint });
-      return { data: fallbackValue, isFallback: true };
-    }
     if (err instanceof ApiError) {
       throw err;
     }

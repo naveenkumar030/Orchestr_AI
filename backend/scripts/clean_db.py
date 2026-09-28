@@ -69,6 +69,11 @@ def clean_mongodb():
             "rollbacks",
             "approvals",
             "github_actions",
+            "webhook_events",
+            "incident_metadata",
+            "local_pipelines",
+            "agents",
+            "agent_status",
         ]
         total_deleted = 0
         for col_name in collections:

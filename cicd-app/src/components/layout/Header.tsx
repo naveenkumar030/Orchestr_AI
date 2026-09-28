@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useBackend } from '../../context/useBackend';
-import { api } from '../../services/api';
 
 interface HeaderProps {
   onToggleSidebar?: () => void;
@@ -9,26 +7,11 @@ interface HeaderProps {
 
 export default function Header({ onToggleSidebar }: HeaderProps) {
   const { isConnected, latency, backendVersion, mongoConnected, mongoLatency, mongoDb, recheck } = useBackend();
-  const [isChaosRunning, setIsChaosRunning] = useState(false);
-  const [chaosToast, setChaosToast] = useState<string | null>(null);
-
-  const handleTriggerChaos = async () => {
-    setIsChaosRunning(true);
-    try {
-      const inc = await api.simulateAnomaly();
-      setChaosToast(`⚡ Chaos Anomaly Injected: ${inc.id} (${inc.repo})! AI triage agent dispatched.`);
-      setTimeout(() => setChaosToast(null), 5000);
-    } catch (err) {
-      console.error('Failed to trigger chaos:', err);
-    } finally {
-      setIsChaosRunning(false);
-    }
-  };
 
   return (
     <header className="fixed top-0 left-0 lg:left-72 right-0 h-16 bg-white/95 backdrop-blur-2xl border-b border-[#E5DED6] shadow-header z-30 flex items-center justify-between px-3 sm:px-6 gap-2 sm:gap-4 transition-[left] duration-300 ease-in-out">
-      {/* Left side: Hamburger + Search */}
-      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 max-w-xl">
+      {/* Left side: Mobile Hamburger */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* Mobile Hamburger Menu Button */}
         <button
           onClick={onToggleSidebar}
@@ -37,21 +20,6 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
         >
           <span className="material-symbols-outlined text-2xl">menu</span>
         </button>
-
-        {/* Search */}
-        <div className="relative w-full flex items-center min-w-0">
-          <span className="material-symbols-outlined absolute left-3 text-[#6B625B] text-lg pointer-events-none">
-            search
-          </span>
-          <input
-            type="text"
-            placeholder="Search repos, traces, PRs..."
-            className="w-full h-9 sm:h-10 pl-9 sm:pl-10 pr-3 sm:pr-12 rounded-lg bg-[#F7F4EF] border border-[#E5DED6] text-[#2D2926] placeholder:text-[#6B625B] text-xs sm:text-sm focus:outline-none focus:border-[#D97757] focus:bg-white transition-all shadow-inner"
-          />
-          <kbd className="hidden sm:inline-block absolute right-3 px-1.5 py-0.5 bg-white border border-[#E5DED6] rounded font-label-code-sm text-[10px] text-[#6B625B] pointer-events-none shadow-sm">
-            ⌘K
-          </kbd>
-        </div>
       </div>
 
       {/* Right side */}
@@ -126,27 +94,7 @@ export default function Header({ onToggleSidebar }: HeaderProps) {
           </span>
         </button>
 
-        {/* Chaos Anomaly Simulator Button */}
-        <button
-          onClick={handleTriggerChaos}
-          disabled={isChaosRunning}
-          title="Chaos Simulation: Injects a live Redis starvation incident into order-orchestrator and tests autonomous agent remediation"
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#FDF0F0] border border-[#C34A4A]/30 text-[#C34A4A] hover:bg-[#C34A4A] hover:text-white transition-all cursor-pointer text-xs font-semibold shadow-xs disabled:opacity-50"
-        >
-          <span className={`material-symbols-outlined text-sm ${isChaosRunning ? 'animate-spin' : ''}`}>
-            bolt
-          </span>
-          <span className="hidden md:inline">
-            {isChaosRunning ? 'Injecting Anomaly...' : 'Chaos Anomaly'}
-          </span>
-        </button>
 
-        {chaosToast && (
-          <div className="fixed top-20 right-4 sm:right-6 z-50 flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl bg-[#2D2926] text-white text-xs shadow-xl border border-[#C34A4A]/60 animate-in fade-in slide-in-from-top-2 max-w-[calc(100vw-2rem)]">
-            <span className="material-symbols-outlined text-[#C34A4A] text-base animate-pulse shrink-0">warning</span>
-            <span className="truncate">{chaosToast}</span>
-          </div>
-        )}
 
 
         {/* Agent mode badge */}

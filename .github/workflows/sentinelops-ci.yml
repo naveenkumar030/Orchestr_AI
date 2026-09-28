@@ -18,8 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-and-verify:
-    name: Python API Tests & Linting
+  backend-quality-gates:
+    name: Python Backend Tests, Linting & Security Scan
     runs-on: ubuntu-latest
 
     steps:
@@ -36,11 +36,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
-          pip install pytest
+          pip install pytest pytest-cov ruff pip-audit
 
-      - name: Run Backend Integration Test Suite
+      - name: Backend Code Quality & Linting
         run: |
-          pytest backend/test_api.py -v
+          ruff check backend/ --ignore E501,F401,F841 || true
+
+      - name: Python Dependency Security Audit
+        run: |
+          pip-audit -r backend/requirements.txt || true
+
+      - name: Run Backend Integration & Safeguard Test Suites
+        env:
+          PYTHONPATH: backend
+        run: |
+          pytest backend/test_api.py backend/tests/ -v -o pythonpath=backend
 
       - name: Simulated CI Failure (Healer-Alpha Auto-Remediation Trigger)
         if: ${{ inputs.simulate_failure == true }}
@@ -53,3 +63,30 @@ jobs:
           echo "AssertionError: assert True is False"
           echo "E   AssertionError: TokenValidator incorrectly accepted expired token"
           exit 1
+
+  frontend-quality-gates:
+    name: Frontend Static Analysis, Typecheck & Production Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: cicd-app/package.json
+
+      - name: Install Frontend Dependencies
+        run: |
+          npm --prefix cicd-app ci
+
+      - name: Frontend Static Analysis & Lint
+        run: |
+          npm --prefix cicd-app run lint
+
+      - name: Frontend Typecheck & Production Build
+        run: |
+          npm --prefix cicd-app run build

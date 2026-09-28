@@ -9,6 +9,8 @@ services:
     envVars:
       - key: FLASK_ENV
         value: production
+      - key: SECRET_KEY
+        generateValue: true
       - key: REQUIRE_HUMAN_APPROVAL
         value: "true"
       - key: GITHUB_REPO

@@ -8,6 +8,7 @@ from routes.github import github_bp
 from routes.health import health_bp
 from routes.reliability import reliability_bp
 from routes.webhooks import webhooks_bp
+from routes.operator import operator_bp
 
 
 def register_routes(app):
@@ -23,4 +24,5 @@ def register_routes(app):
     app.register_blueprint(github_bp)
     app.register_blueprint(reliability_bp)
     app.register_blueprint(database_bp)
+    app.register_blueprint(operator_bp)
 

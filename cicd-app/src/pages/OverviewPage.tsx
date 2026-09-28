@@ -92,29 +92,14 @@ const chartDatasets: Record<TimeFilter, FilterDataset> = {
 
 const thoughtTraceLogs = [
   {
-    pid: '98242',
-    line: '[AGENT-CORE] Executing npm audit fix --dry-run... AST diff verified. 0 syntax regressions.',
-    sub: "➜ Sandbox container 'ephem-val-8924' health: OK (memory: 382MB, cpu: 14%)",
+    pid: 'LIVE',
+    line: '[SENTINEL-AGENT] Monitoring connected repository naveenkumar030/testingrepo for CI/CD events.',
+    sub: '➜ Telemetry nominal. Autonomous Healer and MergeGuard active.',
   },
   {
-    pid: '98245',
-    line: '[SENTINEL-AST] Ingesting run logs for SentinelOps -> isolated AssertionError in token validation branch.',
-    sub: "➜ Synthesizing lockfile reconciliation patch. Test coverage delta: +0.4%",
-  },
-  {
-    pid: '98251',
-    line: "[SANDBOX-VALIDATE] Provisioned validation sandbox container 'ephem-val-8925' in 1.2s.",
-    sub: "➜ Executed automated integration test suite: 18/18 checks passed.",
-  },
-  {
-    pid: '98260',
-    line: '[POLICY-GATE] Verified Zero-Regression Guardrail Policy v2.4. Zero high-severity CVEs.',
-    sub: '➜ Pull Request branch prepared: sentinelops/fix-INC-auto-heal with verified patch.',
-  },
-  {
-    pid: '98268',
-    line: '[TELEMETRY-STREAM] Live GitHub webhooks synchronized. Ingestion queue latency: 12ms.',
-    sub: '➜ Cluster-Alpha runner nodes nominal (4 active runners, 0 queued bottlenecks).',
+    pid: 'DAEMON',
+    line: '[TELEMETRY-STREAM] Live GitHub Actions polling and webhook ingestion synchronized.',
+    sub: '➜ System nominal. 0 active blocker incidents.',
   },
 ];
 

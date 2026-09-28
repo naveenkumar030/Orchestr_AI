@@ -10,7 +10,7 @@ export default function PipelinesPage() {
   const [isTriggering, setIsTriggering] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [showTriggerModal, setShowTriggerModal] = useState(false);
-  const [customRepo, setCustomRepo] = useState('payment-service');
+  const [customRepo, setCustomRepo] = useState('naveenkumar030/testingrepo');
   const [customBranch, setCustomBranch] = useState('main');
   const [customName, setCustomName] = useState('Autonomous CI/CD Workflow');
 

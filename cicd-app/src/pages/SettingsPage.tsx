@@ -1,17 +1,9 @@
 import { useState, useEffect } from 'react';
-import { api, type SettingsData, type HealthResponse, type GitHubStatusResponse, type DatabaseStatusResponse } from '../services/api';
+import { api, type SettingsData, type GitHubStatusResponse } from '../services/api';
 import { useBackend } from '../context/useBackend';
 
-interface EndpointStatus {
-  path: string;
-  name: string;
-  status: 'idle' | 'testing' | 'success' | 'failed';
-  code?: number;
-  latency?: number;
-}
-
 export default function SettingsPage() {
-  const { isConnected, latency: currentLatency, health, mongoConnected, mongoLatency, mongoDb, recheck, isMockMode, setMockMode } = useBackend();
+  const { isMockMode, setMockMode } = useBackend();
 
   const [confidenceThreshold, setConfidenceThreshold] = useState(95);
   const [autoMergeActive, setAutoMergeActive] = useState(true);
@@ -33,30 +25,6 @@ export default function SettingsPage() {
   const [isTogglingNgrok, setIsTogglingNgrok] = useState(false);
   const [isDispatching, setIsDispatching] = useState(false);
 
-  // MongoDB Atlas Cloud Database State
-  const [dbStatus, setDbStatus] = useState<DatabaseStatusResponse | null>(null);
-  const [isPingingDb, setIsPingingDb] = useState(false);
-  const [isSyncingDb, setIsSyncingDb] = useState(false);
-  const [dbToast, setDbToast] = useState<{ success: boolean; message: string } | null>(null);
-
-  // Diagnostics State
-  const [isPinging, setIsPinging] = useState(false);
-  const [pingResult, setPingResult] = useState<{ success: boolean; latency: number; data?: HealthResponse } | null>(null);
-  const [endpoints, setEndpoints] = useState<EndpointStatus[]>([
-    { path: '/health', name: 'Health & System', status: 'idle' },
-    { path: '/database/status', name: 'MongoDB Status', status: 'idle' },
-    { path: '/database/ping', name: 'MongoDB Ping', status: 'idle' },
-    { path: '/overview', name: 'Dashboard Overview', status: 'idle' },
-    { path: '/pipelines', name: 'DAG Pipelines', status: 'idle' },
-    { path: '/incidents', name: 'Incident Stream', status: 'idle' },
-    { path: '/ai-agents', name: 'AI Fleet Nodes', status: 'idle' },
-    { path: '/pull-requests', name: 'PR Auto-Review', status: 'idle' },
-    { path: '/logs', name: 'Observability Logs', status: 'idle' },
-    { path: '/github/status', name: 'GitHub Integration', status: 'idle' },
-    { path: '/analytics', name: 'MTTR Analytics', status: 'idle' },
-  ]);
-  const [isTestingAll, setIsTestingAll] = useState(false);
-
   useEffect(() => {
     let mounted = true;
     api.getSettings().then((settings: SettingsData) => {
@@ -74,71 +42,10 @@ export default function SettingsPage() {
       setGitHubStatus(status);
     });
 
-    api.getDatabaseStatus().then((status) => {
-      if (!mounted) return;
-      setDbStatus(status);
-    });
-
     return () => {
       mounted = false;
     };
   }, []);
-
-  const handlePingDatabase = async () => {
-    setIsPingingDb(true);
-    try {
-      const res = await api.pingDatabase();
-      if (res.ok === 1) {
-        setDbToast({
-          success: true,
-          message: `MongoDB Atlas Ping OK: Responded in ${res.latency_ms || 20}ms (Database: ${res.database || 'sentinelops'})`,
-        });
-      } else {
-        setDbToast({
-          success: false,
-          message: `MongoDB Ping Failed: ${res.error || 'Connection error'}`,
-        });
-      }
-      const updated = await api.getDatabaseStatus();
-      setDbStatus(updated);
-    } catch {
-      setDbToast({
-        success: false,
-        message: 'Failed to contact MongoDB ping endpoint',
-      });
-    } finally {
-      setIsPingingDb(false);
-      setTimeout(() => setDbToast(null), 4500);
-    }
-  };
-
-  const handleSyncDatabase = async () => {
-    setIsSyncingDb(true);
-    try {
-      const res = await api.syncDatabase();
-      if (res.success) {
-        setDbToast({
-          success: true,
-          message: res.message || 'Operational state synchronized to MongoDB Atlas',
-        });
-        const updated = await api.getDatabaseStatus();
-        setDbStatus(updated);
-      } else {
-        setDbToast({
-          success: false,
-          message: `State sync error: ${res.error || 'Unknown error'}`,
-        });
-      }
-    } catch {
-      setDbToast({
-        success: false,
-        message: 'Failed to execute database sync',
-      });
-    } finally {
-      setIsSyncingDb(false);
-      setTimeout(() => setDbToast(null), 4500);
-    }
-  };
 
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -163,62 +70,6 @@ export default function SettingsPage() {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleKillSwitch = async () => {
-    const newState = !killSwitchEngaged;
-    setKillSwitchEngaged(newState);
-    await api.saveSettings({ killSwitchEngaged: newState });
-    setSavedNotice(true);
-    setTimeout(() => setSavedNotice(false), 3500);
-  };
-
-  const handlePingBackend = async () => {
-    setIsPinging(true);
-    const start = performance.now();
-    try {
-      const res = await api.checkHealth();
-      const lat = Math.round(performance.now() - start);
-      setPingResult({
-        success: res.isConnected,
-        latency: lat,
-        data: res.health,
-      });
-      await recheck();
-    } catch {
-      setPingResult({
-        success: false,
-        latency: Math.round(performance.now() - start),
-      });
-    } finally {
-      setIsPinging(false);
-    }
-  };
-
-  const testAllEndpoints = async () => {
-    setIsTestingAll(true);
-    const updated = [...endpoints];
-
-    for (let i = 0; i < updated.length; i++) {
-      const ep = updated[i];
-      ep.status = 'testing';
-      setEndpoints([...updated]);
-
-      const start = performance.now();
-      try {
-        const res = await fetch(`/api${ep.path}`);
-        const lat = Math.round(performance.now() - start);
-        ep.status = res.ok ? 'success' : 'failed';
-        ep.code = res.status;
-        ep.latency = lat;
-      } catch {
-        ep.status = 'failed';
-        ep.code = 0;
-        ep.latency = Math.round(performance.now() - start);
-      }
-      setEndpoints([...updated]);
-    }
-    setIsTestingAll(false);
   };
 
   const handleTestWebhook = async (eventType: string) => {
@@ -503,414 +354,6 @@ export default function SettingsPage() {
             <p className="text-[#6B625B] font-body-sm leading-relaxed">
               Safe simulated responses for UI evaluation, offline walkthroughs, and automated interface previews. Responses are tagged <code className="font-mono text-[#7C65C1]">[Demo Mode]</code>.
             </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Python Backend Diagnostics Hub ────────────────────────────────── */}
-      <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card space-y-space-md">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5DED6] pb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#F9ECE7] border border-[#D97757]/40 flex items-center justify-center text-[#D97757]">
-              <span className="material-symbols-outlined text-lg">terminal</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-headline-sm text-base font-bold text-[#2D2926]">
-                  Python Backend Diagnostics &amp; Telemetry
-                </h2>
-                <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono border ${
-                    isConnected
-                      ? 'bg-[#EAF3E7] border-[#5B7C4B]/30 text-[#5B7C4B]'
-                      : 'bg-[#FAF7F3] border-[#E5DED6] text-[#6B625B]'
-                  }`}
-                >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      isConnected ? 'bg-[#5B7C4B] animate-pulse' : 'bg-[#A89F99]'
-                    }`}
-                  />
-                  {isConnected ? 'ONLINE (:5000)' : 'LOCAL CACHE MODE'}
-                </span>
-              </div>
-              <p className="text-xs text-[#6B625B]">
-                Python Flask server hosting REST endpoints and enterprise operational data store
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePingBackend}
-              disabled={isPinging}
-              className="px-3.5 py-1.5 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <span className={`material-symbols-outlined text-xs text-[#D97757] ${isPinging ? 'animate-spin' : ''}`}>
-                network_ping
-              </span>
-              <span>{isPinging ? 'Pinging...' : 'Ping Backend'}</span>
-            </button>
-            <button
-              onClick={testAllEndpoints}
-              disabled={isTestingAll}
-              className="px-3.5 py-1.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-xs text-[#D97757]">checklist</span>
-              <span>{isTestingAll ? 'Testing Routes...' : 'Test All Routes'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Runtime Metrics Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-space-sm text-xs">
-          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
-            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Framework</span>
-            <span className="font-bold text-[#2D2926]">Flask {health?.version || '3.1.1'}</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
-            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Python Runtime</span>
-            <span className="font-bold text-[#2D2926]">Python {health?.pythonVersion || '3.13.2'}</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
-            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Kernel Engine</span>
-            <span className="font-bold text-[#99462A] truncate block">{health?.aiKernel || 'v2.4 Autonomous'}</span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
-            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Ping Latency</span>
-            <span className="font-bold text-[#5B7C4B]">
-              {currentLatency !== null ? `${currentLatency}ms` : '—'}
-            </span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
-            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Active Fleet</span>
-            <span className="font-bold text-[#2D2926]">
-              {health?.activeAgents ?? 6} nodes
-            </span>
-          </div>
-
-          <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
-            <span className="text-[10px] text-[#8F857D] uppercase font-semibold block">Server PID</span>
-            <span className="font-mono font-bold text-[#2D2926]">
-              {health?.pid ? `#${health.pid}` : 'Flask'}
-            </span>
-          </div>
-        </div>
-
-        {/* Live Ping Alert */}
-        {pingResult && (
-          <div
-            className={`p-3 rounded-xl border text-xs flex items-center justify-between ${
-              pingResult.success
-                ? 'bg-[#EAF3E7] border-[#5B7C4B]/40 text-[#2D2926]'
-                : 'bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A]'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-base text-[#5B7C4B]">
-                {pingResult.success ? 'check_circle' : 'error'}
-              </span>
-              <span>
-                {pingResult.success
-                  ? `Ping successful! Response received in ${pingResult.latency}ms from Python Flask (:5000)`
-                  : `Ping failed (${pingResult.latency}ms). Ensure Python Flask server is running via python run_backend.py`}
-              </span>
-            </div>
-            {pingResult.data?.timestamp && (
-              <span className="font-mono text-[11px] text-[#6B625B]">
-                {pingResult.data.timestamp.substring(11, 19)}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Endpoints Status Grid */}
-        <div className="space-y-2 pt-2 border-t border-[#E5DED6]">
-          <span className="text-xs font-bold text-[#2D2926] block">REST API Endpoints Connectivity</span>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            {endpoints.map((ep) => (
-              <div
-                key={ep.path}
-                className="p-2.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between"
-              >
-                <div>
-                  <div className="font-semibold text-[#2D2926] text-[11px]">{ep.name}</div>
-                  <div className="font-mono text-[10px] text-[#6B625B]">/api{ep.path}</div>
-                </div>
-                <div>
-                  {ep.status === 'testing' && (
-                    <span className="material-symbols-outlined text-sm text-[#D97757] animate-spin">sync</span>
-                  )}
-                  {ep.status === 'success' && (
-                    <span className="px-1.5 py-0.5 rounded bg-[#EAF3E7] text-[#5B7C4B] font-mono text-[10px] font-bold">
-                      200 ({ep.latency}ms)
-                    </span>
-                  )}
-                  {ep.status === 'failed' && (
-                    <span className="px-1.5 py-0.5 rounded bg-[#FDF0F0] text-[#C34A4A] font-mono text-[10px] font-bold">
-                      {ep.code || 'ERR'}
-                    </span>
-                  )}
-                  {ep.status === 'idle' && (
-                    <span className="px-1.5 py-0.5 rounded bg-white border border-[#E5DED6] text-[#8F857D] font-mono text-[10px]">
-                      READY
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── MongoDB Atlas Cloud Persistence Hub ─────────────────────────────── */}
-      <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card space-y-space-md">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5DED6] pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#EBF3E8] border border-[#5B7C4B]/40 flex items-center justify-center text-[#5B7C4B]">
-              <span className="material-symbols-outlined text-lg">database</span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-headline-sm text-base font-bold text-[#2D2926]">
-                  MongoDB Atlas Cloud Persistence Hub
-                </h2>
-                <span
-                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono border ${
-                    dbStatus?.connected || mongoConnected
-                      ? 'bg-[#EBF3E8] border-[#5B7C4B]/30 text-[#5B7C4B]'
-                      : 'bg-[#FAF7F3] border-[#E5DED6] text-[#6B625B]'
-                  }`}
-                >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      dbStatus?.connected || mongoConnected
-                        ? 'bg-[#5B7C4B] animate-pulse'
-                        : 'bg-[#A89F99]'
-                    }`}
-                  />
-                  {dbStatus?.connected || mongoConnected
-                    ? 'ATLAS CLUSTER ONLINE'
-                    : 'SQLITE LOCAL FALLBACK'}
-                </span>
-              </div>
-              <p className="text-xs text-[#6B625B]">
-                High-availability document persistence for incidents, reasoning traces, workflows &amp; audit trails
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePingDatabase}
-              disabled={isPingingDb}
-              className="px-3.5 py-1.5 rounded-lg bg-white border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
-            >
-              <span
-                className={`material-symbols-outlined text-xs text-[#5B7C4B] ${
-                  isPingingDb ? 'animate-spin' : ''
-                }`}
-              >
-                network_ping
-              </span>
-              <span>{isPingingDb ? 'Pinging Atlas...' : 'Ping MongoDB Atlas'}</span>
-            </button>
-            <button
-              onClick={handleSyncDatabase}
-              disabled={isSyncingDb}
-              className="px-3.5 py-1.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] shadow-sm flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all"
-            >
-              <span
-                className={`material-symbols-outlined text-xs text-[#D97757] ${
-                  isSyncingDb ? 'animate-spin' : ''
-                }`}
-              >
-                cloud_sync
-              </span>
-              <span>{isSyncingDb ? 'Syncing...' : 'Sync Local State to Cloud'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Toast Notification */}
-        {dbToast && (
-          <div
-            className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between shadow-xs transition-all ${
-              dbToast.success
-                ? 'bg-[#EBF3E8] border-[#5B7C4B]/40 text-[#3F5A31]'
-                : 'bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A]'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-base">
-                {dbToast.success ? 'check_circle' : 'error'}
-              </span>
-              <span>{dbToast.message}</span>
-            </div>
-            <button
-              onClick={() => setDbToast(null)}
-              className="hover:opacity-75 transition-opacity cursor-pointer font-bold"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* Diagnostic Metrics Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="bg-[#FAF7F3] border border-[#E5DED6] rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center justify-between text-xs text-[#6B625B]">
-              <span className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-sm text-[#5B7C4B]">storage</span>
-                Active Database
-              </span>
-              <span className="font-mono text-[11px] text-[#5B7C4B] font-semibold">Primary</span>
-            </div>
-            <div className="text-base font-bold text-[#2D2926] tracking-tight truncate">
-              {dbStatus?.database || mongoDb || 'sentinelops'}
-            </div>
-            <div className="text-[11px] text-[#6B625B] truncate">
-              Provider: {dbStatus?.provider || 'MongoDB Atlas'}
-            </div>
-          </div>
-
-          <div className="bg-[#FAF7F3] border border-[#E5DED6] rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center justify-between text-xs text-[#6B625B]">
-              <span className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-sm text-[#D97757]">speed</span>
-                Roundtrip Latency
-              </span>
-              <span className="font-mono text-[11px] text-[#5B7C4B] font-semibold">Live Probe</span>
-            </div>
-            <div className="text-base font-bold text-[#2D2926] tracking-tight">
-              {dbStatus?.latency_ms !== undefined
-                ? `${dbStatus.latency_ms} ms`
-                : mongoLatency !== null
-                ? `${mongoLatency} ms`
-                : '< 30 ms'}
-            </div>
-            <div className="text-[11px] text-[#6B625B]">Admin ping command roundtrip</div>
-          </div>
-
-          <div className="bg-[#FAF7F3] border border-[#E5DED6] rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center justify-between text-xs text-[#6B625B]">
-              <span className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-sm text-[#B87A36]">shield</span>
-                Resilience Engine
-              </span>
-              <span className="font-mono text-[11px] text-[#B87A36] font-semibold">Failover</span>
-            </div>
-            <div className="text-base font-bold text-[#2D2926] tracking-tight">
-              Dual-Layer Fallback
-            </div>
-            <div className="text-[11px] text-[#6B625B]">Seamless SQLite local caching</div>
-          </div>
-
-          <div className="bg-[#FAF7F3] border border-[#E5DED6] rounded-xl p-3.5 space-y-1">
-            <div className="flex items-center justify-between text-xs text-[#6B625B]">
-              <span className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-sm text-[#5B7C4B]">folder_open</span>
-                Active Collections
-              </span>
-              <span className="font-mono text-[11px] text-[#5B7C4B] font-semibold">Indexed</span>
-            </div>
-            <div className="text-base font-bold text-[#2D2926] tracking-tight">
-              {Object.keys(dbStatus?.collections || {}).length || 8} Managed
-            </div>
-            <div className="text-[11px] text-[#6B625B]">BSON Document collections</div>
-          </div>
-        </div>
-
-        {/* Collections Breakdown Grid */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#2D2926] tracking-wide uppercase">
-              Cloud Document Collections
-            </span>
-            <span className="text-[11px] text-[#6B625B]">
-              Real-time document counts in Atlas
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-            {[
-              {
-                name: 'incidents',
-                label: 'Incidents',
-                icon: 'warning',
-                count: dbStatus?.collections?.incidents ?? 0,
-                color: 'text-[#D97757]',
-              },
-              {
-                name: 'workflows',
-                label: 'Workflows',
-                icon: 'account_tree',
-                count: dbStatus?.collections?.workflows ?? 0,
-                color: 'text-[#5B7C4B]',
-              },
-              {
-                name: 'agent_reasoning',
-                label: 'Reasoning',
-                icon: 'psychology',
-                count: dbStatus?.collections?.agent_reasoning ?? 0,
-                color: 'text-[#7B61FF]',
-              },
-              {
-                name: 'audit_logs',
-                label: 'Audit Trail',
-                icon: 'receipt_long',
-                count: dbStatus?.collections?.audit_logs ?? 0,
-                color: 'text-[#B87A36]',
-              },
-              {
-                name: 'logs',
-                label: 'Telemetry',
-                icon: 'terminal',
-                count: dbStatus?.collections?.logs ?? 0,
-                color: 'text-[#2D2926]',
-              },
-              {
-                name: 'settings',
-                label: 'Settings',
-                icon: 'tune',
-                count: dbStatus?.collections?.settings ?? 1,
-                color: 'text-[#5B7C4B]',
-              },
-              {
-                name: 'deployments',
-                label: 'Deploys',
-                icon: 'rocket_launch',
-                count: dbStatus?.collections?.deployments ?? 0,
-                color: 'text-[#0284C7]',
-              },
-              {
-                name: 'rollbacks',
-                label: 'Rollbacks',
-                icon: 'history',
-                count: dbStatus?.collections?.rollbacks ?? 0,
-                color: 'text-[#C34A4A]',
-              },
-            ].map((col) => (
-              <div
-                key={col.name}
-                className="bg-[#FAF7F3] border border-[#E5DED6] rounded-lg p-2.5 flex flex-col items-center justify-center text-center space-y-1 hover:border-[#5B7C4B]/40 transition-colors"
-              >
-                <span className={`material-symbols-outlined text-base ${col.color}`}>
-                  {col.icon}
-                </span>
-                <span className="text-[10px] text-[#6B625B] font-medium leading-tight">
-                  {col.label}
-                </span>
-                <span className="text-xs font-bold text-[#2D2926] font-mono">
-                  {col.count}
-                </span>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -1315,235 +758,134 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Main Grid: Policies + Credentials */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
-        {/* Left Column: Policies (8 cols) */}
-        <div className="lg:col-span-8 space-y-space-lg">
-          {/* Auto-Merge Guardrails Card */}
-          <section className="rounded-2xl bg-white border border-[#E5DED6] shadow-card overflow-hidden">
-            <div className="px-space-lg py-space-md border-b border-[#E5DED6] bg-[#FAF7F3] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#D97757]">policy</span>
-                <h2 className="font-headline-sm text-base font-bold text-[#2D2926]">
-                  Auto-Merge Guardrails
-                </h2>
-              </div>
-
-              {/* Toggle Switch */}
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={autoMergeActive}
-                  onChange={(e) => setAutoMergeActive(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-[#E5DED6] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D97757]"></div>
-              </label>
+      {/* Main Grid: Policies */}
+      <div className="space-y-space-lg">
+        {/* Auto-Merge Guardrails Card */}
+        <section className="rounded-2xl bg-white border border-[#E5DED6] shadow-card overflow-hidden">
+          <div className="px-space-lg py-space-md border-b border-[#E5DED6] bg-[#FAF7F3] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#D97757]">policy</span>
+              <h2 className="font-headline-sm text-base font-bold text-[#2D2926]">
+                Auto-Merge Guardrails
+              </h2>
             </div>
 
-            <div className="p-space-lg grid grid-cols-1 md:grid-cols-2 gap-space-xl">
-              {/* Slider & Dial */}
-              <div className="space-y-space-md">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="font-medium text-xs text-[#2D2926]">
-                      Autopilot Confidence Threshold
-                    </label>
-                    <span className="font-mono text-xs font-bold text-[#99462A] bg-[#F9ECE7] border border-[#D97757]/30 px-2 py-0.5 rounded">
-                      {confidenceThreshold}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="50"
-                    max="100"
-                    value={confidenceThreshold}
-                    onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
-                    className="w-full accent-[#D97757] h-1.5 bg-[#E5DED6] rounded-lg cursor-pointer"
-                  />
-                  <p className="text-xs text-[#6B625B] mt-2 leading-relaxed">
-                    PRs synthesized by AI will only auto-merge if internal confidence scores exceed this threshold.
-                  </p>
-                </div>
+            {/* Toggle Switch */}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoMergeActive}
+                onChange={(e) => setAutoMergeActive(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-[#E5DED6] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D97757]"></div>
+            </label>
+          </div>
 
-                <div className="bg-[#FAF7F3] border border-[#E5DED6] p-space-md rounded-xl flex items-center gap-4">
-                  <div className="relative w-16 h-16 shrink-0">
-                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                      <path
-                        className="text-[#E5DED6]"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                      />
-                      <path
-                        className="text-[#D97757]"
-                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeDasharray={`${confidenceThreshold}, 100`}
-                        strokeLinecap="round"
-                        strokeWidth="3"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center font-mono text-xs font-bold text-[#2D2926]">
-                      {confidenceThreshold}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-[#2D2926]">Safety Score Dial</div>
-                    <div className="text-[11px] text-[#6B625B]">Posture: Strict &amp; Deterministic</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Mandatory Criteria */}
+          <div className="p-space-lg grid grid-cols-1 md:grid-cols-2 gap-space-xl">
+            {/* Slider & Dial */}
+            <div className="space-y-space-md">
               <div>
-                <h3 className="font-bold text-xs text-[#2D2926] mb-3">Mandatory Merge Criteria</h3>
-                <ul className="space-y-3 text-xs">
-                  <li className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={ciSuccessRequired}
-                      onChange={(e) => setCiSuccessRequired(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 accent-[#D97757] cursor-pointer"
-                    />
-                    <div>
-                      <div className="font-semibold text-[#2D2926]">100% CI Pipeline Success</div>
-                      <div className="text-[#6B625B]">All unit, lint, and integration tests must pass.</div>
-                    </div>
-                  </li>
-
-                  <li className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={zeroCveRequired}
-                      onChange={(e) => setZeroCveRequired(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 accent-[#D97757] cursor-pointer"
-                    />
-                    <div>
-                      <div className="font-semibold text-[#2D2926]">Zero High/Critical CVEs</div>
-                      <div className="text-[#6B625B]">Trivy &amp; Snyk dependency scanning mandatory.</div>
-                    </div>
-                  </li>
-
-                  <li className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={humanApprovalRequired}
-                      onChange={(e) => setHumanApprovalRequired(e.target.checked)}
-                      className="mt-0.5 h-4 w-4 accent-[#D97757] cursor-pointer"
-                    />
-                    <div>
-                      <div className="font-semibold text-[#2D2926]">Human Code Owner Approval</div>
-                      <div className="text-[#6B625B]">Requires signoff for core payment &amp; auth modules.</div>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          {/* Fallback & Kill-Switch Section */}
-          <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-lg shadow-card space-y-3">
-            <div className="flex items-center gap-2 border-b border-[#E5DED6] pb-2">
-              <span className="material-symbols-outlined text-[#C34A4A]">warning</span>
-              <h3 className="font-headline-sm text-sm font-bold text-[#2D2926]">Emergency Autopilot Kill-Switch</h3>
-            </div>
-            <p className="text-xs text-[#6B625B] leading-relaxed">
-              In the event of anomalous fleet behavior, engaging this emergency kill-switch will immediately halt all autonomous PR generation, lock active git branches, and revert to purely manual SRE intervention.
-            </p>
-            <div className="pt-2">
-              <button
-                onClick={handleKillSwitch}
-                className={`px-4 py-2 rounded-lg border font-bold text-xs transition-all shadow-xs cursor-pointer ${
-                  killSwitchEngaged
-                    ? 'bg-[#C34A4A] text-white border-[#C34A4A]'
-                    : 'bg-[#FDF0F0] border-[#C34A4A]/40 text-[#C34A4A] hover:bg-[#C34A4A] hover:text-white'
-                }`}
-              >
-                {killSwitchEngaged ? 'Disengage Emergency Kill-Switch (Engaged)' : 'Engage Emergency Kill-Switch'}
-              </button>
-            </div>
-          </section>
-        </div>
-
-        {/* Right Column: Access Credentials & Quick Commands (4 cols) */}
-        <div className="lg:col-span-4 space-y-space-md">
-          {/* Quick Start Card */}
-          <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-md shadow-card space-y-3">
-            <div className="flex items-center gap-2 border-b border-[#E5DED6] pb-2">
-              <span className="material-symbols-outlined text-[#D97757]">play_circle</span>
-              <h3 className="font-headline-sm font-bold text-sm text-[#2D2926]">Backend CLI Commands</h3>
-            </div>
-
-            <div className="space-y-2 text-xs">
-              <div className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
-                <div className="text-[11px] text-[#6B625B] mb-1">Start Unified Server:</div>
-                <code className="font-mono text-[11px] text-[#99462A] block bg-white p-1.5 rounded border border-[#E5DED6]">
-                  python run_backend.py --open
-                </code>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
-                <div className="text-[11px] text-[#6B625B] mb-1">Windows One-Click Launcher:</div>
-                <code className="font-mono text-[11px] text-[#99462A] block bg-white p-1.5 rounded border border-[#E5DED6]">
-                  start_backend.bat
-                </code>
-              </div>
-
-              <div className="p-2.5 rounded-xl bg-[#FAF7F3] border border-[#E5DED6]">
-                <div className="text-[11px] text-[#6B625B] mb-1">Run Automated Test Suite:</div>
-                <code className="font-mono text-[11px] text-[#99462A] block bg-white p-1.5 rounded border border-[#E5DED6]">
-                  python backend/test_api.py
-                </code>
-              </div>
-            </div>
-          </section>
-
-          {/* Access Credentials */}
-          <section className="rounded-2xl bg-white border border-[#E5DED6] p-space-md shadow-card space-y-3">
-            <div className="flex items-center gap-2 border-b border-[#E5DED6] pb-2">
-              <span className="material-symbols-outlined text-[#D97757]">key</span>
-              <h3 className="font-headline-sm font-bold text-sm text-[#2D2926]">Access Credentials</h3>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              {/* GitHub */}
-              <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base text-[#2D2926]">code</span>
-                    <span className="font-bold text-[#2D2926]">GitHub App Token</span>
-                  </div>
-                  <span className="text-[#5B7C4B] font-semibold flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs">check_circle</span> Connected
+                <div className="flex justify-between items-center mb-2">
+                  <label className="font-medium text-xs text-[#2D2926]">
+                    Autopilot Confidence Threshold
+                  </label>
+                  <span className="font-mono text-xs font-bold text-[#99462A] bg-[#F9ECE7] border border-[#D97757]/30 px-2 py-0.5 rounded">
+                    {confidenceThreshold}%
                   </span>
                 </div>
-                <div className="font-mono text-[11px] text-[#6B625B] bg-white p-2 rounded border border-[#E5DED6] truncate">
-                  ghp_984f1a287cba90123...
-                </div>
+                <input
+                  type="range"
+                  min="50"
+                  max="100"
+                  value={confidenceThreshold}
+                  onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
+                  className="w-full accent-[#D97757] h-1.5 bg-[#E5DED6] rounded-lg cursor-pointer"
+                />
+                <p className="text-xs text-[#6B625B] mt-2 leading-relaxed">
+                  PRs synthesized by AI will only auto-merge if internal confidence scores exceed this threshold.
+                </p>
               </div>
 
-              {/* Kubernetes */}
-              <div className="p-3 rounded-xl bg-[#FAF7F3] border border-[#E5DED6] space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-base text-[#2D2926]">dns</span>
-                    <span className="font-bold text-[#2D2926]">Production Cluster</span>
+              <div className="bg-[#FAF7F3] border border-[#E5DED6] p-space-md rounded-xl flex items-center gap-4">
+                <div className="relative w-16 h-16 shrink-0">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                    <path
+                      className="text-[#E5DED6]"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                    />
+                    <path
+                      className="text-[#D97757]"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeDasharray={`${confidenceThreshold}, 100`}
+                      strokeLinecap="round"
+                      strokeWidth="3"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center font-mono text-xs font-bold text-[#2D2926]">
+                    {confidenceThreshold}
                   </div>
-                  <span className="text-[#B87A36] font-semibold flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs">schedule</span> Rotates in 5d
-                  </span>
                 </div>
-                <div className="font-mono text-[11px] text-[#6B625B] bg-white p-2 rounded border border-[#E5DED6] flex justify-between items-center">
-                  <span>kubeconfig_prod_v2.yaml</span>
-                  <span className="material-symbols-outlined text-xs text-[#D97757] cursor-pointer">download</span>
+                <div>
+                  <div className="text-xs font-bold text-[#2D2926]">Safety Score Dial</div>
+                  <div className="text-[11px] text-[#6B625B]">Posture: Strict &amp; Deterministic</div>
                 </div>
               </div>
             </div>
-          </section>
-        </div>
+
+            {/* Mandatory Criteria */}
+            <div>
+              <h3 className="font-bold text-xs text-[#2D2926] mb-3">Mandatory Merge Criteria</h3>
+              <ul className="space-y-3 text-xs">
+                <li className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={ciSuccessRequired}
+                    onChange={(e) => setCiSuccessRequired(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[#D97757] cursor-pointer"
+                  />
+                  <div>
+                    <div className="font-semibold text-[#2D2926]">100% CI Pipeline Success</div>
+                    <div className="text-[#6B625B]">All unit, lint, and integration tests must pass.</div>
+                  </div>
+                </li>
+
+                <li className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={zeroCveRequired}
+                    onChange={(e) => setZeroCveRequired(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[#D97757] cursor-pointer"
+                  />
+                  <div>
+                    <div className="font-semibold text-[#2D2926]">Zero High/Critical CVEs</div>
+                    <div className="text-[#6B625B]">Trivy &amp; Snyk dependency scanning mandatory.</div>
+                  </div>
+                </li>
+
+                <li className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={humanApprovalRequired}
+                    onChange={(e) => setHumanApprovalRequired(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 accent-[#D97757] cursor-pointer"
+                  />
+                  <div>
+                    <div className="font-semibold text-[#2D2926]">Human Code Owner Approval</div>
+                    <div className="text-[#6B625B]">Requires signoff for core payment &amp; auth modules.</div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+
       </div>
     </div>
   );

@@ -96,24 +96,73 @@ class GitHubMixin:
                         from services.incident_service import incident_service
                         inc_id = f"INC-{r['id']}"
                         existing = incident_service.get_incident_by_id(inc_id)
-                        if not existing:
-                            incident_service.persist_incident({
-                                "id": inc_id,
-                                "repo": self.repo.split("/")[-1],
-                                "pipeline": r.get("name") or "Deploy SentinelOps to GitHub Pages",
-                                "failure": f"Workflow run failed at step '{r.get('name')}'",
-                                "rootCause": f"Step failure in {r.get('name')} (Run #{r['id']})",
-                                "confidence": 94,
-                                "confidenceColor": "primary",
-                                "status": "Remediated",  # Remediated as subsequent runs succeeded
-                                "time": rel_time,
-                                "runId": r["id"],
-                                "branch": r.get("head_branch") or "main",
-                                "commit": (r.get("head_sha") or "")[:7],
-                                "actionLabel": "View Incident",
-                                "actionVariant": "secondary",
-                                "prNumber": 181,
-                            })
+                        is_already_remediated = (
+                            existing
+                            and existing.get("status") in ["Remediated", "Resolved", "remediated", "resolved"]
+                            and existing.get("prNumber")
+                            and existing.get("prNumber") != 181
+                        )
+
+                        if not existing or not is_already_remediated:
+                            if not existing:
+                                incident_service.persist_incident({
+                                    "id": inc_id,
+                                    "repo": self.repo.split("/")[-1],
+                                    "pipeline": r.get("name") or "CI Suite",
+                                    "failure": f"Workflow run failed at step '{r.get('name')}'",
+                                    "rootCause": f"Step failure in {r.get('name')} (Run #{r['id']})",
+                                    "confidence": 94,
+                                    "confidenceColor": "primary",
+                                    "status": "Investigating",
+                                    "time": rel_time,
+                                    "runId": r["id"],
+                                    "branch": r.get("head_branch") or "main",
+                                    "commit": (r.get("head_sha") or "")[:7],
+                                    "actionLabel": "Auto-Fixing",
+                                    "actionVariant": "primary",
+                                })
+
+                            active_set = getattr(self, "_active_remediations", None)
+                            if active_set is None:
+                                self._active_remediations = set()
+                                active_set = self._active_remediations
+
+                            if inc_id not in active_set:
+                                active_set.add(inc_id)
+                                self.add_log(
+                                    service="Sentinel-Core",
+                                    level="WARN",
+                                    message=f"Autonomous Agent Fleet detected workflow failure for Run #{r['id']} ({r.get('name')}). Dispatching Healer-Alpha.",
+                                )
+                                # Update agent status to processing
+                                for ag in getattr(self, "ai_agents", []):
+                                    if "healer" in ag.get("name", "").lower() or "healer" in ag.get("id", "").lower():
+                                        ag["status"] = "processing"
+
+                                run_payload = {
+                                    "repository": self.repo,
+                                    "workflow_name": r.get("name") or "CI/CD Workflow",
+                                    "run_id": r["id"],
+                                    "branch": r.get("head_branch") or "main",
+                                    "commit_sha": r.get("head_sha") or "HEAD",
+                                    "conclusion": conc,
+                                    "action": "completed",
+                                }
+
+                                def _run_async_remediation(payload=run_payload, iid=inc_id):
+                                    try:
+                                        from services.remediation_service import remediation_service
+                                        remediation_service.remediate_workflow_failure(payload, trigger_source="autonomous_sync")
+                                    except Exception as ex:
+                                        import logging
+                                        logging.getLogger(__name__).error("Autonomous remediation loop failed", exc_info=True)
+                                    finally:
+                                        # Reset agent status to active
+                                        for ag in getattr(self, "ai_agents", []):
+                                            if "healer" in ag.get("name", "").lower() or "healer" in ag.get("id", "").lower():
+                                                ag["status"] = "active"
+
+                                threading.Thread(target=_run_async_remediation, daemon=True).start()
                     except Exception as e:
                         import logging
                         logging.getLogger(__name__).error('Exception in data_store', exc_info=True)

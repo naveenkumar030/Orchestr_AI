@@ -41,9 +41,12 @@ class MergeGuard:
         repo: str | None = None,
         pr_number: int | None = None,
         commit_sha: str | None = None,
+        auto_merge_enabled: bool | None = None,
+        approval_status: str | None = None,
+        require_human_approval: bool | None = None,
     ) -> dict[str, Any]:
         """
-        Evaluates 9 safety conditions to authorize or deny auto-merge:
+        Evaluates safety conditions to authorize or deny auto-merge:
           1. Confidence score >= threshold (default 90%)
           2. Risk level == 'LOW' (strictly fail-closed for MEDIUM/HIGH)
           3. SentinelGuard policy == 'PASS' / 'PASSED'
@@ -53,6 +56,8 @@ class MergeGuard:
           7. Attempt number <= MAX_REMEDIATION_ATTEMPTS
           8. Restricted paths == False
           9. Secret scanning == 'PASS' / 'PASSED'
+          10. Autonomous auto-merge enabled globally (AUTO_MERGE_ENABLED=True)
+          11. Human approval status verified when required
         """
         # Idempotency check if identifiers provided
         cache_key = None
@@ -142,6 +147,33 @@ class MergeGuard:
         if not secret_ok:
             failed_conditions.append(
                 f"Secret scanner status is {str(secret_scan).upper()} (requires PASS)"
+            )
+
+        # Condition 10: Auto-Merge Enabled Configuration Safeguard
+        if auto_merge_enabled is None:
+            auto_merge_enabled = getattr(config, "AUTO_MERGE_ENABLED", True)
+        checks["auto_merge_enabled"] = bool(auto_merge_enabled)
+        if not auto_merge_enabled:
+            failed_conditions.append(
+                "Autonomous auto-merge is disabled by configuration (AUTO_MERGE_ENABLED=False). Human approval required."
+            )
+
+        # Condition 11: Approval Gate Safeguard
+        if require_human_approval is None:
+            require_human_approval = getattr(config, "REQUIRE_HUMAN_APPROVAL", True)
+
+        if approval_status is not None:
+            norm_status = str(approval_status).strip().lower()
+            approval_valid = norm_status in ["approved_by_human", "auto_approved"]
+            checks["approval_status_valid"] = approval_valid
+            if not approval_valid:
+                failed_conditions.append(
+                    f"Approval gate not satisfied: current status is '{approval_status}'"
+                )
+        elif require_human_approval and not auto_merge_enabled:
+            checks["approval_status_valid"] = False
+            failed_conditions.append(
+                "Human approval is required when autonomous auto-merge is disabled"
             )
 
         audit_id = f"mg-audit-{int(time.time() * 1000)}-{uuid.uuid4().hex[:6]}"

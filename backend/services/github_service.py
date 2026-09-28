@@ -134,22 +134,40 @@ class GitHubService:
             "actor": run_data.get("actor", "github-actions"),
         }
 
+    def _normalize_repo(self, repo: str) -> str:
+        """Ensures repository string is in 'owner/repo' format."""
+        if not repo:
+            return os.environ.get("GITHUB_REPO", "naveenkumar030/testingrepo")
+        repo_clean = repo.strip().strip("/")
+        if "github.com/" in repo_clean:
+            repo_clean = repo_clean.split("github.com/")[-1]
+        if "/" not in repo_clean:
+            default_repo = os.environ.get("GITHUB_REPO", "")
+            if default_repo and "/" in default_repo:
+                owner = default_repo.split("/")[0]
+                return f"{owner}/{repo_clean}"
+            return f"naveenkumar030/{repo_clean}"
+        return repo_clean
+
     # ── GitHub REST API Methods ───────────────────────────────────────────────
 
     def get_repository(self, repo: str) -> tuple[bool, dict[str, Any]]:
         """Fetches repository metadata from GitHub API."""
+        repo = self._normalize_repo(repo)
         if not self.token:
             return True, {"name": repo, "simulated": True, "full_name": repo, "default_branch": "main"}
         return self._api_request(f"repos/{repo}")
 
     def get_workflow_run(self, repo: str, run_id: int) -> tuple[bool, dict[str, Any]]:
         """Fetches workflow run details by run ID."""
+        repo = self._normalize_repo(repo)
         if not self.token:
             return True, {"id": run_id, "simulated": True, "status": "completed", "conclusion": "failure"}
         return self._api_request(f"repos/{repo}/actions/runs/{run_id}")
 
     def get_workflow_jobs(self, repo: str, run_id: int) -> tuple[bool, dict[str, Any]]:
         """Fetches list of jobs for a workflow run to pinpoint failed steps."""
+        repo = self._normalize_repo(repo)
         if not self.token:
             return True, {
                 "total_count": 1,
@@ -174,6 +192,7 @@ class GitHubService:
 
     def get_job_logs(self, repo: str, job_id: int) -> tuple[bool, str]:
         """Fetches raw logs for a specific job."""
+        repo = self._normalize_repo(repo)
         if not self.token:
             sample_logs = (
                 f"=== Job {job_id} Runner Execution Log ===\n"
@@ -196,11 +215,22 @@ class GitHubService:
             )
             return True, sample_logs
 
+        class _NoAuthRedirectHandler(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
+                if new_req:
+                    new_req.headers.pop("Authorization", None)
+                    new_req.headers.pop("authorization", None)
+                    new_req.unredirected_hdrs.pop("Authorization", None)
+                    new_req.unredirected_hdrs.pop("authorization", None)
+                return new_req
+
         url = f"{self.base_url}/repos/{repo}/actions/jobs/{job_id}/logs"
         headers = self._get_headers()
         req = urllib.request.Request(url, headers=headers, method="GET")
+        opener = urllib.request.build_opener(_NoAuthRedirectHandler)
         try:
-            with urllib.request.urlopen(req, timeout=15) as response:
+            with opener.open(req, timeout=20) as response:
                 return True, response.read().decode("utf-8", errors="replace")
         except Exception as ex:
             return False, f"Error fetching job logs: {ex!s}"
@@ -210,6 +240,7 @@ class GitHubService:
         Fetches workflow execution logs.
         Attempts to fetch via workflow jobs or fallback to simulated/mock logs.
         """
+        repo = self._normalize_repo(repo)
         if not self.token:
             return self.get_job_logs(repo, 892401)
 
@@ -271,6 +302,7 @@ class GitHubService:
         sha: str | None = None,
     ) -> tuple[bool, dict[str, Any]]:
         """Creates or updates a file in a branch via GitHub Contents API."""
+        repo = self._normalize_repo(repo)
         import base64
         b64_content = base64.b64encode(content.encode("utf-8")).decode("utf-8")
 
@@ -309,6 +341,7 @@ class GitHubService:
 
     def create_branch(self, repo: str, branch_name: str, sha: str) -> tuple[bool, dict[str, Any]]:
         """Creates a git reference/branch from a base commit SHA."""
+        repo = self._normalize_repo(repo)
         if not self.token:
             return True, {
                 "ref": f"refs/heads/{branch_name}",
@@ -327,6 +360,7 @@ class GitHubService:
         self, repo: str, title: str, head: str, base: str, body: str, draft: bool = False
     ) -> tuple[bool, dict[str, Any]]:
         """Creates a GitHub pull request."""
+        repo = self._normalize_repo(repo)
         if not self.token:
             pr_num = int(time.time()) % 1000 + 100
             return True, {
@@ -392,6 +426,7 @@ class GitHubService:
         Merges a pull request using GitHub REST API.
         Enforces real GitHub responses (handles branch protection, approval requirements, merge conflicts).
         """
+        repo = self._normalize_repo(repo)
         if not self.token:
             return True, {
                 "sha": "c0ffee1234567890abcdef",

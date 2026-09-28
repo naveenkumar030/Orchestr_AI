@@ -484,8 +484,8 @@ class RemediationOrchestrator:
                 self._save_incident(inc_record)
                 try:
                     slack_service.send_incident_alert(inc_record)
-                except Exception:
-                    pass
+                except Exception as alert_err:
+                    logger.warning("Failed to send Slack incident alert for %s: %s", incident_id, alert_err)
 
                 return {
                     "status": "blocked",
@@ -585,8 +585,8 @@ class RemediationOrchestrator:
                         "draft": create_draft,
                         "agent": "Healer-Alpha",
                     })
-                except Exception:
-                    pass
+                except Exception as pr_err:
+                    logger.warning("Failed to save PR info to store for %s: %s", incident_id, pr_err)
 
             else:
                 # Push new commit to existing PR branch
@@ -613,8 +613,8 @@ class RemediationOrchestrator:
             add_timeline_event("CI Validation Started", f"Validating attempt #{attempt_number}", "⚙️")
             try:
                 slack_service.send_validation_started(incident_id, repo, remediation_branch, pr_number)
-            except Exception:
-                pass
+            except Exception as val_slack_err:
+                logger.warning("Failed to send Slack validation started for %s: %s", incident_id, val_slack_err)
 
             # Update incident to Validating
             inc_record = self._build_incident_record(
@@ -693,7 +693,19 @@ class RemediationOrchestrator:
 
                 token_verified, token_msg = self._verify_token_scope(token_override=kwargs.get("token_scope_ok"))
 
-                # MergeGuard authorization check with 9-point safety policy & idempotency
+                # Query approval record if available
+                approval_rec = None
+                try:
+                    from services.human_approval_service import human_approval_service
+                    approval_rec = human_approval_service.get_approval_state(incident_id)
+                except Exception as app_ex:
+                    logger.debug("Approval state check notice for %s: %s", incident_id, app_ex)
+
+                approval_status_val = kwargs.get("approval_status")
+                if approval_status_val is None and approval_rec:
+                    approval_status_val = approval_rec.get("approval_status")
+
+                # MergeGuard authorization check with safety policy & idempotency
                 merge_decision = merge_guard.can_auto_merge(
                     confidence=confidence,
                     risk_level=risk_level,
@@ -707,11 +719,14 @@ class RemediationOrchestrator:
                     repo=repo,
                     pr_number=pr_number,
                     commit_sha=commit_sha,
+                    auto_merge_enabled=kwargs.get("auto_merge_enabled"),
+                    approval_status=approval_status_val,
+                    require_human_approval=kwargs.get("require_human_approval"),
                 )
                 try:
                     slack_service.send_merge_decision(incident_id, pr_number or 181, repo, merge_decision)
-                except Exception:
-                    pass
+                except Exception as slack_err:
+                    logger.warning("Failed to send Slack merge decision for %s: %s", incident_id, slack_err)
 
                 attempt_record = {
                     "incident_id": incident_id,
@@ -795,8 +810,8 @@ class RemediationOrchestrator:
                         add_timeline_event("Deployment Initiated", f"Deploying commit {commit_sha[:7]} to {env}", "📦")
                         try:
                             slack_service.send_deployment_started(incident_id, repo, commit_sha, env)
-                        except Exception:
-                            pass
+                        except Exception as dep_slack_err:
+                            logger.warning("Failed to send Slack deployment started for %s: %s", incident_id, dep_slack_err)
 
                         eff_deployment_status = override_deployment_status if override_deployment_status is not None else ("SUCCESS" if not github_service.token else None)
                         eff_health_status = override_health_status if override_health_status is not None else ("HEALTHY" if not github_service.token else None)
@@ -964,8 +979,8 @@ class RemediationOrchestrator:
                             slack_service.send_deployment_successful(
                                 incident_id, repo, commit_sha, env, dep_poll.get("duration_seconds", 12)
                             )
-                        except Exception:
-                            pass
+                        except Exception as dep_succ_err:
+                            logger.warning("Failed to send Slack deployment successful for %s: %s", incident_id, dep_succ_err)
 
                         # 2. Post-Deployment Health Verification
                         t_health_start = datetime.now(timezone.utc).isoformat()
@@ -974,8 +989,8 @@ class RemediationOrchestrator:
                             slack_service.send_health_verification_started(
                                 incident_id, target_health_url or f"https://{repo.split('/')[-1].lower()}.onrender.com/api/health"
                             )
-                        except Exception:
-                            pass
+                        except Exception as health_start_err:
+                            logger.warning("Failed to send Slack health verification started for %s: %s", incident_id, health_start_err)
 
                         from services.health_check_service import health_check_service
                         health_res = health_check_service.verify_health(
@@ -1043,8 +1058,8 @@ class RemediationOrchestrator:
                                 slack_service.send_resolution_notification(
                                     incident_id, pr_number or 181, repo, mttr_metrics.get("total_mttr_seconds", 48)
                                 )
-                            except Exception:
-                                pass
+                            except Exception as res_notify_err:
+                                logger.warning("Failed to send Slack resolution notification for %s: %s", incident_id, res_notify_err)
 
                             return {
                                 "status": "resolved",
@@ -1078,8 +1093,8 @@ class RemediationOrchestrator:
                                     health_res.get("http_status", 500),
                                     health_res.get("reason", "HTTP 500"),
                                 )
-                            except Exception:
-                                pass
+                            except Exception as health_fail_err:
+                                logger.warning("Failed to send Slack health verification failure for %s: %s", incident_id, health_fail_err)
 
                             t_rb_start = datetime.now(timezone.utc).isoformat()
                             add_timeline_event("Automated Rollback", "Rollback Initiated: Reverting to previous stable commit", "↩️")
@@ -1158,8 +1173,8 @@ class RemediationOrchestrator:
                                     slack_service.send_rollback_successful(
                                         incident_id, repo, rb_res.get("target_commit", "7f9a1b2c"), rb_res.get("duration_seconds", 12)
                                     )
-                                except Exception:
-                                    pass
+                                except Exception as rb_succ_err:
+                                    logger.warning("Failed to send Slack rollback success for %s: %s", incident_id, rb_succ_err)
 
                                 return {
                                     "status": "rolled_back",
@@ -1215,8 +1230,8 @@ class RemediationOrchestrator:
                                     slack_service.send_rollback_failed_escalation(
                                         incident_id, repo, rb_err
                                     )
-                                except Exception:
-                                    pass
+                                except Exception as rb_esc_err:
+                                    logger.warning("Failed to send Slack rollback escalation for %s: %s", incident_id, rb_esc_err)
 
                                 return {
                                     "status": "escalated",
@@ -1342,8 +1357,8 @@ class RemediationOrchestrator:
                         slack_service.send_retry_notification(
                             incident_id, repo, attempt_number + 1, self.max_attempts, str(fail_reason)[:150]
                         )
-                    except Exception:
-                        pass
+                    except Exception as retry_err:
+                        logger.warning("Failed to send Slack retry notification for %s: %s", incident_id, retry_err)
                 else:
                     # Max retries exceeded -> ESCALATE
                     add_timeline_event("Max Attempts Reached", f"Exhausted {self.max_attempts} attempts without resolution", "🚨", status="error")
@@ -1380,8 +1395,8 @@ class RemediationOrchestrator:
                         slack_service.send_escalation_alert(
                             inc_record, attempt_count=self.max_attempts, reason="CI validation failed on all attempts"
                         )
-                    except Exception:
-                        pass
+                    except Exception as esc_err:
+                        logger.warning("Failed to send Slack escalation alert for %s: %s", incident_id, esc_err)
 
                     return {
                         "status": "escalated",
@@ -1449,8 +1464,10 @@ class RemediationOrchestrator:
                 raw = comp.choices[0].message.content
                 if raw:
                     return json.loads(raw)
-            except Exception:
-                pass
+            except (json.JSONDecodeError, AttributeError, KeyError) as parse_err:
+                logger.warning("Failed to parse LLM refined patch JSON: %s", parse_err)
+            except Exception as llm_err:
+                logger.warning("LLM refined retry synthesis call failed: %s", llm_err)
 
         # Fallback to deterministic refined heuristic
         target_file = previous_target_file or "services/auth/token_validator.py"
@@ -1513,7 +1530,7 @@ class RemediationOrchestrator:
                 return None
             try:
                 return datetime.fromisoformat(ts.replace("Z", "+00:00"))
-            except Exception:
+            except (ValueError, TypeError):
                 return None
 
         dt_det = parse_iso(t_detected)
@@ -1681,8 +1698,8 @@ class RemediationOrchestrator:
         try:
             from services.incident_service import incident_service
             incident_service.persist_incident(inc_record)
-        except Exception:
-            pass
+        except Exception as inc_err:
+            logger.warning("Failed to persist incident %s via incident_service: %s", inc_id, inc_err)
 
     def _upsert_store_pr(
         self,

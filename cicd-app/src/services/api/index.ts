@@ -11,6 +11,7 @@ import { settingsApi } from './settings';
 import { analyticsApi } from './analytics';
 import { githubApi } from './github';
 import { reliabilityApi } from './reliability';
+import { operatorApi } from './operator';
 
 export const api = {
   ...healthApi,
@@ -26,6 +27,7 @@ export const api = {
   ...analyticsApi,
   ...githubApi,
   ...reliabilityApi,
+  ...operatorApi,
 };
 
 export * from './types';
@@ -43,3 +45,5 @@ export * from './settings';
 export * from './analytics';
 export * from './github';
 export * from './reliability';
+export * from './operator';
+
