@@ -84,7 +84,7 @@ def init_db(db_url: str | None = None, target_revision: str = "head"):
     try:
         alembic_cfg = get_alembic_config(db_url)
 
-        with active_engine.connect() as conn:
+        with active_engine.begin() as conn:
             inspector = inspect(conn)
             table_names = set(inspector.get_table_names())
 
