@@ -132,9 +132,13 @@ export const IncidentRcaCard: React.FC<IncidentRcaCardProps> = ({ selectedIncide
               </span>
             )}
             {/* PR link */}
-            {selectedIncident.prUrl && (
+            {(selectedIncident.prUrl || selectedIncident.prNumber) && (
               <a
-                href={selectedIncident.prUrl}
+                href={
+                  selectedIncident.prUrl
+                    ? selectedIncident.prUrl.replace('https://github.com/testingrepo/', 'https://github.com/naveenkumar030/testingrepo/')
+                    : `https://github.com/naveenkumar030/testingrepo/pull/${selectedIncident.prNumber}`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-3 py-1.5 rounded-lg bg-white hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-body-sm text-xs flex items-center gap-1.5 transition-all shadow-sm font-semibold"

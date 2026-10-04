@@ -64,7 +64,7 @@ export const IncidentRemediationDetails: React.FC<IncidentRemediationDetailsProp
               {selectedIncident.prNumber ? `Pull Request #${selectedIncident.prNumber} Diff` : 'Auto-Remediation PR Diff'}
             </span>
             <span className="font-mono text-xs px-2 py-0.5 rounded bg-white border border-[#E5DED6] text-[#2D2926]">
-              {selectedIncident.targetFile || 'package.json'}
+              {selectedIncident.targetFile || (selectedIncident.diff ? (selectedIncident.diff.match(/diff --git a\/([^\s]+)/)?.[1] || 'app/main.py') : (selectedIncident.failed_step ? `Failed Step: ${selectedIncident.failed_step}` : 'app/main.py'))}
             </span>
             {selectedIncident.remediationBranch && (
               <span className="font-mono text-xs px-2 py-0.5 rounded bg-[#EAF3E7] border border-[#5B7C4B]/30 text-[#5B7C4B]">
@@ -73,25 +73,29 @@ export const IncidentRemediationDetails: React.FC<IncidentRemediationDetailsProp
             )}
           </div>
           <p className="font-body-sm text-xs text-[#6B625B] mt-0.5">
-            {selectedIncident.rootCause || 'fix(deps): resolve dependency conflict and restore pipeline green status'}
+            {selectedIncident.rootCause || selectedIncident.failure || 'Automated CI/CD test failure triage'}
           </p>
         </div>
 
-        <a
-          href={selectedIncident.prUrl || '#'}
-          target={selectedIncident.prUrl ? '_blank' : undefined}
-          rel="noreferrer"
-          onClick={(e) => {
-            if (!selectedIncident.prUrl) {
-              e.preventDefault();
-              alert(`Pull Request #${selectedIncident.prNumber || 184} opened in GitHub.`);
-            }
-          }}
-          className="px-3 py-1.5 rounded bg-white hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-body-sm text-xs flex items-center gap-1 font-semibold transition-colors"
-        >
-          <span className="material-symbols-outlined text-sm text-[#D97757]">open_in_new</span>
-          <span>{selectedIncident.prNumber ? `Open PR #${selectedIncident.prNumber}` : 'Open in GitHub'}</span>
-        </a>
+        {(() => {
+          const safePrUrl = selectedIncident.prUrl
+            ? selectedIncident.prUrl.replace('https://github.com/testingrepo/', 'https://github.com/naveenkumar030/testingrepo/')
+            : selectedIncident.prNumber
+            ? `https://github.com/naveenkumar030/testingrepo/pull/${selectedIncident.prNumber}`
+            : selectedIncident.html_url || (selectedIncident.runId ? `https://github.com/naveenkumar030/testingrepo/actions/runs/${selectedIncident.runId}` : 'https://github.com/naveenkumar030/testingrepo');
+
+          return (
+            <a
+              href={safePrUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-1.5 rounded bg-white hover:bg-[#F2EDE6] border border-[#E5DED6] text-[#2D2926] font-body-sm text-xs flex items-center gap-1 font-semibold transition-colors"
+            >
+              <span className="material-symbols-outlined text-sm text-[#D97757]">open_in_new</span>
+              <span>{selectedIncident.prNumber ? `Open PR #${selectedIncident.prNumber}` : 'View GitHub Run'}</span>
+            </a>
+          );
+        })()}
       </div>
 
       {/* Code diff container */}
@@ -119,28 +123,10 @@ export const IncidentRemediationDetails: React.FC<IncidentRemediationDetailsProp
             );
           })
         ) : (
-          <>
-            <div className="text-[#8F857D] py-1 border-b border-[#3E3835]">
-              @@ -28,7 +28,7 @@ "dependencies": &#123;
-            </div>
-            <div className="text-[#D1C7BD] pl-4">
-              &nbsp;&nbsp;"@fastify/sensible": "^5.2.0",
-            </div>
-            <div className="bg-[#ba1a1a]/30 text-[#fca5a5] px-2 py-0.5 rounded flex items-center gap-2">
-              <span>-</span>
-              <span>&nbsp;&nbsp;"@stripe/stripe-node": "^12.1.0",</span>
-            </div>
-            <div className="bg-[#15803d]/30 text-[#86efac] px-2 py-0.5 rounded flex items-center gap-2">
-              <span>+</span>
-              <span>&nbsp;&nbsp;"@stripe/stripe-node": "^14.1.2",</span>
-            </div>
-            <div className="text-[#D1C7BD] pl-4">
-              &nbsp;&nbsp;"dotenv": "^16.3.1",
-            </div>
-            <div className="text-[#D1C7BD] pl-4">
-              &nbsp;&nbsp;"fastify": "^4.26.1"
-            </div>
-          </>
+          <div className="py-6 text-center text-[#8F857D]">
+            <span className="material-symbols-outlined text-2xl block mb-1">hourglass_empty</span>
+            <span>No unified diff synthesized yet. Click &apos;Healer-Alpha&apos; to generate automated code patch.</span>
+          </div>
         )}
       </div>
 

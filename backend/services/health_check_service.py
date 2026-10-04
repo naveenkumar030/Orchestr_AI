@@ -229,7 +229,7 @@ class HealthCheckService:
                     }
             else:
                 consecutive_successes = 0
-                if "connection error" in str(probe.get("reason", "")).lower() and not os.environ.get("GITHUB_TOKEN") and timeout > 3:
+                if "connection error" in str(probe.get("reason", "")).lower() and (not os.environ.get("GITHUB_TOKEN") or os.environ.get("PYTEST_CURRENT_TEST") or timeout > 3):
                     break
 
             if time.time() - start_time + interval >= timeout:

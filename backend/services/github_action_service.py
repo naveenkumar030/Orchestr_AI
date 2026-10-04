@@ -296,15 +296,46 @@ class GitHubActionService:
             self._created_branches[clean_inc] = branch_name
 
             # ── Step 2: Apply Patch Safely to Dedicated Branch ────────────────
-            affected_files = fix.get("affected_files", ["src/app.py"])
+            from services.patch_applicator import patch_applicator
+
+            def file_fetcher(f_p: str) -> str | None:
+                ok, res = github_service.get_file_content(clean_repo, f_p, ref=base_branch)
+                if ok and isinstance(res, dict) and res.get("decoded_text") is not None:
+                    return res["decoded_text"]
+                return None
+
             patch_content = fix.get("patch", "")
+            primary_file = (fix.get("affected_files", ["src/app.py"])[0] if fix.get("affected_files") else "src/app.py")
+            
+            # Apply patch cleanly to actual repository files
+            app_result = patch_applicator.apply_patch(
+                patch_str=patch_content,
+                file_provider=file_fetcher,
+                fallback_target_file=primary_file,
+            )
+
+            if not app_result.get("applied"):
+                failed_record = {
+                    "action": "patch_application",
+                    "status": "failed",
+                    "incident_id": clean_inc,
+                    "run_id": run_id,
+                    "repository": clean_repo,
+                    "branch": branch_name,
+                    "error": app_result.get("reason", "Patch applicator failed to match context lines"),
+                    "created_at": now_iso,
+                }
+                self._action_records[clean_inc] = failed_record
+                return failed_record
+
+            resulting_files = app_result.get("resulting_files", {})
             commit_msg = f"fix(sentinelops): automated remediation for {clean_inc}"
 
-            for f_path in affected_files:
+            for f_path, resulting_content in resulting_files.items():
                 file_ok, file_res = github_service.create_or_update_file(
                     repo=clean_repo,
                     path=f_path,
-                    content=f"# SentinelOps remediated patch\n# Incident: {clean_inc}\n\n{patch_content}",
+                    content=resulting_content,
                     message=commit_msg,
                     branch=branch_name,
                 )

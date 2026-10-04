@@ -383,7 +383,7 @@ export default function SettingsPage() {
 
           <div className="flex items-center gap-2">
             <a
-              href={`https://github.com/${gitHubStatus?.repository || 'naveenkumar030/SentinelOps'}/settings/hooks`}
+              href={`https://github.com/${gitHubStatus?.repository || 'naveenkumar030/testingrepo'}/settings/hooks`}
               target="_blank"
               rel="noreferrer"
               className="px-3 py-1.5 rounded-lg bg-[#FAF7F3] border border-[#E5DED6] hover:bg-[#F2EDE6] text-xs font-semibold text-[#2D2926] shadow-sm flex items-center gap-1.5 cursor-pointer"

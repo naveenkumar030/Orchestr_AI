@@ -70,11 +70,7 @@ class MergeGuard:
                     return cached
 
         if confidence_threshold is None:
-            try:
-                from data_store import store
-                confidence_threshold = store.get_settings().get("confidenceThreshold", 90)
-            except Exception:
-                confidence_threshold = 90
+            confidence_threshold = getattr(config, "CONFIDENCE_THRESHOLD", 90)
 
         failed_conditions: list[str] = []
         checks: dict[str, bool] = {}

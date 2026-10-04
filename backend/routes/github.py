@@ -157,11 +157,11 @@ def github_trigger_orchestration():
     Detect -> Diagnose -> Fix -> SentinelGuard -> PR -> CI Validation -> ValidatorAgent -> MergeGuard -> Auto-Merge / Retry / Escalate.
     """
     data = request.get_json(force=True, silent=True) or {}
-    run_id = data.get("run_id", 892401)
-    repo = data.get("repo", "payment-service")
+    run_id = data.get("run_id", 36973274857)
+    repo = data.get("repo", "naveenkumar030/testingrepo")
     branch = data.get("branch", "main")
-    commit_sha = data.get("commit_sha", "a1b2c3d4")
-    wf_name = data.get("workflow_name", "CI/CD Pipeline")
+    commit_sha = data.get("commit_sha", "HEAD")
+    wf_name = data.get("workflow_name", "CI Suite")
 
     from services.remediation_orchestrator import remediation_orchestrator
     run_data = {
@@ -197,7 +197,7 @@ def github_trigger_orchestration():
 def github_validate_branch():
     """Validates CI status for a branch."""
     data = request.get_json(force=True, silent=True) or {}
-    repo = data.get("repo", "payment-service")
+    repo = data.get("repo", "naveenkumar030/testingrepo")
     branch = data.get("branch", "sentinelops/fix-892401")
     commit_sha = data.get("commit_sha")
     from services.validation_service import validation_service

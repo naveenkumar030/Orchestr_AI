@@ -12,9 +12,11 @@ export default function PullRequestsPage() {
   const [notification, setNotification] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCreatePRModalOpen, setIsCreatePRModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
+    setIsLoading(true);
     api.getPullRequests().then((data) => {
       if (!mounted) return;
       if (data && data.length > 0) {
@@ -24,6 +26,9 @@ export default function PullRequestsPage() {
         setPrList([]);
         setSelectedPR(null);
       }
+      setIsLoading(false);
+    }).catch(() => {
+      if (mounted) setIsLoading(false);
     });
     return () => {
       mounted = false;
@@ -223,7 +228,13 @@ export default function PullRequestsPage() {
       </div>
 
       {/* 2-Column Split: Selected PR Review & Queue */}
-      {!selectedPR || prList.length === 0 ? (
+      {isLoading ? (
+        <div className="rounded-2xl bg-white border border-[#E5DED6] p-space-xl shadow-card flex flex-col items-center justify-center text-center py-20">
+          <span className="material-symbols-outlined text-5xl text-[#D97757] animate-spin mb-4">sync</span>
+          <h3 className="font-headline-sm text-base font-bold text-[#2D2926]">Fetching Pull Requests from GitHub...</h3>
+          <p className="font-body-sm text-sm text-[#6B625B] mt-1">Connecting to naveenkumar030/testingrepo</p>
+        </div>
+      ) : !selectedPR || prList.length === 0 ? (
         <div className="rounded-2xl bg-white border border-[#E5DED6] p-space-xl shadow-card flex flex-col items-center justify-center text-center py-16">
           <div className="h-16 w-16 rounded-2xl bg-[#F9ECE7] border border-[#D97757]/20 flex items-center justify-center mb-4 text-[#D97757]">
             <span className="material-symbols-outlined text-3xl">call_merge</span>
@@ -485,9 +496,13 @@ export default function PullRequestsPage() {
       <CreatePRModal 
         isOpen={isCreatePRModalOpen}
         onClose={() => setIsCreatePRModalOpen(false)}
-        onSuccess={(title, branch) => {
+        onSuccess={(title, branch, newPR) => {
           setNotification(`Successfully requested autonomous PR "${title}" on branch ${branch}. Pipeline initiated.`);
           setTimeout(() => setNotification(null), 5000);
+          if (newPR) {
+            setPrList((prev) => [newPR, ...prev]);
+            setSelectedPR(newPR);
+          }
         }}
       />
     </div>

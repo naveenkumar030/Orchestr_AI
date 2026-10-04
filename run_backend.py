@@ -50,6 +50,13 @@ if __name__ == "__main__":
         if ng_status.get("running"):
             print(f"  * Live ngrok:  {ng_status.get('webhookUrl')}")
 
+    try:
+        from services.fleet_monitor import fleet_monitor
+        fleet_monitor.start()
+        print("  * Fleet Monitor: Active (Polling GitHub Actions)")
+    except Exception as e:
+        print(f"  * Fleet Monitor: Disabled ({e})")
+
     print("=" * 68)
     print("  [SentinelOps] Autonomous DevOps -- Unified Server")
     print("=" * 68)

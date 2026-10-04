@@ -24,7 +24,23 @@ export type IncidentStatus =
   | 'Resolved'
   | 'Remediated'
   | 'Blocked'
-  | 'Escalated';
+  | 'Escalated'
+  | 'Human Review Required'
+  | 'HUMAN_REVIEW_REQUIRED'
+  | 'DETECTED'
+  | 'ANALYZED'
+  | 'FIX_GENERATED'
+  | 'PATCH_APPLIED'
+  | 'LOCALLY_VALIDATED'
+  | 'COMMITTED'
+  | 'CI_RUNNING'
+  | 'CI_PASSED'
+  | 'CI_FAILED'
+  | 'REMEDIATED'
+  | 'Unverified'
+  | 'UNVERIFIED'
+  | 'Unresolved'
+  | 'UNRESOLVED';
 
 export interface RemediationAttempt {
   attempt_number: number;
@@ -160,6 +176,10 @@ export interface Incident {
   remediationBranch?: string;
   targetFile?: string;
   diff?: string;
+  failed_step?: string;
+  html_url?: string;
+  github_run_url?: string;
+  run_url?: string;
   explanation?: string;
   guard_status?: string;
   risk_level?: string;
@@ -208,6 +228,22 @@ export interface AgentTask {
   status: 'done' | 'running' | 'pending';
 }
 
+export interface AgentExecutionRecord {
+  incident_id?: string;
+  category?: string;
+  root_cause?: string;
+  confidence?: number;
+  score?: number;
+  fix_type?: string;
+  description?: string;
+  affected_files?: string[];
+  approved?: boolean;
+  security_concerns?: string[];
+  timestamp?: string;
+  status?: string;
+  summary?: string;
+}
+
 export interface AIAgent {
   id: string;
   name: string;
@@ -221,10 +257,78 @@ export interface AIAgent {
   tags: string[];
   hostRunner?: string;
   modelBackend?: string;
+  avgLatencyMs?: number;
+  recentExecutions?: AgentExecutionRecord[];
 }
 
+export interface LLMProviderStatus {
+  id: string;
+  name: string;
+  model: string;
+  status: 'online' | 'active' | 'degraded' | 'offline';
+  latencyMs: number;
+  role: string;
+  primary?: boolean;
+}
+
+export interface AgentQueueItem {
+  id: string;
+  title: string;
+  repo: string;
+  pipeline: string;
+  priority: string;
+  status: string;
+  assignedTo: string;
+}
+
+export interface AgentFleetStats {
+  totalAgents: number;
+  activeAgents: number;
+  standbyAgents: number;
+  totalTasksCompleted: number;
+  autonomousResolutionRate: number;
+  totalIncidents: number;
+  resolvedIncidents: number;
+  avgCriticScore: number;
+  avgDiagnosisConfidence: number;
+  avgLatencyMs: number;
+  activeRepository: string;
+  llmProviders: LLMProviderStatus[];
+  pendingQueue: AgentQueueItem[];
+}
+
+export interface AgentTimelineStep {
+  agent: string;
+  role: string;
+  status: string;
+  duration_ms: number;
+  input_summary?: string;
+  output_summary?: string;
+  confidence?: number;
+  score?: number;
+}
+
+export interface AgentReasoningFeedItem {
+  incident_id: string;
+  workflow_name: string;
+  repository: string;
+  commit_sha: string;
+  timestamp: string;
+  status: string;
+  category: string;
+  root_cause: string;
+  diagnosis_confidence?: number;
+  fix_type?: string;
+  fix_description?: string;
+  critic_score?: number;
+  critic_approved?: boolean;
+  agent_timeline?: AgentTimelineStep[];
+  execution_duration_ms: number;
+}
+
+
 // ─── Pull Requests ────────────────────────────────────────────────────────────
-export type PRStatus = 'approved' | 'changes_requested' | 'reviewing' | 'merged' | 'draft';
+export type PRStatus = 'open' | 'closed' | 'approved' | 'changes_requested' | 'reviewing' | 'merged' | 'draft';
 
 export interface PullRequest {
   id: string;
@@ -232,16 +336,28 @@ export interface PullRequest {
   title: string;
   repo: string;
   branch: string;
+  baseBranch?: string;
   author: string;
+  authorAvatar?: string;
   status: PRStatus;
+  statusLabel?: string;
   aiReviewScore?: number;
+  aiReviewStatus?: string;
+  aiComment?: string;
   comments: number;
   additions: number;
   deletions: number;
   time: string;
-  aiComment?: string;
+  htmlUrl?: string;
+  draft?: boolean;
+  isDraft?: boolean;
   guard_status?: string;
   risk_level?: string;
+  incidentId?: string;
+  diff?: string;
+  changes?: { additions: number; deletions: number; files: number };
+  checks?: Array<{ name: string; status: string; duration?: string }>;
+  findings?: Array<{ title: string; description: string; file: string; line: number; severity: string }>;
 }
 
 // ─── Logs ─────────────────────────────────────────────────────────────────────

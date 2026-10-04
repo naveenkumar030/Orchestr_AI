@@ -32,6 +32,13 @@ function getIconLabel(icon: string): string {
     '📢': 'campaign',
     '🚨': 'error',
     '✔️': 'check',
+    '🧪': 'science',
+    '📝': 'description',
+    '🔀': 'alt_route',
+    '📦': 'inventory_2',
+    '↩️': 'undo',
+    '🟡': 'info',
+    '🚫': 'block',
   };
   return map[icon] || 'circle';
 }
@@ -136,9 +143,13 @@ export const IncidentExecutionTrail: React.FC<IncidentExecutionTrailProps> = ({ 
           {selectedIncident.prNumber && (
             <div className="p-2 rounded bg-[#FAF7F3] border border-[#E5DED6] flex items-center justify-between">
               <span className="text-[#6B625B]">Pull Request</span>
-              {selectedIncident.prUrl ? (
+              {selectedIncident.prUrl || selectedIncident.prNumber ? (
                 <a
-                  href={selectedIncident.prUrl}
+                  href={
+                    selectedIncident.prUrl
+                      ? selectedIncident.prUrl.replace('https://github.com/testingrepo/', 'https://github.com/naveenkumar030/testingrepo/')
+                      : `https://github.com/naveenkumar030/testingrepo/pull/${selectedIncident.prNumber}`
+                  }
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[#D97757] font-semibold hover:underline"
@@ -152,6 +163,67 @@ export const IncidentExecutionTrail: React.FC<IncidentExecutionTrailProps> = ({ 
           )}
         </div>
       </section>
+
+      {/* Autonomous Remediation Attempts (Multi-Attempt History) */}
+      {selectedIncident.attempts && selectedIncident.attempts.length > 0 && (
+        <section className="rounded-xl bg-white border border-[#E5DED6] shadow-card overflow-hidden flex flex-col">
+          <div className="p-space-md bg-[#F2EDE6]/80 border-b border-[#E5DED6] flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[#D97757] text-lg">autorenew</span>
+              <span className="font-headline-sm font-semibold text-[#2D2926]">Remediation Attempts</span>
+            </div>
+            <span className="font-label-code-sm text-xs text-[#99462A] bg-[#F9ECE7] border border-[#D97757]/30 px-2 py-0.5 rounded font-semibold">
+              {selectedIncident.attempts.length} / 3 Max
+            </span>
+          </div>
+          <div className="p-space-md space-y-3">
+            {selectedIncident.attempts.map((att: any, idx: number) => {
+              const num = att.attempt_number || idx + 1;
+              const status = att.validation_status || att.ci_validation?.status || 'UNKNOWN';
+              const isPass = status === 'SUCCESS' || status === 'PASSED';
+              const isUnverified = status === 'UNVERIFIED';
+              const reason = att.validation_reason || att.ci_validation?.failure_reason || att.patch_summary;
+              return (
+                <div
+                  key={idx}
+                  className={`p-2.5 rounded-lg border text-xs ${
+                    isPass
+                      ? 'bg-[#EAF3E7] border-[#5B7C4B]/40'
+                      : isUnverified
+                      ? 'bg-[#FFFBEB] border-[#F59E0B]/40'
+                      : 'bg-[#FAF7F3] border-[#E5DED6]'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-semibold text-[#2D2926]">Attempt #{num}</span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        isPass
+                          ? 'bg-[#5B7C4B] text-white'
+                          : isUnverified
+                          ? 'bg-[#F59E0B] text-white'
+                          : 'bg-[#C34A4A] text-white'
+                      }`}
+                    >
+                      {isPass ? 'CI PASSED' : isUnverified ? 'UNVERIFIED' : 'CI FAILED'}
+                    </span>
+                  </div>
+                  {att.files_changed && att.files_changed.length > 0 && (
+                    <div className="text-[11px] text-[#6B625B] font-mono">
+                      Target: {att.files_changed.join(', ')}
+                    </div>
+                  )}
+                  {reason && (
+                    <div className="text-[11px] text-[#6B625B] mt-1 font-mono truncate" title={reason}>
+                      Reason: {reason}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 };

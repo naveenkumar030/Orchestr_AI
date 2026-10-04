@@ -10,7 +10,7 @@ export const pipelinesApi = {
     const query = status && status !== 'all' ? `?status=${status}` : '';
     const fallback =
       status && status !== 'all'
-        ? localPipelines.filter((p) => p.status.toLowerCase() === status.toLowerCase())
+        ? localPipelines.filter((p) => (p.status || '').toLowerCase() === status.toLowerCase())
         : localPipelines;
     const { data } = await request<Pipeline[]>(`/pipelines${query}`, { method: 'GET' }, fallback);
     return data;
@@ -59,7 +59,7 @@ export const pipelinesApi = {
 
   async retryPipeline(id: string): Promise<Pipeline> {
     const mockHandler = () => {
-      const idx = localPipelines.findIndex((p) => p.id.toLowerCase() === id.toLowerCase());
+      const idx = localPipelines.findIndex((p) => (p.id || '').toLowerCase() === (id || '').toLowerCase());
       if (idx >= 0) {
         localPipelines[idx] = {
           ...localPipelines[idx],

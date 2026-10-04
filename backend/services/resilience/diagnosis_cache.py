@@ -29,6 +29,8 @@ class DiagnosisCacheEntry:
         ttl_seconds: int = 86400,
         repo_context_hash: str | None = None,
         repository: str = "SentinelOps",
+        workflow_run_id: int | str | None = None,
+        commit_sha: str | None = None,
     ):
         self.error_signature = error_signature
         self.diagnosis_data = diagnosis_data  # Root cause, category, evidence, affected files
@@ -38,6 +40,8 @@ class DiagnosisCacheEntry:
         self.hit_count = 0
         self.repo_context_hash = repo_context_hash or ""
         self.repository = repository
+        self.workflow_run_id = str(workflow_run_id).strip() if workflow_run_id is not None else None
+        self.commit_sha = str(commit_sha).strip()[:10] if commit_sha else None
 
     def is_expired(self) -> bool:
         """Returns True if entry has surpassed its TTL."""
@@ -53,6 +57,8 @@ class DiagnosisCacheEntry:
             "hit_count": self.hit_count,
             "repo_context_hash": self.repo_context_hash,
             "repository": self.repository,
+            "workflow_run_id": self.workflow_run_id,
+            "commit_sha": self.commit_sha,
             "is_expired": self.is_expired(),
             "remaining_ttl_seconds": max(0, int(self.expires_at - time.time())),
         }
@@ -78,14 +84,31 @@ class DiagnosisCache:
             "entries_stored": 0,
         }
 
+    @staticmethod
+    def build_composite_key(
+        repository: str,
+        commit_sha: str | None = None,
+        workflow_run_id: int | str | None = None,
+        failure_signature: str = "",
+    ) -> str:
+        """Generates canonical cache key based on repo, commit, run ID, and failure signature."""
+        clean_repo = (repository or "").strip().lower()
+        clean_sha = (commit_sha or "HEAD").strip()[:10]
+        clean_run = str(workflow_run_id or "").strip()
+        clean_sig = (failure_signature or "").strip()
+        return f"{clean_repo}::{clean_sha}::{clean_run}::{clean_sig}"
+
     def get(
         self,
         error_signature: str,
         current_repo_context_hash: str | None = None,
+        workflow_run_id: int | str | None = None,
+        commit_sha: str | None = None,
     ) -> dict[str, Any] | None:
         """
         Retrieves a cached diagnosis by error signature.
-        Returns None if cache miss, expired, or if repository context has changed.
+        Returns None if cache miss, expired, or if run_id/commit/context changed.
+        A new CI failure or new commit must generate a fresh diagnosis.
         """
         if not error_signature:
             return None
@@ -104,6 +127,21 @@ class DiagnosisCache:
                 logger.info(f"Diagnosis cache expired for signature {error_signature[:12]}")
                 return None
 
+            # Invalidate if workflow_run_id changed
+            if workflow_run_id is not None and entry.workflow_run_id is not None:
+                if str(workflow_run_id).strip() != entry.workflow_run_id:
+                    self.stats["misses"] += 1
+                    logger.info("Diagnosis cache miss: workflow run ID changed (%s != %s)", workflow_run_id, entry.workflow_run_id)
+                    return None
+
+            # Invalidate if commit_sha changed
+            if commit_sha and entry.commit_sha:
+                curr_sha = str(commit_sha).strip()[:10]
+                if curr_sha != entry.commit_sha:
+                    self.stats["misses"] += 1
+                    logger.info("Diagnosis cache miss: commit SHA changed (%s != %s)", curr_sha, entry.commit_sha)
+                    return None
+
             # Check repo context hash invalidation if provided
             if current_repo_context_hash and entry.repo_context_hash:
                 if entry.repo_context_hash != current_repo_context_hash:
@@ -120,7 +158,6 @@ class DiagnosisCache:
             logger.info(
                 f"Diagnosis cache HIT for signature {error_signature[:12]} (hits: {entry.hit_count})"
             )
-            # Return a copy of cached diagnosis data
             return dict(entry.diagnosis_data)
 
     def put(
@@ -130,6 +167,8 @@ class DiagnosisCache:
         ttl: int | None = None,
         repo_context_hash: str | None = None,
         repository: str = "SentinelOps",
+        workflow_run_id: int | str | None = None,
+        commit_sha: str | None = None,
     ) -> None:
         """
         Stores a diagnosis in the cache.
@@ -139,13 +178,13 @@ class DiagnosisCache:
 
         ttl_to_use = ttl if ttl is not None else self.default_ttl
 
-        # Ensure we only store serializable diagnostic fields
         sanitized_diag = {
             "root_cause": diagnosis_data.get("root_cause", ""),
             "category": diagnosis_data.get("category", "unknown"),
             "evidence": diagnosis_data.get("evidence", []),
             "affected_files": diagnosis_data.get("affected_files", []),
             "confidence_score": diagnosis_data.get("confidence_score", 0.0),
+            "confidence": diagnosis_data.get("confidence", 0.0),
             "cached": True,
         }
 
@@ -156,6 +195,8 @@ class DiagnosisCache:
                 ttl_seconds=ttl_to_use,
                 repo_context_hash=repo_context_hash,
                 repository=repository,
+                workflow_run_id=workflow_run_id,
+                commit_sha=commit_sha,
             )
             self._entries[error_signature] = entry
             self.stats["entries_stored"] += 1

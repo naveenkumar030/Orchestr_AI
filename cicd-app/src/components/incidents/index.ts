@@ -4,3 +4,4 @@ export * from './IncidentRcaCard';
 export * from './IncidentTerminalCard';
 export * from './IncidentRemediationDetails';
 export * from './IncidentExecutionTrail';
+export * from './HealerAlphaResultCard';

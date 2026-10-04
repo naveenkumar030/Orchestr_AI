@@ -43,18 +43,18 @@ class ValidationService:
         poll_interval = poll_interval_seconds if poll_interval_seconds is not None else self.default_poll_interval
         start_time = time.time()
 
-        # Handle local / simulated mode when GITHUB_TOKEN is not present
+        # Handle local / unverified mode when GITHUB_TOKEN is not present
         if not github_service.token:
-            duration = 12
             return {
-                "status": "SUCCESS",
+                "status": "UNVERIFIED",
+                "reason": "Real GitHub Actions validation is unavailable (missing GitHub credentials)",
                 "workflow": "CI / Test & Build Suite",
                 "run_id": int(time.time()),
                 "commit_sha": commit_sha or "c0ffee1",
                 "branch": branch,
                 "failed_jobs": [],
                 "logs": None,
-                "duration": duration,
+                "duration": 0,
                 "simulated": True,
             }
 
@@ -62,11 +62,13 @@ class ValidationService:
         workflow_name = "CI/CD Workflow"
         current_commit = commit_sha
 
+        empty_runs_count = 0
         while time.time() - start_time < timeout:
             ok, data = github_service.list_workflow_runs_for_branch(repo, branch)
             if ok and isinstance(data, dict):
                 runs = data.get("workflow_runs", [])
                 if runs:
+                    empty_runs_count = 0
                     target_run = None
                     if commit_sha:
                         for r in runs:
@@ -93,8 +95,47 @@ class ValidationService:
                                 conclusion=conclusion,
                                 start_time=start_time,
                             )
+                else:
+                    empty_runs_count += 1
+                    # After 2 checks, attempt to dispatch ci.yml on the branch if no automated run started yet
+                    if empty_runs_count == 2:
+                        try:
+                            github_service.dispatch_workflow(repo, "ci.yml", branch)
+                        except Exception:
+                            pass
+                    # If after 6 checks (~30s), no GitHub Actions run is triggered for this branch, return UNVERIFIED
+                    if empty_runs_count >= 6:
+                        elapsed = int(time.time() - start_time)
+                        return {
+                            "status": "UNVERIFIED",
+                            "reason": f"No GitHub Actions workflow runs scheduled or found on branch '{branch}'.",
+                            "workflow": workflow_name,
+                            "run_id": 0,
+                            "commit_sha": current_commit or "HEAD",
+                            "branch": branch,
+                            "failed_jobs": [],
+                            "logs": None,
+                            "duration": elapsed,
+                            "simulated": False,
+                        }
+            else:
+                empty_runs_count += 1
+                if empty_runs_count >= 6:
+                    elapsed = int(time.time() - start_time)
+                    return {
+                        "status": "UNVERIFIED",
+                        "reason": f"Unable to retrieve workflow runs for branch '{branch}'.",
+                        "workflow": workflow_name,
+                        "run_id": 0,
+                        "commit_sha": current_commit or "HEAD",
+                        "branch": branch,
+                        "failed_jobs": [],
+                        "logs": None,
+                        "duration": elapsed,
+                        "simulated": False,
+                    }
 
-            time.sleep(poll_interval)
+            time.sleep(min(poll_interval, 5))
 
         # Timeout reached
         elapsed = int(time.time() - start_time)

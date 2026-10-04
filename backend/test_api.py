@@ -148,6 +148,26 @@ def test_ai_agents_deploy_and_update(client):
     assert update_res.get_json().get("status") == "standby"
 
 
+def test_ai_agent_fleet_stats_and_reasoning_feed(client):
+    # Test fleet-stats endpoint
+    stats_res = client.get("/api/ai-agents/fleet-stats")
+    assert stats_res.status_code == 200
+    stats = stats_res.get_json()
+    assert "totalAgents" in stats
+    assert "activeAgents" in stats
+    assert "totalTasksCompleted" in stats
+    assert "autonomousResolutionRate" in stats
+    assert "avgCriticScore" in stats
+    assert "llmProviders" in stats
+    assert len(stats["llmProviders"]) >= 2
+
+    # Test reasoning-feed endpoint
+    feed_res = client.get("/api/ai-agents/reasoning-feed?limit=5")
+    assert feed_res.status_code == 200
+    feed = feed_res.get_json()
+    assert isinstance(feed, list)
+
+
 def test_pull_requests_list(client):
     res = client.get("/api/pull-requests")
     assert res.status_code == 200

@@ -636,11 +636,8 @@ export default function PipelinesPage() {
                   onChange={(e) => setCustomRepo(e.target.value)}
                   className="w-full h-9 px-3 text-xs rounded-lg border border-[#E5DED6] bg-[#FAF7F3] focus:bg-white focus:outline-none focus:border-[#D97757]"
                 >
-                  <option value="payment-service">payment-service</option>
-                  <option value="auth-service">auth-service</option>
-                  <option value="gateway-service">gateway-service</option>
-                  <option value="inventory-api">inventory-api</option>
-                  <option value="order-orchestrator">order-orchestrator</option>
+                  <option value="naveenkumar030/testingrepo">naveenkumar030/testingrepo (Active Primary)</option>
+                  <option value="naveenkumar030/SentinelOps">naveenkumar030/SentinelOps (Agent Engine)</option>
                 </select>
               </div>
 

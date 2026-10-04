@@ -12,13 +12,13 @@ export const IncidentTerminalCard: React.FC<IncidentTerminalCardProps> = ({ sele
   const rawLogs = selectedIncident.failure
     ? [
         { line: '01', time: '[LIVE]', type: 'error', text: `${selectedIncident.failure}: ${selectedIncident.rootCause || 'Workflow failure detected'}` },
-        { line: '02', time: '[AGENT]', type: 'info', text: `Repository: ${selectedIncident.repo} on branch '${selectedIncident.branch || 'main'}'` },
+        { line: '02', time: '[AGENT]', type: 'info', text: `Repository: ${selectedIncident.repo || 'unknown'} on branch '${selectedIncident.branch || 'main'}'` },
         { line: '03', time: '[AGENT]', type: 'agent', text: `Confidence score: ${selectedIncident.confidence}% (${selectedIncident.status})` },
       ]
     : [];
 
   const filteredLogs = rawLogs.filter((l) =>
-    l.text.toLowerCase().includes(logFilter.toLowerCase())
+    (l.text || '').toLowerCase().includes((logFilter || '').toLowerCase())
   );
 
   const handleCopyLogs = () => {

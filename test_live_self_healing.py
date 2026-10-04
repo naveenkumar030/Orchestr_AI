@@ -8,6 +8,8 @@ self-healing loop in real time.
 
 import os
 import sys
+import hashlib
+import hmac
 import json
 import time
 
@@ -77,10 +79,20 @@ def run_live_test():
     }
 
     start_time = time.time()
+    payload_bytes = json.dumps(webhook_payload).encode("utf-8")
+    headers = {
+        "Content-Type": "application/json",
+        "X-GitHub-Event": "workflow_run",
+    }
+    secret = os.environ.get("GITHUB_WEBHOOK_SECRET")
+    if secret:
+        sig = "sha256=" + hmac.new(secret.encode("utf-8"), payload_bytes, hashlib.sha256).hexdigest()
+        headers["X-Hub-Signature-256"] = sig
+
     resp = client.post(
         "/api/webhooks/github",
-        headers={"X-GitHub-Event": "workflow_run"},
-        json=webhook_payload
+        headers=headers,
+        data=payload_bytes
     )
 
     elapsed = time.time() - start_time

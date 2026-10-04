@@ -29,8 +29,8 @@ export default function LogsPage() {
     if (selectedLevel !== 'ALL' && log.level !== selectedLevel) return false;
     if (
       searchQuery &&
-      !log.message.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !log.service.toLowerCase().includes(searchQuery.toLowerCase())
+      !(log.message || '').toLowerCase().includes(searchQuery.toLowerCase()) &&
+      !(log.service || '').toLowerCase().includes(searchQuery.toLowerCase())
     )
       return false;
     return true;
@@ -418,13 +418,11 @@ export default function LogsPage() {
             aria-label="Filter logs by service"
             className="h-8 px-2.5 rounded-lg bg-white border border-[#E5DED6] text-xs font-semibold text-[#2D2926] focus:outline-none focus:border-[#D97757]"
           >
-            <option value="all">All Services (6)</option>
-            <option value="payment-service">payment-service</option>
-            <option value="auth-service">auth-service</option>
+            <option value="all">All Repositories & Services</option>
+            <option value="naveenkumar030/testingrepo">naveenkumar030/testingrepo (Primary)</option>
+            <option value="naveenkumar030/SentinelOps">naveenkumar030/SentinelOps</option>
             <option value="ai-kernel">ai-kernel</option>
-            <option value="resolver-beta">resolver-beta</option>
-            <option value="order-orchestrator">order-orchestrator</option>
-            <option value="inventory-api">inventory-api</option>
+            <option value="healer-alpha">healer-alpha</option>
           </select>
         </div>
 

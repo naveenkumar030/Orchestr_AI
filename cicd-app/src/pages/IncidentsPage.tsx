@@ -10,6 +10,7 @@ import {
   IncidentTerminalCard,
   IncidentRemediationDetails,
   IncidentExecutionTrail,
+  HealerAlphaResultCard,
 } from '../components/incidents';
 
 export default function IncidentsPage() {
@@ -103,7 +104,8 @@ export default function IncidentsPage() {
         const curr = updatedList.find((i) => i.id === selectedIncident.id);
         if (curr) setSelectedIncident(curr);
       }
-      setNotification(`⚡ Healer-Alpha auto-remediated ${selectedIncident.id}! PR #${res?.prNumber || '144'} created on branch '${res?.remediationBranch || 'sentinelops/fix'}'`);
+      const prMsg = res?.prNumber ? `PR #${res.prNumber} created on GitHub` : `remediation branch '${res?.remediationBranch || 'sentinelops/fix'}' pushed`;
+      setNotification(`⚡ Healer-Alpha auto-remediated ${selectedIncident.id}! ${prMsg}`);
       setTimeout(() => setNotification(null), 5000);
     } catch (err) {
       console.error('Failed to auto-remediate:', err);
@@ -192,11 +194,11 @@ export default function IncidentsPage() {
     setIsOrchestrating(true);
     try {
       const res = await api.orchestrateRemediation({
-        run_id: selectedIncident.runId || 892401,
-        repo: selectedIncident.repo || 'SentinelOps',
+        run_id: selectedIncident.runId || 36973274857,
+        repo: selectedIncident.repo || 'naveenkumar030/testingrepo',
         branch: selectedIncident.branch || 'main',
-        commit_sha: selectedIncident.commit || 'a1b2c3d',
-        workflow_name: selectedIncident.pipeline || 'CI/CD Workflow',
+        commit_sha: selectedIncident.commit || 'HEAD',
+        workflow_name: selectedIncident.pipeline || 'CI Suite',
       });
       const updatedList = await api.getIncidents();
       if (updatedList && updatedList.length > 0) {
@@ -342,6 +344,15 @@ export default function IncidentsPage() {
                 onHumanReject={handleHumanReject}
                 incidentId={selectedIncident.id}
                 repo={selectedIncident.repo}
+              />
+
+              {/* Dedicated Healer-Alpha Autonomous Remediation Result Section */}
+              <HealerAlphaResultCard
+                selectedIncident={selectedIncident}
+                isRemediating={isRemediating}
+                onRemediate={handleRemediate}
+                onValidateCI={handleValidateCI}
+                isValidatingCI={isValidatingCI}
               />
 
               {/* 1. Root Cause Analysis Card */}

@@ -17,6 +17,22 @@ const statusConfig: Record<IncidentStatus, { bg: string; dot: string; text: stri
   Remediated:      { bg: 'bg-[#EAF3E7] border-[#5B7C4B]/40',  dot: 'bg-[#5B7C4B] animate-pulse', text: 'text-[#5B7C4B]',  label: 'Remediated' },
   Blocked:         { bg: 'bg-[#FDF0F0] border-[#C34A4A]/40',  dot: 'bg-[#C34A4A]',  text: 'text-[#C34A4A]',  label: 'Blocked' },
   Escalated:       { bg: 'bg-[#FEF2F2] border-[#DC2626]/40',  dot: 'bg-[#DC2626] animate-ping', text: 'text-[#DC2626]', label: 'Escalated' },
+  'Human Review Required': { bg: 'bg-[#FEF2F2] border-[#DC2626]/40', dot: 'bg-[#DC2626] animate-ping', text: 'text-[#DC2626]', label: 'Human Review Required' },
+  HUMAN_REVIEW_REQUIRED:   { bg: 'bg-[#FEF2F2] border-[#DC2626]/40', dot: 'bg-[#DC2626] animate-ping', text: 'text-[#DC2626]', label: 'Human Review Required' },
+  DETECTED:                { bg: 'bg-[#FFFBEB] border-[#F59E0B]/40', dot: 'bg-[#F59E0B] animate-pulse', text: 'text-[#D97706]', label: 'Detected' },
+  ANALYZED:                { bg: 'bg-[#F6EFE6] border-[#B87A36]/40', dot: 'bg-[#B87A36] animate-pulse', text: 'text-[#B87A36]', label: 'Analyzed' },
+  FIX_GENERATED:           { bg: 'bg-[#EDE0D7] border-[#D97757]/40', dot: 'bg-[#D97757]', text: 'text-[#99462A]', label: 'Fix Generated' },
+  PATCH_APPLIED:           { bg: 'bg-[#EFF6FF] border-[#3B82F6]/40', dot: 'bg-[#3B82F6]', text: 'text-[#1D4ED8]', label: 'Patch Applied' },
+  LOCALLY_VALIDATED:       { bg: 'bg-[#F0FDF4] border-[#16A34A]/40', dot: 'bg-[#16A34A]', text: 'text-[#15803D]', label: 'Locally Validated' },
+  COMMITTED:               { bg: 'bg-[#F3E8FF] border-[#9333EA]/40', dot: 'bg-[#9333EA]', text: 'text-[#7E22CE]', label: 'Committed' },
+  CI_RUNNING:              { bg: 'bg-[#EFF6FF] border-[#3B82F6]/40', dot: 'bg-[#3B82F6] animate-spin', text: 'text-[#1D4ED8]', label: 'CI Running' },
+  CI_PASSED:               { bg: 'bg-[#EDF4EA] border-[#5B7C4B]/30', dot: 'bg-[#5B7C4B]', text: 'text-[#5B7C4B]', label: 'CI Passed' },
+  CI_FAILED:               { bg: 'bg-[#FDF0F0] border-[#C34A4A]/40', dot: 'bg-[#C34A4A]', text: 'text-[#C34A4A]', label: 'CI Failed' },
+  REMEDIATED:              { bg: 'bg-[#EAF3E7] border-[#5B7C4B]/40', dot: 'bg-[#5B7C4B] animate-pulse', text: 'text-[#5B7C4B]', label: 'Remediated' },
+  Unverified:              { bg: 'bg-[#FFFBEB] border-[#F59E0B]/40', dot: 'bg-[#F59E0B]', text: 'text-[#D97706]', label: 'Unverified' },
+  UNVERIFIED:              { bg: 'bg-[#FFFBEB] border-[#F59E0B]/40', dot: 'bg-[#F59E0B]', text: 'text-[#D97706]', label: 'Unverified' },
+  Unresolved:              { bg: 'bg-[#FDF0F0] border-[#C34A4A]/40', dot: 'bg-[#C34A4A]', text: 'text-[#C34A4A]', label: 'Unresolved' },
+  UNRESOLVED:              { bg: 'bg-[#FDF0F0] border-[#C34A4A]/40', dot: 'bg-[#C34A4A]', text: 'text-[#C34A4A]', label: 'Unresolved' },
 };
 
 interface StatusBadgeProps {

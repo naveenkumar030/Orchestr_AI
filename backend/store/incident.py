@@ -48,6 +48,8 @@ class IncidentMixin:
             res = []
             for inc in db_incs:
                 item = dict(inc)
+                if not item.get("repo"):
+                    item["repo"] = getattr(self, "repo", "naveenkumar030/SentinelOps")
                 inc_id = item.get("id")
                 if inc_id and inc_id in self._incident_metadata:
                     item.update(self._incident_metadata[inc_id])
@@ -61,15 +63,15 @@ class IncidentMixin:
                 res.append(item)
 
         if status and status.lower() != "all":
-            res = [i for i in res if i.get("status", "").lower() == status.lower()]
+            res = [i for i in res if (i.get("status") or "").lower() == status.lower()]
         if search:
             s = search.lower()
             res = [
                 i for i in res
-                if s in i.get("id", "").lower()
-                or s in i.get("repo", "").lower()
-                or s in i.get("failure", "").lower()
-                or s in i.get("rootCause", "").lower()
+                if s in (i.get("id") or "").lower()
+                or s in (i.get("repo") or "").lower()
+                or s in (i.get("failure") or "").lower()
+                or s in (i.get("rootCause") or "").lower()
             ]
         return res
 
@@ -217,6 +219,7 @@ class IncidentMixin:
         res = remediation_orchestrator.handle_remediation(run_data, trigger_source="manual")
         if isinstance(res, dict):
             res.setdefault("agent", "Healer-Alpha")
+            res.setdefault("success", True)
         return res
 
     def simulate_anomaly(self):
@@ -227,7 +230,7 @@ class IncidentMixin:
         from services.incident_service import incident_service
         new_inc = incident_service.persist_incident({
             "id": inc_id,
-            "repo": self.repo.split("/")[-1],
+            "repo": self.repo,
             "pipeline": "SentinelOps Autonomous CI/CD Pipeline",
             "failure": "Simulated Integration Test Assertion Failure",
             "rootCause": "Race condition detected during concurrent token verification",
@@ -240,7 +243,8 @@ class IncidentMixin:
             "commit": "HEAD",
             "actionLabel": "Auto-Heal Active",
             "actionVariant": "primary",
-            "prNumber": 181,
+            "prNumber": None,
+            "prUrl": None,
             "guard_status": "PASSED",
             "risk_level": "LOW",
             "source": "demo",

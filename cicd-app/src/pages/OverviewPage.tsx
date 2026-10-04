@@ -204,12 +204,18 @@ export default function OverviewPage() {
 
   // Compute live active incidents
   const activeIncidents = useMemo(() => {
-    return incidentList.filter((i) => i.status === 'Investigating' || i.status === 'Failed');
+    return incidentList.filter((i) => {
+      const s = (i.status || '').toLowerCase();
+      return s === 'investigating' || s === 'failed';
+    });
   }, [incidentList]);
 
   // Compute live resolution rate percentage
   const liveResolutionRate = useMemo(() => {
-    const resolved = incidentList.filter((i) => i.status === 'Resolved' || i.status === 'Remediated' || i.status === 'Fixed').length;
+    const resolved = incidentList.filter((i) => {
+      const s = (i.status || '').toLowerCase();
+      return s === 'resolved' || s === 'remediated' || s === 'fixed';
+    }).length;
     const total = incidentList.length || 1;
     return Math.min(100, Math.round((resolved / total) * 100));
   }, [incidentList]);
@@ -226,8 +232,8 @@ export default function OverviewPage() {
 
   // Filtered incidents
   const filteredIncidents = useMemo(() => {
-    if (selectedRepo === 'All Repos') return incidentList;
-    return incidentList.filter((i) => i.repo.toLowerCase() === selectedRepo.toLowerCase());
+    if (!selectedRepo || selectedRepo === 'All Repos') return incidentList;
+    return incidentList.filter((i) => (i.repo || '').toLowerCase() === selectedRepo.toLowerCase());
   }, [incidentList, selectedRepo]);
 
   // Paginated incidents
@@ -815,7 +821,7 @@ export default function OverviewPage() {
                       <td className="py-space-base px-space-base">
                         <div className="flex items-center gap-space-xs">
                           <span className="material-symbols-outlined text-base text-[#6B625B] group-hover:text-[#D97757] transition-colors">folder</span>
-                          <span className="font-label-code-md text-label-code-md font-semibold text-[#2D2926]">{inc.repo}</span>
+                          <span className="font-label-code-md text-label-code-md font-semibold text-[#2D2926]">{inc.repo || 'system'}</span>
                         </div>
                       </td>
                       <td className="py-space-base px-space-base">

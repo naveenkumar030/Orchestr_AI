@@ -14,15 +14,15 @@ export const logsApi = {
     const queryString = urlParams.toString() ? `?${urlParams.toString()}` : '';
 
     const fallback = localLogs.filter((l) => {
-      if (params?.service && params.service !== 'all' && l.service.toLowerCase() !== params.service.toLowerCase()) {
+      if (params?.service && params.service !== 'all' && (l.service || '').toLowerCase() !== params.service.toLowerCase()) {
         return false;
       }
-      if (params?.level && params.level !== 'ALL' && l.level.toUpperCase() !== params.level.toUpperCase()) {
+      if (params?.level && params.level !== 'ALL' && (l.level || '').toUpperCase() !== params.level.toUpperCase()) {
         return false;
       }
       if (params?.query) {
         const q = params.query.toLowerCase();
-        return l.message.toLowerCase().includes(q) || l.service.toLowerCase().includes(q);
+        return (l.message || '').toLowerCase().includes(q) || (l.service || '').toLowerCase().includes(q);
       }
       return true;
     });

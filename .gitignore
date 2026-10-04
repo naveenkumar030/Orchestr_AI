@@ -64,3 +64,11 @@ wheels/
 htmlcov/
 archive/
 *.db
+
+# Local scratch and dumps
+job_log*.txt
+*.dump.json
+incidents_dump.json
+real_runs.json
+scratch_*.py
+backend/static/

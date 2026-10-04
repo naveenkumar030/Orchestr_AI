@@ -134,6 +134,7 @@ REQUIRE_HUMAN_APPROVAL: bool = os.environ.get("REQUIRE_HUMAN_APPROVAL", "True").
 
 # ── Phase 2 Autonomous Loop & Validation Settings ─────────────────────────────
 MAX_REMEDIATION_ATTEMPTS: int = int(os.environ.get("MAX_REMEDIATION_ATTEMPTS", 3))
+CONFIDENCE_THRESHOLD: int = int(os.environ.get("CONFIDENCE_THRESHOLD", 90))
 CI_VALIDATION_TIMEOUT_SECONDS: int = int(os.environ.get("CI_VALIDATION_TIMEOUT_SECONDS", 600))
 CI_POLL_INTERVAL_SECONDS: int = int(os.environ.get("CI_POLL_INTERVAL_SECONDS", 10))
 

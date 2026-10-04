@@ -11,6 +11,45 @@ export const pullRequestsApi = {
     return data;
   },
 
+  async createPullRequest(params: {
+    title: string;
+    branch: string;
+    repo?: string;
+    author?: string;
+  }): Promise<PullRequest> {
+    const mockHandler = () => {
+      const pr: PullRequest = {
+        id: `pr-local-${Date.now()}`,
+        number: Math.floor(Math.random() * 9000) + 1000,
+        title: params.title,
+        repo: (params.repo || 'testingrepo').split('/').pop() || 'testingrepo',
+        branch: params.branch,
+        author: params.author || 'sentinelops-user',
+        status: 'open',
+        aiReviewScore: 0,
+        comments: 0,
+        additions: 0,
+        deletions: 0,
+        time: 'just now',
+        aiComment: 'Pending AI review by SentinelOps Engine.',
+        guard_status: 'PENDING',
+        risk_level: 'LOW',
+      };
+      localPRs.unshift(pr);
+      return pr;
+    };
+
+    const { data } = await actionRequest<PullRequest>(
+      '/pull-requests',
+      {
+        method: 'POST',
+        body: JSON.stringify(params),
+      },
+      mockHandler
+    );
+    return data;
+  },
+
   async reviewPullRequest(id: string): Promise<PullRequest> {
     const mockHandler = () => {
       const idx = localPRs.findIndex((p) => p.id === id);

@@ -14,13 +14,13 @@ export const deploymentsApi = {
     const fallback: DeploymentRecord = {
       deployment_id: `dep-${id}`,
       incident_id: id,
-      repo: 'payment-service',
+      repo: 'naveenkumar030/testingrepo',
       branch: 'main',
       commit_sha: 'a1b2c3d',
       provider: 'github_actions',
       target_environment: 'production',
       status: 'SUCCESS',
-      deployment_url: 'https://payment-service.pages.dev',
+      deployment_url: 'https://testingrepo.pages.dev',
       started_at: new Date(Date.now() - 30000).toISOString(),
       completed_at: new Date().toISOString(),
       duration_seconds: 14,
@@ -36,7 +36,7 @@ export const deploymentsApi = {
   async getIncidentHealth(id: string): Promise<HealthCheckResult | null> {
     const fallback: HealthCheckResult = {
       incident_id: id,
-      url: 'https://payment-service.pages.dev/health',
+      url: 'https://testingrepo.pages.dev/health',
       status: 'HEALTHY',
       consecutive_successes: 2,
       success_threshold: 2,
@@ -81,7 +81,7 @@ export const deploymentsApi = {
   async verifyIncidentDeployment(id: string, targetUrl?: string): Promise<HealthCheckResult> {
     const mockHandler = () => ({
       incident_id: id,
-      url: targetUrl || 'https://payment-service.pages.dev/health',
+      url: targetUrl || 'https://testingrepo.pages.dev/health',
       status: 'HEALTHY' as const,
       consecutive_successes: 2,
       success_threshold: 2,
@@ -122,7 +122,7 @@ export const deploymentsApi = {
     const mockHandler = () => ({
       rollback_id: `rb-${id}`,
       incident_id: id,
-      repo: 'payment-service',
+      repo: 'naveenkumar030/testingrepo',
       branch: 'main',
       failed_commit_sha: 'a1b2c3d',
       rollback_commit_sha: 'e4f5a6b',

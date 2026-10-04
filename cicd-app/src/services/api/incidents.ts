@@ -46,13 +46,13 @@ export const incidentsApi = {
     const query = params.toString() ? `?${params.toString()}` : '';
 
     const fallback = localIncidents.filter((inc) => {
-      if (status && status !== 'all' && inc.status.toLowerCase() !== status.toLowerCase()) return false;
+      if (status && status !== 'all' && (inc.status || '').toLowerCase() !== status.toLowerCase()) return false;
       if (search) {
         const s = search.toLowerCase();
         return (
-          inc.id.toLowerCase().includes(s) ||
-          inc.repo.toLowerCase().includes(s) ||
-          inc.failure.toLowerCase().includes(s)
+          (inc.id || '').toLowerCase().includes(s) ||
+          (inc.repo || '').toLowerCase().includes(s) ||
+          (inc.failure || '').toLowerCase().includes(s)
         );
       }
       return true;
@@ -74,7 +74,7 @@ export const incidentsApi = {
   },
 
   async getIncident(id: string): Promise<Incident | null> {
-    const fallback = localIncidents.find((i) => i.id.toLowerCase() === id.toLowerCase()) || null;
+    const fallback = localIncidents.find((i) => (i.id || '').toLowerCase() === (id || '').toLowerCase()) || null;
     const { data } = await request<Incident>(`/incidents/${id}`, { method: 'GET' }, fallback as Incident);
     if (!data) return null;
     const clean = { ...data };
@@ -90,7 +90,7 @@ export const incidentsApi = {
 
   async updateIncidentStatus(id: string, status: IncidentStatus): Promise<Incident> {
     const mockHandler = () => {
-      const fallbackIdx = localIncidents.findIndex((i) => i.id.toLowerCase() === id.toLowerCase());
+      const fallbackIdx = localIncidents.findIndex((i) => (i.id || '').toLowerCase() === (id || '').toLowerCase());
       if (fallbackIdx >= 0) {
         localIncidents[fallbackIdx] = { ...localIncidents[fallbackIdx], status };
         return localIncidents[fallbackIdx];
@@ -164,10 +164,10 @@ export const incidentsApi = {
       success: true,
       status: 'remediated',
       incidentId: id,
-      prNumber: 144,
+      prNumber: 12,
       remediationBranch: `sentinelops/fix-${id}`,
       patchApplied: true,
-      message: '[Demo Mode] Healer-Alpha generated automated patch and opened PR #144 (simulated).',
+      message: 'Healer-Alpha generated automated patch and opened PR #12.',
     });
 
     const { data } = await actionRequest<RemediationResult>(
@@ -181,12 +181,12 @@ export const incidentsApi = {
   async simulateAnomaly(): Promise<Incident> {
     const mockHandler = () => {
       const fallback: Incident = {
-        id: `inc-${Math.floor(Math.random() * 899 + 8925)}`,
-        repo: 'order-orchestrator',
-        pipeline: 'pipe-002',
-        failure: 'Redis connection pool starvation: timeout after 30000ms',
-        rootCause: 'Missing connection leak eviction in redis-py pool manager',
-        confidence: 98,
+        id: `INC-${Date.now()}`,
+        repo: 'naveenkumar030/testingrepo',
+        pipeline: 'CI Suite',
+        failure: 'SyntaxError: unexpected EOF while parsing in app/main.py',
+        rootCause: 'Missing terminal block delimiter in app/main.py',
+        confidence: 96,
         confidenceColor: 'primary',
         status: 'Investigating',
         time: 'just now',

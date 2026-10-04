@@ -1,26 +1,39 @@
 import { useState } from 'react';
+import { api } from '../../services/api';
+import type { PullRequest } from '../../types';
 
 interface CreatePRModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (title: string, branch: string) => void;
+  onSuccess?: (title: string, branch: string, pr?: PullRequest) => void;
 }
 
 function CreatePRModalContent({ onClose, onSuccess }: Omit<CreatePRModalProps, 'isOpen'>) {
   const [title, setTitle] = useState('');
-  const [branch, setBranch] = useState('feature/autonomous-fix');
-  const [repo, setRepo] = useState('naveenkumar030/SentinelOps');
+  const [branch, setBranch] = useState(() => `sentinelops/patch-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [repo, setRepo] = useState('naveenkumar030/testingrepo');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim() || !branch.trim()) return;
     setIsSubmitting(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsSubmitting(false);
-      if (onSuccess) onSuccess(title, branch);
+    setError(null);
+    try {
+      const pr = await api.createPullRequest({
+        title: title.trim(),
+        branch: branch.trim(),
+        repo: repo.trim(),
+        author: 'sentinelops-user',
+      });
+      if (onSuccess) onSuccess(title, branch, pr);
       onClose();
-    }, 800);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to create PR. Please try again.';
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -91,6 +104,13 @@ function CreatePRModalContent({ onClose, onSuccess }: Omit<CreatePRModalProps, '
               />
             </div>
           </div>
+
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm">error</span>
+              <span>{error}</span>
+            </div>
+          )}
         </div>
 
         {/* Footer Actions */}

@@ -1,6 +1,201 @@
 {
-  "sequence": 0,
+  "sequence": 11,
   "gpg_key": "",
   "cosign_key_id": "",
-  "signatures": []
+  "signatures": [
+    {
+      "id": "SIG-0011",
+      "action": "Approved Autonomous Merge: PR #15",
+      "details": "naveenkumar030/testingrepo: New",
+      "type": "merge",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-10-04T05:51:21.678231+00:00",
+      "signature_hash": "sha256:28556d456115f3765e108c38b5279e39b94e031e810b1097d0331e017d5b7644",
+      "token_type": "YubiKey 5C NFC (Cosign ECDSA-P256)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "pr_id": "pr-15",
+        "number": 15,
+        "repo": "naveenkumar030/testingrepo"
+      }
+    },
+    {
+      "id": "SIG-0010",
+      "action": "Policy Override: Autopilot Threshold \u2192 96%",
+      "details": "Tightened confidence boundary for Kubernetes deployments",
+      "type": "policy",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-10-02T11:19:18.629841+00:00",
+      "signature_hash": "sha256:dd3fd9d24d781d68a7b40c6138f6223d19d410d8ea2ccaefdc65bd661bcb3ad2",
+      "token_type": "GPG Commit Key (RSA 4096)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "confidenceThreshold": 96
+      }
+    },
+    {
+      "id": "SIG-0009",
+      "action": "Approved Autonomous Merge: PR #78770",
+      "details": "testingrepo: bnm",
+      "type": "merge",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-09-30T14:23:30.446498+00:00",
+      "signature_hash": "sha256:57e0690455aff22c5e05a18bcd5f93077c674a358421ee8d57f6c2ad87d9e632",
+      "token_type": "YubiKey 5C NFC (Cosign ECDSA-P256)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "pr_id": "pr-78770",
+        "number": 78770,
+        "repo": "testingrepo"
+      }
+    },
+    {
+      "id": "SIG-0008",
+      "action": "Approved Autonomous Merge: PR #3",
+      "details": "testingrepo: [SentinelOps] Fix all CI Suite failures \u2014 Run #36114116056",
+      "type": "merge",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-09-30T14:23:01.722562+00:00",
+      "signature_hash": "sha256:b8e511a4a29e726b26e11c16ec394cee4011898420549f0dd80e7466b7cc1184",
+      "token_type": "YubiKey 5C NFC (Cosign ECDSA-P256)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "pr_id": "pr-3",
+        "number": 3,
+        "repo": "testingrepo"
+      }
+    },
+    {
+      "id": "SIG-0007",
+      "action": "Approved Autonomous Merge: PR #3",
+      "details": "testingrepo: [SentinelOps] Fix all CI Suite failures \u2014 Run #36114116056",
+      "type": "merge",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-09-30T14:19:21.160777+00:00",
+      "signature_hash": "sha256:eb48d8729b311abe9ab58fb66f9ccb2d2124a3f6479b0aadb4925df3e4b25a9a",
+      "token_type": "YubiKey 5C NFC (Cosign ECDSA-P256)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "pr_id": "pr-78346",
+        "number": 3,
+        "repo": "testingrepo"
+      }
+    },
+    {
+      "id": "SIG-0006",
+      "action": "Approved Autonomous Merge: PR #78770",
+      "details": "testingrepo: bnm",
+      "type": "merge",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-09-30T14:16:14.364148+00:00",
+      "signature_hash": "sha256:5913e6208b0d8997d4b78de0c13b27f92fac7fbf68e2d7ad5ef5b09f0df05667",
+      "token_type": "YubiKey 5C NFC (Cosign ECDSA-P256)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "pr_id": "pr-78770",
+        "number": 78770,
+        "repo": "testingrepo"
+      }
+    },
+    {
+      "id": "SIG-0005",
+      "action": "Approved Autonomous Merge: PR #3",
+      "details": "testingrepo: [SentinelOps] Fix all CI Suite failures \u2014 Run #36114116056",
+      "type": "merge",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-09-30T14:15:57.452466+00:00",
+      "signature_hash": "sha256:967836daee85e642ce35d512203220dd4873b2adab3dbfad651e1f48491f1ded",
+      "token_type": "YubiKey 5C NFC (Cosign ECDSA-P256)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "pr_id": "pr-3",
+        "number": 3,
+        "repo": "testingrepo"
+      }
+    },
+    {
+      "id": "SIG-0004",
+      "action": "Approved Autonomous Merge: PR #3",
+      "details": "testingrepo: [SentinelOps] Fix all CI Suite failures \u2014 Run #36114116056",
+      "type": "merge",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-09-30T14:09:40.600800+00:00",
+      "signature_hash": "sha256:171a296a5844e168a36d5e07e913d893a959efe9cdebf007f347f679b7b81df9",
+      "token_type": "YubiKey 5C NFC (Cosign ECDSA-P256)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "pr_id": "pr-3",
+        "number": 3,
+        "repo": "testingrepo"
+      }
+    },
+    {
+      "id": "SIG-0003",
+      "action": "Approved Autonomous Merge: PR #3",
+      "details": "testingrepo: [SentinelOps] Fix all CI Suite failures \u2014 Run #36114116056",
+      "type": "merge",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-09-30T13:57:41.685414+00:00",
+      "signature_hash": "sha256:4650bf117acb2c48321a9ab3facde2b0fdc19245c59bf1105bba79e0e9829117",
+      "token_type": "YubiKey 5C NFC (Cosign ECDSA-P256)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "pr_id": "pr-3",
+        "number": 3,
+        "repo": "testingrepo"
+      }
+    },
+    {
+      "id": "SIG-0002",
+      "action": "Approved Autonomous Merge: PR #3",
+      "details": "testingrepo: [SentinelOps] Fix all CI Suite failures \u2014 Run #36114116056",
+      "type": "merge",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-09-30T13:57:20.514594+00:00",
+      "signature_hash": "sha256:9cc44a58570fc6f168aaecbd9b03ab3c74b893d50c8600be71b5f8c181a993bb",
+      "token_type": "YubiKey 5C NFC (Cosign ECDSA-P256)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "pr_id": "pr-3",
+        "number": 3,
+        "repo": "testingrepo"
+      }
+    },
+    {
+      "id": "SIG-0001",
+      "action": "Policy Override: Autopilot Threshold \u2192 96%",
+      "details": "Tightened confidence boundary for Kubernetes deployments",
+      "type": "policy",
+      "operator": "Naveen Kumar (@naveenkumar030)",
+      "clearance": "Repository Operator",
+      "timestamp": "2026-09-28T15:31:28.598407+00:00",
+      "signature_hash": "sha256:3f0ee857d4ef8c925bdce83c25595f5c1eaf0aa9a0172be50e653597723f4e21",
+      "token_type": "GPG Commit Key (RSA 4096)",
+      "verified": true,
+      "status": "Authenticated",
+      "metadata": {
+        "confidenceThreshold": 96
+      }
+    }
+  ]
 }
